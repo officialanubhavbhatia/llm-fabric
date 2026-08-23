@@ -1,7 +1,20 @@
-# llm-fabric
+# MyVista LLM Fabric
 
 LLM gateway, serving, and inferencing layers.
 
-This repository is the only destination for llm-fabric work. Code generated for this project belongs here: [github.com/officialanubhavbhatia/llm-fabric](https://github.com/officialanubhavbhatia/llm-fabric).
+Repository: [github.com/officialanubhavbhatia/llm-fabric](https://github.com/officialanubhavbhatia/llm-fabric)
 
-The repo is new and currently empty of application code. Implementation lands in later commits.
+## Status
+
+Greenfield. No application code has been written yet.
+
+The architecture under consideration, the results of the repository inspection,
+and the decisions still outstanding are recorded in
+[`ARCHITECTURE.md`](ARCHITECTURE.md). That document is a draft: the project's
+engineering constitution has not yet been added to the repository, and the
+architecture is not settled until it has been reconciled against it.
+
+## Running it locally
+
+Not applicable yet — there is nothing to run. This section will describe the
+real setup once Phase 1 lands, and not before.
