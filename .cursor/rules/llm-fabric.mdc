@@ -1,0 +1,11 @@
+---
+description: Always keep llm-fabric work on this GitHub repo only
+alwaysApply: true
+---
+
+This workspace is the llm-fabric repository.
+
+- Canonical remote: https://github.com/officialanubhavbhatia/llm-fabric
+- All code generated for this project goes in this repo.
+- Do not clone, copy, or change any other existing project.
+- Do not mix unrelated code into this tree.
