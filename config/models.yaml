@@ -1,0 +1,77 @@
+# Model registry for MyVista LLM Fabric.
+#
+# Declarative on purpose: adding a model, repricing one, or taking one out of
+# rotation is a config change, not a code change.
+#
+# Costs are USD per million tokens and are OPERATOR-SUPPLIED INPUTS, not figures
+# the fabric measures or verifies. Provider pricing changes; fill these in from
+# your provider's current pricing page. The `cheapest` policy ranks candidates
+# using exactly these numbers, so a wrong price here produces a wrong route.
+#
+# The default configuration enables only the `mock` provider, so the fabric runs
+# with no credentials. The mock provider performs no inference — it returns text
+# assembled from the request. Enable the real providers below once their API keys
+# are set and their prices and context windows are filled in.
+
+models:
+  # --- local, no credentials required -------------------------------------
+  - id: mock-small
+    provider: mock
+    provider_model: mock-small
+    context_window: 8192
+    input_cost_per_mtok: 0.05
+    output_cost_per_mtok: 0.15
+    capabilities: [chat, streaming]
+    enabled: true
+    fallbacks: [mock-large]
+
+  - id: mock-large
+    provider: mock
+    provider_model: mock-large
+    context_window: 32768
+    input_cost_per_mtok: 0.50
+    output_cost_per_mtok: 1.50
+    capabilities: [chat, streaming, reasoning]
+    enabled: true
+
+  # --- external providers: set keys, fill in pricing, then enable ----------
+  - id: gpt-4o-mini
+    provider: openai
+    provider_model: gpt-4o-mini
+    context_window: null
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    capabilities: [chat, streaming]
+    enabled: false
+
+  - id: gpt-4o
+    provider: openai
+    provider_model: gpt-4o
+    context_window: null
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    capabilities: [chat, streaming, reasoning]
+    enabled: false
+    fallbacks: [gpt-4o-mini]
+
+  - id: claude-sonnet
+    provider: anthropic
+    provider_model: claude-sonnet-4-20250514
+    context_window: null
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    capabilities: [chat, streaming, reasoning]
+    enabled: false
+
+# Aliases are virtual model ids resolved by policy at request time. A client that
+# sends `auto` gets whichever candidate the policy picks, and learns which one it
+# was from the `x-fabric-served-model` response header.
+aliases:
+  - id: auto
+    policy: cheapest
+    candidates: [mock-small, mock-large, gpt-4o-mini, gpt-4o, claude-sonnet]
+
+  - id: auto-reasoning
+    policy: cheapest
+    requires: [reasoning]
+    candidates: [mock-large, gpt-4o, claude-sonnet]
