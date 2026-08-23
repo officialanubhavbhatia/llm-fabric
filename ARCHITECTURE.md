@@ -1,258 +1,242 @@
 # MyVista LLM Fabric — Architecture
 
-> **Document status: DRAFT — awaiting the engineering constitution.**
+> **On the engineering constitution.** The opening instruction for this repository
+> referenced an attached engineering constitution to be treated as the permanent
+> architecture and engineering specification. **That attachment never reached the
+> session** — the cover note arrived twice, the document neither time. The
+> workspace, `/tmp`, the home directory, and the artifact store were all searched.
 >
-> The first message to this repository referenced an attached "project engineering
-> constitution" to be treated as the permanent architecture and engineering
-> specification. **That attachment did not reach this session** — only the cover
-> note describing it arrived. See
-> [Blocked on the constitution](#blocked-on-the-constitution).
->
-> Everything in this document that is not under
-> [Repository inspection](#1-repository-inspection) is a **proposal inferred from
-> the repository description and standard practice for this class of system**, not
-> a restatement of the specification. It must be reconciled against the
-> constitution before any of it is treated as settled. Nothing here has been
-> implemented.
+> Phase 1 was therefore built against the architecture inferred from the
+> repository description, with the stack chosen deliberately and recorded as a
+> reversible decision in [`docs/adr/0001`](docs/adr/0001-language-and-runtime.md).
+> Sections marked **Built** describe code that exists and is tested. Sections
+> marked **Not built** are honest gaps. When the constitution arrives, commit it to
+> `docs/constitution.md`; it overrides everything here, and
+> [§7](#7-reconciling-with-the-constitution) states what each kind of
+> disagreement would cost.
 
 ---
 
 ## 1. Repository inspection
 
-Inspection is complete. Findings are factual and current as of this commit.
+Inspection was completed before any code was written.
 
-### 1.1 Remote state
+**Starting state.** The GitHub repository `officialanubhavbhatia/llm-fabric` was
+created empty on 2026-08-23, described as "LLM Gateway, Serving and Inferencing
+Layers", public, default branch `main`, with no commits. The working tree held
+only placeholder files written during this session. There was no application
+code, build system, dependency manifest, test suite, CI configuration, or
+infrastructure definition.
 
-| Property | Value |
-| --- | --- |
-| Canonical remote | `github.com/officialanubhavbhatia/llm-fabric` |
-| Description | "LLM Gateway, Serving and Inferencing Layers" |
-| Visibility | Public |
-| Default branch | `main` |
-| Created | 2026-08-23 |
-| Contents on GitHub | Empty — no commits, no tree |
-
-### 1.2 Working tree state
-
-The repository contains no application code, no build system, no dependency
-manifest, no tests, no CI configuration, and no infrastructure definitions.
-
-Tracked files, in full:
-
-| Path | Origin | Purpose |
-| --- | --- | --- |
-| `README.md` | This session | Placeholder describing the repo |
-| `AGENTS.md` | This session | Scope note: work stays in this repo |
-| `.cursor/rules/llm-fabric.mdc` | This session | Same scope note, as an editor rule |
-
-There is no prior engineering history to preserve, no legacy interface to keep
-compatible, and no migration to plan. This is a greenfield repository.
-
-### 1.3 What this means for sequencing
-
-Because the tree is empty, repository inspection cannot surface the design
-constraints that would normally shape Phase 1 — there is no existing module
-layout, dependency choice, or interface contract to conform to. The constitution
-is therefore the **only** source of those constraints, which is why Phase 1 has
-not been started.
+**Consequence.** Greenfield: nothing to preserve, no interface to keep
+compatible, no migration to plan — and no inherited constraints to shape Phase 1
+either, which is precisely what the constitution would have supplied.
 
 ---
 
-## 2. Architecture as currently understood
+## 2. The system
 
-Derived from the repository description "LLM Gateway, Serving and Inferencing
-Layers", which names three concerns. Presented for confirmation or correction.
+A **fabric** is a single control point that accepts inference traffic, decides
+where each request should run, executes it against external provider APIs or
+self-hosted model servers, and stays accountable for cost and reliability.
 
-The system is a **fabric**: a single control point that accepts inference
-traffic, decides where each request should run, and executes it against either
-external provider APIs or self-hosted model servers, while remaining accountable
-for cost, latency, and reliability.
-
-### 2.1 Gateway layer (ingress and contract)
-
-The stable public surface. Owns everything that must happen before a routing
-decision is possible:
-
-- Request admission: authentication, tenant and project identity, API-key
-  lifecycle.
-- Enforcement: rate limits, quotas, spend ceilings, per-tenant policy.
-- Contract: a versioned request/response schema, with streaming support.
-  An OpenAI-compatible surface is the usual choice, because it makes the fabric
-  adoptable without client rewrites.
-- Normalization: turning many client dialects into one internal request object.
-
-The value of this layer is that it is the *only* thing callers depend on.
-Providers, models, and serving topology behind it stay replaceable.
-
-### 2.2 Routing and policy layer (the decision)
-
-Given a normalized request, decide which model on which backend should serve it:
-
-- Model selection against a **model registry** — capability, context window,
-  modality, cost, and availability per model.
-- Policy-driven routing: cheapest capable model, lowest latency, pinned model,
-  or tenant-specific preference.
-- Resilience: fallback chains and provider failover, timeouts, retries with
-  budget, circuit breaking on a degraded backend.
-- Caching: exact-match first; semantic caching only if the constitution calls
-  for it, since it trades correctness risk for cost.
-
-This layer is where the fabric earns its name. It is also the layer most likely
-to be specified in detail by the constitution, so it is the one I am least
-willing to guess at.
-
-### 2.3 Serving and inference layer (execution)
-
-Executes the decision against a concrete backend:
-
-- **Provider adapters** for external APIs, behind one internal interface, so a
-  new provider is an adapter and not a change to routing.
-- **Self-hosted serving** for in-house models: engine integration, replica pool
-  selection, and cache-aware placement so requests sharing a prefix land on a
-  replica that already holds that KV cache.
-- Uniform translation of backend responses, errors, and token accounting back
-  into the internal contract.
-
-### 2.4 Observability and control plane (cross-cutting)
-
-Not a layer so much as a requirement on every layer:
-
-- Per-request metering: tokens in and out, cost, latency broken down by stage,
-  chosen route, and why it was chosen.
-- Tracing across gateway, routing decision, and backend call.
-- Operational surfaces: health, readiness, and configuration state.
-
-Routing decisions are only defensible if they are attributable after the fact,
-so decision provenance is treated as a first-class output rather than a log line.
-
-### 2.5 Request path
+Its central claim is that **callers depend on one surface, not on providers.** A
+client sends a request to the fabric and never encodes which vendor serves it.
+That is what makes providers substitutable, and it is why the routing decision is
+a first-class object with its own provenance rather than an implementation detail
+buried in a proxy.
 
 ```
 client
-  -> gateway        auth, tenancy, limits, normalize
-  -> router         model registry + policy -> route decision
-  -> adapter        provider API  |  self-hosted pool (cache-aware)
-  -> response       normalize, meter, trace
-  -> client
+  │
+  ├─ gateway      auth, limits, normalize            §3
+  ├─ router       registry + policy → decision       §4
+  ├─ serving      provider adapter | self-hosted     §5
+  └─ observability  meter, trace, explain            §6
 ```
 
 ---
 
-## 3. Conflicts between the specification and existing code
+## 3. Gateway layer — Built
 
-**No code-level conflicts exist.** The repository has no application code, so
-there is nothing that can contradict the specification.
+`src/llm_fabric/gateway/`, with the public schema isolated in
+`src/llm_fabric/contract/`.
 
-Two items still need reconciliation, both introduced during this session rather
-than inherited:
+The stable public surface. Everything that must happen before a routing decision
+is possible lives here.
 
-| Item | Nature | Resolution |
-| --- | --- | --- |
-| `README.md`, `AGENTS.md`, `.cursor/rules/llm-fabric.mdc` | Placeholders written before the constitution was requested. They assert scope, not architecture. | Rewrite or delete to match the constitution's documentation conventions. |
-| Commit authorship | Earlier commits in this session were recorded under the default agent identity. | Fixed going forward: git identity is now `Anubhav Bhatia`, and signing with the agent key is disabled. |
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/chat/completions` | Inference, buffered or streamed over SSE |
+| `GET /v1/models`, `GET /v1/models/{id}` | Discovery, including aliases |
+| `GET /v1/usage` | Usage totals and recent routing decisions |
+| `GET /healthz`, `GET /readyz` | Liveness and readiness |
+| `GET /docs` | Generated OpenAPI reference |
 
-The genuine risk is not conflict but **divergence**: if Phase 1 is implemented
-against the inferred architecture in section 2 and the constitution specifies a
-different language, module boundary, or routing model, the work is discarded.
-That is the reason for holding.
+Three decisions worth stating:
 
----
+**The dialect is OpenAI-compatible** so existing clients and SDKs can point at
+the fabric without code changes — see
+[`docs/adr/0002`](docs/adr/0002-openai-compatible-contract.md). Fields the fabric
+does not yet act on are accepted rather than rejected, so unmodified clients do
+not break; [`docs/CONTRACT.md`](docs/CONTRACT.md) records exactly which fields
+are honoured and which are currently inert.
 
-## 4. Proposed repository structure
+**Liveness and readiness are separate.** A fabric with an empty registry is alive
+but cannot serve anything. Conflating the two would keep traffic arriving at a
+gateway with nowhere to send it, so `/readyz` returns 503 when no model is
+enabled.
 
-Proposal only. The concrete layout depends on the language the constitution
-mandates, so this is expressed as a **module decomposition** — the boundaries
-matter more than the file names, and the boundaries should survive translation
-into whichever stack is specified.
+**Every error uses one envelope** — `{"error": {message, type, request_id}}` —
+including schema validation failures, which are reshaped from pydantic's format.
+A client has exactly one error shape to parse.
 
-```
-llm-fabric/
-├── ARCHITECTURE.md          # this document
-├── README.md                # what it is, how to run it
-├── docs/
-│   ├── constitution.md      # the specification, committed verbatim
-│   └── adr/                 # architecture decision records
-│
-├── gateway/                 # §2.1 ingress
-│   ├── http/                #   server, routes, streaming
-│   ├── auth/                #   keys, tenancy
-│   ├── limits/              #   rate limits, quotas, spend
-│   └── contract/            #   versioned public schema
-│
-├── router/                  # §2.2 the decision
-│   ├── registry/            #   model catalog + capabilities
-│   ├── policy/              #   selection strategies
-│   ├── resilience/          #   fallback, retry, circuit breaking
-│   └── cache/               #   response caching
-│
-├── serving/                 # §2.3 execution
-│   ├── adapters/            #   one module per external provider
-│   ├── selfhosted/          #   engine integration, pool selection
-│   └── normalize/           #   responses, errors, token accounting
-│
-├── observability/           # §2.4 metering, tracing, health
-├── config/                  # typed configuration and secret loading
-├── tests/
-│   ├── unit/
-│   ├── integration/         #   against recorded provider fixtures
-│   └── contract/            #   public surface stability
-└── deploy/                  # containers, manifests, CI
-```
+Authentication is API-key based, accepting `Authorization: Bearer` or `x-api-key`,
+compared in constant time. With no keys configured the gateway runs open, which
+is a local-development affordance and is logged as a warning at startup so an
+open deployment is never silent. Keys are never stored or logged — only a
+truncated SHA-256 fingerprint reaches a metering record.
 
-Three properties this layout is chosen to guarantee:
-
-1. **Adding a provider touches one directory.** `serving/adapters/` only.
-2. **Routing is testable without network access.** `router/` depends on the
-   registry and policy interfaces, not on live providers.
-3. **The public contract is versioned separately from its implementation**, so
-   the gateway can be refactored without breaking callers.
-
-### 4.1 Language and runtime — undecided
-
-Deliberately left open, because it is the single decision most likely to be
-mandated by the constitution and the most expensive one to reverse.
-
-For the record, the trade-off as I see it: Python maximizes ecosystem fit for
-provider SDKs and model tooling, while Go or Rust give a materially better
-proxy hot path under concurrency. A split — hot path in one, control plane in
-the other — is defensible but doubles the build and operational surface. **I
-have not benchmarked any of these and make no performance claims.**
+**Not built:** rate limiting, quotas, spend ceilings, and multi-tenant identity.
+The layer is the right home for them and they are absent.
 
 ---
 
-## 5. Blocked on the constitution
+## 4. Routing layer — Built
 
-Phase 1 is not started. To begin it without guessing, the following must come
-from the specification rather than from inference:
+`src/llm_fabric/router/`.
 
-1. **The constitution document itself**, committed to `docs/constitution.md` as
-   the durable source of truth.
-2. **Phase definitions** — what Phase 1 delivers, and its acceptance criteria.
-3. **Language, runtime, and framework.**
-4. **The public API contract** — OpenAI-compatible or bespoke; which endpoints.
-5. **Deployment target** — single service, or Kubernetes-native with a control
-   plane.
-6. **Scope of self-hosted serving** in Phase 1, versus external providers only.
-7. **State dependencies** — datastore and cache, if any, in Phase 1.
-8. **Non-functional requirements** — the latency, throughput, and availability
-   targets the design must actually meet.
+### The registry
 
-Send the constitution and Phase 1 begins against it directly.
+`config/models.yaml`, loaded into `ModelRegistry`. Declarative on purpose:
+adding a model, repricing one, or taking one out of rotation is a config change,
+not a deploy. References are validated at load time, so a typo in a fallback
+chain fails at startup rather than during a production failover.
+
+Two entry kinds:
+
+- a **model** maps a fabric-facing id onto one provider and that provider's own
+  model name, with cost, context window, capabilities, and a fallback chain;
+- an **alias** is a virtual id resolving to several models under a policy.
+  `auto` is an alias.
+
+Costs are USD per million tokens and are **operator-supplied inputs, not figures
+the fabric measures**. The `cheapest` policy ranks candidates using exactly these
+numbers, so a wrong price produces a wrong route. The shipped registry leaves
+external-provider prices at zero and disabled, to be filled in from the
+provider's current pricing page.
+
+### Policies
+
+`cheapest` orders by a blended price weighting output tokens more heavily than
+input, since generation is the priced-heavier side for most providers. It is a
+ranking heuristic, not a spend prediction. `declared` preserves registry order,
+letting the operator's stated preference win.
+
+**A latency-aware policy is deliberately absent.** Ordering by latency requires
+per-backend latency measurement, and the fabric does not yet collect it. Shipping
+the policy first would mean ranking on numbers that do not exist.
+
+A pinned model is never reordered — the caller asked for it explicitly — but its
+declared fallbacks trail it.
+
+### Failover
+
+Candidates are tried in policy order. Only a retryable failure advances to the
+next candidate; a caller error stops immediately, because retrying a malformed
+request just fails again more slowly. `max_attempts` bounds the whole chain.
+
+**Failover is forbidden once a stream has produced its first byte.** The client
+has already committed to a response it cannot un-see, and splicing a second
+model's output onto it would corrupt the response rather than save it. The engine
+enforces that boundary centrally instead of trusting each adapter —
+[`docs/adr/0003`](docs/adr/0003-no-failover-after-first-streamed-byte.md).
+
+**Not built:** circuit breaking, response caching, and semantic caching. Failure
+handling is per-request; a backend that is down is rediscovered on every request
+rather than tripped out of rotation.
 
 ---
 
-## 6. Engineering rules in force
+## 5. Serving layer — Built
 
-Recorded here because they are permanent, and they apply to every commit in
-this repository.
+`src/llm_fabric/serving/`.
+
+One `Provider` interface — `generate`, `stream`, `aclose` — over every backend.
+Adding a backend means adding one subclass in `serving/adapters/`; neither the
+gateway nor the router changes, because neither knows what a provider is beyond
+that interface.
+
+| Adapter | Notes |
+| --- | --- |
+| `mock` | No credentials. Performs **no inference**; returns text assembled from the request. Exists so the fabric runs and is testable out of the box, and can be told to fail on demand to exercise failover. |
+| `openai` | Chat-completions API, requesting `stream_options.include_usage` so streamed responses still carry real token counts. |
+| `anthropic` | Messages API. Absorbs the dialect differences — system prompt as a top-level field, `max_tokens` required — so they never leak upward. |
+
+Adapters share one job beyond transport: **classifying failures**. Timeouts,
+transport errors, and 429/5xx become retryable; a 4xx that is the caller's fault
+does not. That classification is what the router's failover consumes, so it is
+centralised in `adapters/_http.py` rather than repeated per provider.
+
+**Not built:** self-hosted serving. No engine integration, replica pool
+selection, or KV-cache-aware placement exists. This is the largest gap against
+the "Serving and Inferencing Layers" in the repository description, and the
+`Provider` interface is where it would attach.
+
+---
+
+## 6. Observability — Built
+
+`src/llm_fabric/observability/`.
+
+Every served request produces a `UsageRecord` naming the model requested, the
+model actually used, the policy that chose it, token counts, cost at registry
+prices, latency, and **every attempt made including the failures**. A route can
+therefore be explained after the fact instead of guessed at. The same provenance
+is returned to the caller in `x-fabric-*` headers, and in the final SSE chunk for
+streamed responses, so a client sending `auto` always learns what served it.
+
+Honesty is enforced structurally. When a backend reports no token counts, the
+fabric estimates them with an explicit heuristic in `serving/tokens.py`, and the
+record carries `cost_is_estimated: true`. `/v1/usage` reports how many requests
+that applies to. An estimated cost is never presented as a measured one.
+
+Logs are one JSON object per line, so a pipeline can query them without regex.
+
+**Not built:** the metering sink is in-memory and bounded — **not durable**.
+Records are lost on restart and visible only to the process that made them. There
+is no persistence, no aggregation across replicas, and no distributed tracing.
+`/v1/usage` states this in its own response rather than implying a durable ledger.
+
+---
+
+## 7. Reconciling with the constitution
+
+What each kind of disagreement costs, stated plainly so the decision is informed:
+
+| If the constitution mandates | Cost |
+| --- | --- |
+| A different language or runtime | Full rewrite. The layering and the contract survive as a design; the code does not. |
+| A different API dialect | Contained. `contract/` is isolated from the layers behind it for this reason. |
+| Different routing policies | Small. Policies are pure functions in one module with a registry. |
+| A different registry schema | Small. One loader, validated in one place. |
+| Self-hosted serving in Phase 1 | Additive. A new `Provider` implementation; no change above it. |
+| Persistent metering | Contained. `MeteringSink` is already a protocol; the in-memory class is one implementation. |
+
+Still needed from the specification: phase definitions and acceptance criteria,
+the deployment target, whether self-hosted serving belongs in an early phase,
+state dependencies, and the non-functional targets the design must actually meet.
+
+---
+
+## 8. Engineering rules in force
 
 - **Authorship.** All production code is authored under Anubhav Bhatia. No AI or
-  Cursor authorship, co-author trailers, or generated-by markers appear in
-  commits, code, or documentation.
-- **No fabrication.** Benchmarks, test results, metrics, and capability claims
-  are only stated when they have actually been produced by a run that can be
-  reproduced. Unmeasured means unstated. Unimplemented means described as
-  unimplemented — as in section 2 of this document.
-- **Scope.** Work stays within this repository. No other project is modified.
-- **Documentation tracks reality.** This file is updated when the architecture
-  changes, and it distinguishes what is built from what is planned.
+  Cursor authorship, co-author trailers, or generated-by markers.
+- **No fabrication.** No benchmark, metric, or capability claim appears unless it
+  was actually produced by a reproducible run. This repository contains **no
+  performance measurements of any kind** — no latency, throughput, or cost
+  benchmarks have been run, and none are claimed. The only quantitative claim
+  made anywhere is the test count, which is reproducible with `pytest`.
+- **Unbuilt means labelled unbuilt**, as in §3 through §6 above.
+- **Scope.** Work stays in this repository. No other project is modified.
