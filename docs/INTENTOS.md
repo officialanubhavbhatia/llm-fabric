@@ -10,9 +10,9 @@ is [`INTENTOS_SUCCESS_CRITERIA.md`](INTENTOS_SUCCESS_CRITERIA.md). Dataset
 hygiene is [`INTENT_DATASET_REPORT.md`](../INTENT_DATASET_REPORT.md).
 
 Nothing here claims competitor comparisons. Nothing here claims multilingual
-production quality. Serving-path IntentOS is **mandatory in production**.
-Development and test may disable the cascade; they still attach a
-`SAFE_FALLBACK` IntentResult so `provider_invocations_without_intent` stays 0.
+production quality. Serving-path IntentOS is **mandatory in every environment**.
+Every chat runs the cascade. A catastrophic cascade failure produces a typed
+`SAFE_FALLBACK` so `provider_invocations_without_intent` stays 0.
 See [ADR 0006](adr/0006-serving-path-intentos.md).
 
 ## Architecture
@@ -225,8 +225,8 @@ gates. There is **no** live self-training.
 Shadow classification samples traffic, records production vs candidate, and
 never returns the candidate to the user. Expensive layers are not double-called
 unless sampling is configured to allow it. Serving-path shadow
-(`LLM_FABRIC_INTENT_SHADOW=true` with classification still off) classifies
-and emits `x-fabric-intent-shadow-*` headers without changing the route.
+(`LLM_FABRIC_INTENT_SHADOW=true`) duplicates the mandatory classification in
+`x-fabric-intent-shadow-*` headers without changing the route.
 
 ## Failure behaviour
 

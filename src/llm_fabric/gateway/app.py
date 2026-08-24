@@ -420,14 +420,13 @@ def create_app(
         pin_requires_approved=promotion.pin_requires(settings.environment),
         commercial_use_required=promotion.commercial_use_required,
     )
-    # Built when serving-path classification is on, when shadow is on, or when
-    # production already required the flag at startup. An unused cascade is not
-    # built in development/test so focused tests can bypass classification.
+    # IntentOS is mandatory on every chat request in every environment. Route
+    # influence remains separately gated, but the cascade itself has no bypass.
     serving_metrics = IntentMetrics()
     app.state.intent_serving_metrics = serving_metrics
     if intent is not None:
         app.state.intent = intent
-    elif settings.intent_classification_enabled or settings.intent_shadow:
+    else:
         embedder = _resolve_serving_embedder(settings, logger)
         app.state.intent = build_offline_cascade(
             bootstrap_taxonomy(),
@@ -436,8 +435,6 @@ def create_app(
             l4_rerank=settings.intent_l4_rerank,
             metrics=serving_metrics,
         )
-    else:
-        app.state.intent = None
     if app.state.intent is not None:
         app.state.controls.classifiers.pin(app.state.intent)
 

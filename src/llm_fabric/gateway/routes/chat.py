@@ -84,6 +84,7 @@ def _provenance(
     decision: RouteDecision,
     intent: IntentClassification | None = None,
     *,
+    intent_routing_enabled: bool = False,
     shadow: IntentClassification | None = None,
     context: ContextRecord | None = None,
 ) -> dict[str, str]:
@@ -130,6 +131,7 @@ def _provenance(
             headers["x-fabric-actual-served-model"] = last.actual_served_model
     if intent is not None:
         headers["x-fabric-intent"] = intent.intent_id
+        headers["x-fabric-intent-routing"] = "on" if intent_routing_enabled else "off"
         headers["x-fabric-intent-state"] = intent.serving_state.value
         headers["x-fabric-intent-result-id"] = intent.intent_result_id
         headers["x-fabric-intent-confidence"] = f"{intent.confidence:.4f}"
@@ -460,7 +462,7 @@ async def create_chat_completion(
                 f"a remediation ceiling of {ceiling} tokens is in effect"
             )
     classified = await _classify(cascade, scope, body)
-    if settings.intent_classification_enabled:
+    if settings.intent_routing_enabled:
         route_intent = classified
         shadow = None
     else:
@@ -495,11 +497,14 @@ async def create_chat_completion(
         }
         stream_headers.update(_topology_headers(candidates[0]))
         if route_intent is not None:
-            stream_headers["x-fabric-intent"] = route_intent.intent_id
-            stream_headers["x-fabric-intent-state"] = route_intent.serving_state.value
-            stream_headers["x-fabric-intent-result-id"] = route_intent.intent_result_id
-            stream_headers["x-fabric-taxonomy-version"] = route_intent.taxonomy_version
-            stream_headers["x-fabric-classifier-version"] = route_intent.classifier_version
+            stream_headers["x-fabric-intent"] = classified.intent_id
+            stream_headers["x-fabric-intent-state"] = classified.serving_state.value
+            stream_headers["x-fabric-intent-result-id"] = classified.intent_result_id
+            stream_headers["x-fabric-taxonomy-version"] = classified.taxonomy_version
+            stream_headers["x-fabric-classifier-version"] = classified.classifier_version
+            stream_headers["x-fabric-intent-routing"] = (
+                "on" if settings.intent_routing_enabled else "off"
+            )
         if shadow is not None:
             stream_headers["x-fabric-intent-shadow"] = shadow.intent_id
         stream_headers["x-fabric-context-record-id"] = compiled.record.context_record_id
@@ -512,7 +517,7 @@ async def create_chat_completion(
                 scope=scope,
                 quota=quota,
                 route=route,
-                intent=route_intent,
+                intent=classified,
                 context=compiled.record,
                 telemetry=telemetry,
             ),
@@ -538,7 +543,7 @@ async def create_chat_completion(
                 latency_ms=(time.perf_counter() - started) * 1000,
                 streamed=False,
                 error=exc.message,
-                intent=route_intent,
+                intent=classified,
                 context=compiled.record,
                 telemetry=telemetry,
             )
@@ -562,7 +567,7 @@ async def create_chat_completion(
         usage_reported=routed.result.usage_reported_by_provider,
         latency_ms=latency_ms,
         streamed=False,
-        intent=route_intent,
+        intent=classified,
         context=context_record,
         telemetry=telemetry,
     )
@@ -580,7 +585,11 @@ async def create_chat_completion(
     response.headers["x-fabric-request-id"] = request_id
     response.headers["x-fabric-invocations"] = str(record.invocation_count)
     for key, value in _provenance(
-        routed.decision, route_intent, shadow=shadow, context=context_record
+        routed.decision,
+        classified,
+        intent_routing_enabled=settings.intent_routing_enabled,
+        shadow=shadow,
+        context=context_record,
     ).items():
         response.headers[key] = value
 

@@ -102,7 +102,7 @@ async def get_dashboard(
             "errors": 0,
             "missing": 0,
         }
-    intent_snapshot["routing_enabled"] = settings.intent_classification_enabled
+    intent_snapshot["routing_enabled"] = settings.intent_routing_enabled
     intent_snapshot["cascade_present"] = cascade is not None
     assembler = DashboardAssembler(
         meter=meter,

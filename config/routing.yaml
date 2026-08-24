@@ -1,9 +1,9 @@
 # Intent → capability → preferred-tier policy.
 #
-# This file does not itself enable IntentOS. Production requires
-# LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true at process start. Preview and
-# `llm-fabric route explain --intent ...` can look up these policies without
-# classifying live traffic.
+# IntentOS classification is mandatory independently of this file. These
+# policies influence live routing only when
+# LLM_FABRIC_INTENT_ROUTING_ENABLED=true. Preview and `llm-fabric route explain
+# --intent ...` can inspect them without changing live routes.
 #
 # `default_tier` is documentation for operators. It is not a global minimum:
 # applying it as a floor would exclude the default mock-small (Grade02 / L2)

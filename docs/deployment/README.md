@@ -61,10 +61,9 @@ production capacity result.
 
 ## IntentOS and promotion
 
-Helm development values leave serving-path IntentOS off (`SAFE_FALLBACK` still
-covers chat). Production examples set `intentClassificationEnabled: "true"`.
-The process refuses to start in production if that flag is false. vLLM example
-values leave models at `lifecycle: registered`. A Kubernetes Service does not
-approve a model.
+Helm values run IntentOS classification on every chat. Route influence remains
+off by default (`intentRoutingEnabled: "false"`) until the safety gate clears.
+vLLM example values leave models at `lifecycle: registered`. A Kubernetes
+Service does not approve a model.
 
 See also [`DEPENDENCIES.md`](../DEPENDENCIES.md) and [`TOPOLOGY.md`](../TOPOLOGY.md).

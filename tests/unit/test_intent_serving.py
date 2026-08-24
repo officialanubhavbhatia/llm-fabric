@@ -64,11 +64,12 @@ def _chat(client: TestClient, text: str = "translate this sentence into French")
     )
 
 
-def test_default_test_chat_still_carries_a_safe_fallback_intent(client: TestClient) -> None:
+def test_default_test_chat_runs_mandatory_intentos(client: TestClient) -> None:
     response = _chat(client)
     assert response.status_code == 200
-    assert response.headers["x-fabric-intent"] == "unknown"
-    assert response.headers["x-fabric-intent-state"] == "safe_fallback"
+    assert response.headers["x-fabric-intent"] == "translation"
+    assert response.headers["x-fabric-intent-state"] == "known"
+    assert response.headers["x-fabric-intent-routing"] == "off"
     assert response.headers["x-fabric-intent-result-id"]
     assert response.headers["x-fabric-taxonomy-version"]
     assert response.headers["x-fabric-classifier-version"]
@@ -112,7 +113,7 @@ def test_enabled_classification_routes_on_the_intent_result(registry) -> None:
         settings=Settings(
             environment="test",
             api_keys=[],
-            intent_classification_enabled=True,
+            intent_routing_enabled=True,
         ),
         registry=registry,
         provider_overrides={"mock": MockProvider()},
@@ -123,6 +124,7 @@ def test_enabled_classification_routes_on_the_intent_result(registry) -> None:
     assert response.status_code == 200
     assert response.headers["x-fabric-intent"] == "translation"
     assert response.headers["x-fabric-intent-state"] == "known"
+    assert response.headers["x-fabric-intent-routing"] == "on"
     assert response.headers["x-fabric-intent-result-id"]
     events = meter.recent_events(limit=50)
     assert provider_invocations_without_intent(events) == 0

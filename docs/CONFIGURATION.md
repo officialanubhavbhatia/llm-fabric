@@ -135,14 +135,16 @@ Circuit breakers (per deployment, EWMA + consecutive failures):
 
 ## IntentOS
 
-Serving-path classification is **mandatory in production**. Development and
-test may disable the cascade; they still attach `SAFE_FALLBACK`. See
+Serving-path classification is **mandatory in every environment**. There is no
+development or test bypass. A catastrophic cascade failure degrades to a typed
+`SAFE_FALLBACK`, as required by the selected availability policy. See
 [`docs/INTENTOS.md`](INTENTOS.md) and [ADR 0006](adr/0006-serving-path-intentos.md).
 
 | Variable | Type | Default | Production recommendation | Purpose |
 | --- | --- | --- | --- | --- |
-| `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` | bool | `false` | **`true` (required)** | Classify every chat request. Production refuses to start when false. |
-| `LLM_FABRIC_INTENT_SHADOW` | bool | `false` | optional observation | Classify without changing the route when classification is off. Headers `x-fabric-intent-shadow-*`. |
+| `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` | bool | `true` | leave `true` | Deprecated compatibility setting. Classification is mandatory regardless. |
+| `LLM_FABRIC_INTENT_ROUTING_ENABLED` | bool | `false` | `false` until gates clear | Apply the classification to route planning. Classification still runs when false. |
+| `LLM_FABRIC_INTENT_SHADOW` | bool | `false` | optional observation | Duplicate classification in `x-fabric-intent-shadow-*` headers. |
 | `LLM_FABRIC_INTENT_EMBEDDER` | `hashing` \| `minilm` \| `local` / `bge-small` | `hashing` | `local` or `minilm`, or hashing with the allow flag | L3 embedder. MiniLM needs `uv sync --extra embed`. |
 | `LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER` | bool | `false` | required if embedder is hashing | Explicit acceptance that L3 is lexical hashing, not a semantic model. |
 | `LLM_FABRIC_INTENT_L4_RERANK` | bool | `false` | `false` | Local description reranker as L4. L5 stays off in code. |

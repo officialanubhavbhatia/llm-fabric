@@ -232,12 +232,13 @@ class Settings(BaseSettings):
 
     # -- intent --------------------------------------------------------------
 
-    #: Classify every chat request and route on the result.
-    #:
-    #: Production refuses to start when this is false. Development and test may
-    #: disable the cascade for focused testing; they still attach a SAFE_FALLBACK
-    #: IntentResult so provider invocations are never intent-less.
-    intent_classification_enabled: bool = False
+    #: Deprecated compatibility flag. IntentOS classification is mandatory on
+    #: every chat request regardless of this value. Keep accepting the setting
+    #: so existing manifests do not fail during migration.
+    intent_classification_enabled: bool = True
+    #: Apply the classification to route planning. Classification still runs
+    #: when this is false; only route influence is gated.
+    intent_routing_enabled: bool = False
     #: Classify on the serving path but do not change the route. Recorded on
     #: `x-fabric-intent-shadow-*` headers. Ignored when classification is on.
     intent_shadow: bool = False
@@ -683,11 +684,6 @@ def _validate_production_auth(settings: Settings, mode: AuthMode) -> None:
         )
     if not settings.redis_url:
         raise ConfigurationError("production refused to start: LLM_FABRIC_REDIS_URL is required")
-    if not settings.intent_classification_enabled:
-        raise ConfigurationError(
-            "production refused to start: serving-path IntentOS is mandatory; "
-            "set LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true"
-        )
     embedder = (settings.intent_embedder or "hashing").strip().lower()
     if embedder in {"hashing", "hash", "lexical"} and not settings.intent_allow_hashing_embedder:
         raise ConfigurationError(

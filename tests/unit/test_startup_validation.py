@@ -217,17 +217,17 @@ def test_production_refuses_missing_database_url() -> None:
         )
 
 
-def test_production_refuses_disabled_intentos() -> None:
-    with pytest.raises(ConfigurationError, match="IntentOS is mandatory"):
-        validate_startup(
-            _production(
-                oidc_issuer="https://issuer.example",
-                oidc_audience="myvista",
-                database_url="postgresql://fabric:fabric@127.0.0.1:5432/fabric",
-                redis_url="redis://127.0.0.1:6379/0",
-                intent_classification_enabled=False,
-            )
+def test_legacy_intentos_flag_cannot_disable_mandatory_classification() -> None:
+    validate_startup(
+        _production(
+            oidc_issuer="https://issuer.example",
+            oidc_audience="myvista",
+            database_url="postgresql://fabric:fabric@127.0.0.1:5432/fabric",
+            redis_url="redis://127.0.0.1:6379/0",
+            intent_classification_enabled=False,
+            intent_allow_hashing_embedder=True,
         )
+    )
 
 
 def test_production_refuses_implicit_hashing_embedder() -> None:

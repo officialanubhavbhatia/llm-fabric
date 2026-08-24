@@ -764,7 +764,7 @@ class DashboardAssembler:
                 "safety_gates": {
                     "hard_negative_accuracy": 0.50,
                     "required": 0.58,
-                    "routing": "OFF",
+                    "routing": "ON" if routing_on else "OFF",
                     "source": "frozen_eval_v1.1",
                     "serving_path_classification": cascade_present and routing_on,
                 },

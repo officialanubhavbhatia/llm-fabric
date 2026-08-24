@@ -172,7 +172,8 @@ def test_replica_count_two_and_optional_controls_render() -> None:
     assert "kind: PodDisruptionBudget" not in off.stdout
     assert "kind: HorizontalPodAutoscaler" not in off.stdout
     assert "replicas: 1" in off.stdout
-    assert 'LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "false"' in off.stdout
+    assert 'LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "true"' in off.stdout
+    assert 'LLM_FABRIC_INTENT_ROUTING_ENABLED: "false"' in off.stdout
 
 
 def test_production_helm_examples_enable_serving_path_intentos() -> None:

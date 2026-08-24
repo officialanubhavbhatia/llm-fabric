@@ -63,7 +63,7 @@ def test_chat_with_intent_enabled_exposes_provenance_headers(registry) -> None:
     assert "authorization" not in chat.json()
 
 
-def test_chat_shadow_classifies_without_changing_the_route(registry) -> None:
+def test_chat_shadow_duplicates_mandatory_classification_without_routing(registry) -> None:
     app = create_app(
         settings=Settings(
             environment="test",
@@ -85,8 +85,9 @@ def test_chat_shadow_classifies_without_changing_the_route(registry) -> None:
     assert chat.status_code == 200
     assert "x-fabric-intent-shadow" in chat.headers
     assert chat.headers["x-fabric-intent-shadow"] == "translation"
-    assert chat.headers["x-fabric-intent"] == "unknown"
-    assert chat.headers["x-fabric-intent-state"] == "safe_fallback"
+    assert chat.headers["x-fabric-intent"] == "translation"
+    assert chat.headers["x-fabric-intent-state"] == "known"
+    assert chat.headers["x-fabric-intent-routing"] == "off"
     assert chat.headers["x-fabric-intent-result-id"]
     assert "authorization" not in chat.json()
 

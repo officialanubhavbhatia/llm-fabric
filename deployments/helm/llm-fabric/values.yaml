@@ -113,7 +113,10 @@ config:
   port: 47317
   allowAnonymous: "true"
   authMode: disabled
-  intentClassificationEnabled: "false"
+  # Classification is mandatory. This legacy key remains for compatibility.
+  intentClassificationEnabled: "true"
+  # Route influence stays off until the IntentOS safety gate clears.
+  intentRoutingEnabled: "false"
   intentEmbedder: hashing
   intentAllowHashingEmbedder: "false"
   extraEnv: []

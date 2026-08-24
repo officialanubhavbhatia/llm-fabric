@@ -786,7 +786,7 @@ These exist and work, but are materially narrower than what is mandated.
 | **Intent learning loop** | Redact, dedup, tenant-scoped draft store, sampled shadow. No auto-promotion. | Sanitisation → dedup → dataset → candidate → offline eval → shadow → canary → statistical gate → promotion, with a rollback artifact |
 | **Intent confidence** | Heuristic scores, monotone and bounded. Temperature scaling is identity until a larger val set is fitted offline. Measured ECE on the v1 frozen set is 0.177. | *Calibrated* thresholds against datasets that are not self-authored |
 | **Intent evals** | Every mandated metric computed by `llm-fabric-bench` | The same metrics against datasets that are not self-authored, plus maintained hard-negative sets |
-| **Route consumption** | Serving-path IntentOS is mandatory in production. Development/test may disable the cascade and still attach SAFE_FALLBACK. Context compiler always runs before the planner. | Intent routed on by default; context compiled on the serving path |
+| **Route consumption** | Serving-path IntentOS is mandatory in every environment; there is no chat bypass. Catastrophic failure returns SAFE_FALLBACK. Route influence is separately gated and defaults off until safety gates clear. Context compiler always runs before the planner. | Intent routed on by default after measured gates clear; context compiled on the serving path |
 | **Drift / self-healing** | In-process usage windows, held breakers, traffic overlay, remembered rollbacks, incidents and unevaluated learning jobs | Fleet-wide baselines, embedding drift, compiler context-length drift, safety-block drift, the rest of the learning-loop pipeline |
 
 ### 9.3 Not built at all

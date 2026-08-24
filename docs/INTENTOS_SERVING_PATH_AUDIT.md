@@ -4,6 +4,11 @@
 phase. Implementation closed the gaps below. This file remains the audit of
 what the tree looked like *before* those changes.
 
+**Current implementation:** IntentOS classification now runs on every chat in
+every environment. `LLM_FABRIC_INTENT_ROUTING_ENABLED` separately controls
+whether the planner consumes the classification. Catastrophic cascade failure
+uses `SAFE_FALLBACK`; no provider invocation proceeds without an IntentResult.
+
 **Constitution:** [`docs/constitution.md`](constitution.md) § IntentOS and
 § Non-negotiable architecture (Intent engine before Route planner).
 
