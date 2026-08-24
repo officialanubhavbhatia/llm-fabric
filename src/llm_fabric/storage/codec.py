@@ -23,6 +23,8 @@ def encode(value: Any) -> Any:
         return value.value
     if isinstance(value, tuple):
         return [encode(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return [encode(item) for item in sorted(value, key=str)]
     if isinstance(value, list):
         return [encode(item) for item in value]
     if isinstance(value, dict):
@@ -51,13 +53,19 @@ def _decode(hint: Any, payload: Any) -> Any:
                 continue
         raise TypeError(f"cannot decode {payload!r} as {hint}")
 
-    if origin in (tuple, list):
+    if origin in (tuple, list, set, frozenset):
         args = get_args(hint)
         item_hint = args[0] if args else Any
         if not isinstance(payload, list):
             raise TypeError(f"expected a list for {hint}")
         items = [_decode(item_hint, item) for item in payload]
-        return tuple(items) if origin is tuple else items
+        if origin is tuple:
+            return tuple(items)
+        if origin is frozenset:
+            return frozenset(items)
+        if origin is set:
+            return set(items)
+        return items
 
     if origin is dict:
         args = get_args(hint)

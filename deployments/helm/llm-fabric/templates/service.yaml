@@ -4,7 +4,10 @@ metadata:
   name: {{ include "llm-fabric.fullname" . }}
   labels:
     {{- include "llm-fabric.labels" . | nindent 4 }}
-  {{- with .Values.service.annotations }}
+  {{- $prom := .Values.observability.prometheus.serviceAnnotations | default dict }}
+  {{- $svc := .Values.service.annotations | default dict }}
+  {{- $ann := merge $prom $svc }}
+  {{- with $ann }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}

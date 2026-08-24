@@ -15,13 +15,30 @@ import httpx
 
 from llm_fabric.errors import (
     AuthenticationError,
+    ContextTooLargeError,
     InvalidRequestError,
+    LiteLLMUnavailableError,
+    ModelUnavailableError,
+    OllamaUnavailableError,
     ProviderTimeoutError,
     ProviderUnavailableError,
+    RateLimitedError,
     RetryableError,
+    VllmUnavailableError,
 )
 
 _RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
+_CONTEXT_MARKERS = ("context length", "context window", "maximum context", "too many tokens")
+
+
+def unavailable_error(provider: str, detail: str) -> ProviderUnavailableError:
+    if provider == "litellm" or provider.startswith("litellm-"):
+        return LiteLLMUnavailableError(detail)
+    if provider == "ollama" or provider.startswith("ollama-"):
+        return OllamaUnavailableError(detail)
+    if provider == "vllm" or provider.startswith("vllm-"):
+        return VllmUnavailableError(detail)
+    return ProviderUnavailableError(detail)
 
 
 def build_client(base_url: str, headers: dict[str, str], timeout_s: float) -> httpx.AsyncClient:
@@ -61,11 +78,18 @@ def raise_for_status(provider: str, response: httpx.Response, body: object = Non
 
     message = _extract_message(body, response.text[:500] or response.reason_phrase)
     detail = f"{provider}: {message}"
+    lowered = message.lower()
 
     if response.status_code in {401, 403}:
         raise AuthenticationError(detail)
+    if any(marker in lowered for marker in _CONTEXT_MARKERS):
+        raise ContextTooLargeError(detail)
+    if response.status_code == 429:
+        raise RateLimitedError(detail)
+    if response.status_code == 404 or "model" in lowered and "not found" in lowered:
+        raise ModelUnavailableError(detail)
     if response.status_code in _RETRYABLE_STATUS:
-        raise ProviderUnavailableError(detail)
+        raise unavailable_error(provider, detail)
     if 400 <= response.status_code < 500:
         raise InvalidRequestError(detail)
     raise RetryableError(detail)
@@ -74,7 +98,7 @@ def raise_for_status(provider: str, response: httpx.Response, body: object = Non
 def translate_transport_error(provider: str, exc: httpx.HTTPError) -> RetryableError:
     if isinstance(exc, httpx.TimeoutException):
         return ProviderTimeoutError(f"{provider}: request timed out")
-    return ProviderUnavailableError(f"{provider}: {exc.__class__.__name__}: {exc}")
+    return unavailable_error(provider, f"{provider}: {exc.__class__.__name__}: {exc}")
 
 
 async def iter_sse_data(response: httpx.Response) -> AsyncIterator[str]:

@@ -17,14 +17,17 @@ Abstention is the honest floor. When no layer clears its bar the engine returns
 `unknown` rather than the best of several bad guesses, and the router is
 expected to treat that as "route conservatively", not as an error.
 
-The engine never lets a classifier failure become a request failure. Classifying
-a prompt is an optimisation; the caller asked for a completion.
+Every classify() call produces an IntentResult. Layer or dependency failure
+continues the cascade or degrades to UNKNOWN / ABSTAIN / SAFE_FALLBACK. It never
+skips IntentOS so a provider can run unclassified. A classifier outage also
+never fails the user request by itself.
 """
 
 from __future__ import annotations
 
 import hashlib
 import time
+import uuid
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -50,6 +53,7 @@ from llm_fabric.intent.schema import (
     ClassifierLayer,
     IntentAlternative,
     IntentClassification,
+    ServingClassificationState,
     minimum_capability_grade,
 )
 from llm_fabric.intent.taxonomy import IntentTaxonomy
@@ -94,6 +98,7 @@ class CascadeThresholds:
             ClassifierLayer.L4_STRUCTURED_LLM: self.structured,
             ClassifierLayer.L5_ESCALATION: self.escalation,
             ClassifierLayer.ABSTAIN: 0.0,
+            ClassifierLayer.SAFE_FALLBACK: 0.0,
         }[layer]
 
 
@@ -270,6 +275,19 @@ class IntentCascade:
         )
 
     async def classify(self, scope: TenantScope, request: ClassificationRequest) -> IntentDecision:
+        try:
+            return await self._classify_unchecked(scope, request)
+        except Exception:  # noqa: BLE001 - never skip IntentOS; degrade to SAFE_FALLBACK
+            self._metrics.record_error()
+            fallback = IntentClassification.safe_fallback(
+                classifier_version=self.version,
+                taxonomy_version=self._taxonomy.version,
+            )
+            return self._finish(scope, request, fallback, [], self._clock())
+
+    async def _classify_unchecked(
+        self, scope: TenantScope, request: ClassificationRequest
+    ) -> IntentDecision:
         started = self._clock()
         discriminators = self.discriminators(request)
         attempts: list[LayerAttempt] = []
@@ -298,6 +316,7 @@ class IntentCascade:
                 cache_hit=True,
                 cache_source="l0_exact",
                 cost_usd=0.0,
+                intent_result_id=uuid.uuid4().hex,
             )
             return await self._complete(scope, request, served, attempts, started)
         attempts.append(
@@ -355,6 +374,7 @@ class IntentCascade:
                     cache_hit=True,
                     cache_source="l1_semantic",
                     cost_usd=0.0,
+                    intent_result_id=uuid.uuid4().hex,
                 )
                 return await self._complete(scope, request, served, attempts, started)
 
@@ -597,16 +617,21 @@ class IntentCascade:
         """
         if classification.abstain:
             return
+        if classification.serving_state is not ServingClassificationState.KNOWN:
+            return
 
-        self._exact.put(
-            scope,
-            request.text,
-            discriminators,
-            classification,
-            ttl_seconds=self._exact_ttl,
-        )
-        if self._semantic is not None and vector:
-            self._semantic.admit(scope, request.text, vector, discriminators, classification)
+        try:
+            self._exact.put(
+                scope,
+                request.text,
+                discriminators,
+                classification,
+                ttl_seconds=self._exact_ttl,
+            )
+            if self._semantic is not None and vector:
+                self._semantic.admit(scope, request.text, vector, discriminators, classification)
+        except Exception:  # noqa: BLE001 - cache write failure is not a classification skip
+            return
 
     def _finish(
         self,
@@ -635,6 +660,7 @@ class IntentCascade:
             latency_ms=total_latency,
             cost_usd=total_cost,
             cache_hit=classification.cache_hit,
+            serving_state=classification.serving_state,
         )
 
         self._collect_candidate(scope, request, decision)
@@ -657,6 +683,7 @@ class IntentCascade:
             disagreed=_layers_disagreed(decision.attempts),
             cache_source=classification.cache_source,
         )
+        telemetry.metrics.observe_intent_serving(classification.serving_state.value)
 
     def _collect_candidate(
         self, scope: TenantScope, request: ClassificationRequest, decision: IntentDecision

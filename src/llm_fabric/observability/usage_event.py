@@ -16,6 +16,7 @@ is counted separately.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Any
@@ -25,7 +26,9 @@ class TokenSource(StrEnum):
     """Where token counts came from. Estimates must never look measured."""
 
     PROVIDER_MEASURED = "PROVIDER_MEASURED"
+    TOKENIZER_MEASURED = "TOKENIZER_MEASURED"
     LOCAL_TOKENIZER_ESTIMATE = "LOCAL_TOKENIZER_ESTIMATE"
+    ESTIMATED = "ESTIMATED"
     DERIVED = "DERIVED"
     UNAVAILABLE = "UNAVAILABLE"
 
@@ -82,7 +85,12 @@ class UsageEvent:
     user_id: str | None = None
     project_id: str | None = None
     deployment_id: str | None = None
+    route_id: str | None = None
     intent_id: str | None = None
+    intent_result_id: str | None = None
+    taxonomy_version: str | None = None
+    classifier_version: str | None = None
+    context_record_id: str | None = None
     cached_tokens: int | None = None
     reasoning_tokens: int | None = None
     provider_cost_usd: float | None = None
@@ -91,8 +99,16 @@ class UsageEvent:
     attempt_number: int = 1
     streaming: bool = False
     error: str | None = None
+    provider_adapter: str | None = None
+    transport: str | None = None
+    runtime: str | None = None
+    grade: str | None = None
+    litellm_model: str | None = None
+    actual_served_model: str | None = None
 
     def __post_init__(self) -> None:
+        if not self.route_id:
+            object.__setattr__(self, "route_id", self.request_id)
         if self.total_tokens == 0 and (self.prompt_tokens or self.completion_tokens):
             object.__setattr__(
                 self,
@@ -102,6 +118,27 @@ class UsageEvent:
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+def provider_invocations_without_intent(events: Sequence[UsageEvent]) -> int:
+    """USER_RESPONSE invocations that never carried an IntentResult id.
+
+    Classifier-internal calls are excluded. PASS requires 0.
+    """
+    return sum(
+        1
+        for event in events
+        if event.operation == UsageOperation.USER_RESPONSE.value and not event.intent_result_id
+    )
+
+
+def provider_invocations_without_context_record(events: Sequence[UsageEvent]) -> int:
+    """USER_RESPONSE invocations that never carried a ContextRecord id. PASS is 0."""
+    return sum(
+        1
+        for event in events
+        if event.operation == UsageOperation.USER_RESPONSE.value and not event.context_record_id
+    )
 
 
 @dataclass(frozen=True, slots=True)

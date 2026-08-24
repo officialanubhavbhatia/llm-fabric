@@ -45,8 +45,10 @@ from llm_fabric.intent.bootstrap import bootstrap_taxonomy
 from llm_fabric.intent.cascade import IntentCascade
 from llm_fabric.intent.embeddings import HashingEmbedder, resolve_embedder
 from llm_fabric.intent.factory import build_offline_cascade
+from llm_fabric.intent.metrics import IntentMetrics
 from llm_fabric.models.promotion import PromotionConfig, load_configured_registry
 from llm_fabric.observability.asgi import RequestTelemetryMiddleware
+from llm_fabric.observability.engine import build_engine_hub
 from llm_fabric.observability.langfuse import build_langfuse
 from llm_fabric.observability.logging import configure_logging, request_logger
 from llm_fabric.observability.metering import UsageMeter, build_meter
@@ -186,6 +188,22 @@ def _otel_headers(raw: str | None) -> dict[str, str] | None:
     return parsed or None
 
 
+def _resolve_serving_embedder(settings: Settings, logger):
+    try:
+        return resolve_embedder(settings.intent_embedder)
+    except (ValueError, RuntimeError) as exc:
+        if settings.environment == "production":
+            raise ConfigurationError(
+                "production refused to start: serving-path embedder "
+                f"{settings.intent_embedder!r} is unavailable: {exc}"
+            ) from exc
+        logger.warning(
+            "intent embedder unavailable; using HashingEmbedder",
+            extra={"embedder": settings.intent_embedder, "error": str(exc)},
+        )
+        return HashingEmbedder()
+
+
 def create_app(
     *,
     settings: Settings | None = None,
@@ -226,6 +244,7 @@ def create_app(
             public_key=settings.langfuse_public_key,
             secret_key=settings.langfuse_secret_key,
         ),
+        engines=build_engine_hub(registry),
     )
     engine = None
     if stores is None:
@@ -401,24 +420,21 @@ def create_app(
         pin_requires_approved=promotion.pin_requires(settings.environment),
         commercial_use_required=promotion.commercial_use_required,
     )
-    # Built only when enabled: an unused cascade would still hold a taxonomy and
-    # an embedder, and would appear in health output as if it were serving.
+    # Built when serving-path classification is on, when shadow is on, or when
+    # production already required the flag at startup. An unused cascade is not
+    # built in development/test so focused tests can bypass classification.
+    serving_metrics = IntentMetrics()
+    app.state.intent_serving_metrics = serving_metrics
     if intent is not None:
         app.state.intent = intent
     elif settings.intent_classification_enabled or settings.intent_shadow:
-        try:
-            embedder = resolve_embedder(settings.intent_embedder)
-        except (ValueError, RuntimeError) as exc:
-            logger.warning(
-                "intent embedder unavailable; using HashingEmbedder",
-                extra={"embedder": settings.intent_embedder, "error": str(exc)},
-            )
-            embedder = HashingEmbedder()
+        embedder = _resolve_serving_embedder(settings, logger)
         app.state.intent = build_offline_cascade(
             bootstrap_taxonomy(),
             cache,
             embedder=embedder,
             l4_rerank=settings.intent_l4_rerank,
+            metrics=serving_metrics,
         )
     else:
         app.state.intent = None

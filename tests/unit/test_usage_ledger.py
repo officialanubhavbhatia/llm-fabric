@@ -128,6 +128,42 @@ def test_sqlite_ledger_isolates_tenants(tmp_path) -> None:
     assert ledger.totals(tenant_id="other").prompt_tokens == 99
 
 
+def test_sqlite_provider_invocations_without_intent_is_zero_when_ids_present(
+    tmp_path,
+) -> None:
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'usage.db'}")
+    init_schema(engine)
+    ledger = UsageLedger(engine)
+    ledger.insert(_event(intent_result_id="abc123", taxonomy_version="t", classifier_version="c"))
+    assert ledger.provider_invocations_without_intent() == 0
+    ledger.insert(
+        _event(
+            event_id="inv-2",
+            invocation_id="inv-2",
+            intent_result_id=None,
+        )
+    )
+    assert ledger.provider_invocations_without_intent() == 1
+
+
+def test_sqlite_provider_invocations_without_context_record_is_zero_when_ids_present(
+    tmp_path,
+) -> None:
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'usage.db'}")
+    init_schema(engine)
+    ledger = UsageLedger(engine)
+    ledger.insert(_event(context_record_id="ctx-1"))
+    assert ledger.provider_invocations_without_context_record() == 0
+    ledger.insert(
+        _event(
+            event_id="inv-2",
+            invocation_id="inv-2",
+            context_record_id=None,
+        )
+    )
+    assert ledger.provider_invocations_without_context_record() == 1
+
+
 def test_durable_meter_does_not_double_count_redis(tmp_path) -> None:
     if fakeredis is None:
         pytest.skip("fakeredis is required")

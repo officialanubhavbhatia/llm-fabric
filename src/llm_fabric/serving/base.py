@@ -47,6 +47,11 @@ class ProviderResult:
     # False when token counts came from a heuristic rather than the backend, so
     # downstream cost figures can be labelled as estimates.
     usage_reported_by_provider: bool = True
+    served_model: str | None = None
+    transport_latency_ms: float | None = None
+    retry_count: int = 0
+    rate_limit_events: int = 0
+    transport_errors: int = 0
 
     @property
     def total_tokens(self) -> int:
@@ -68,6 +73,11 @@ class StreamEnd:
     prompt_tokens: int
     completion_tokens: int
     usage_reported_by_provider: bool = True
+    served_model: str | None = None
+    transport_latency_ms: float | None = None
+    retry_count: int = 0
+    rate_limit_events: int = 0
+    transport_errors: int = 0
 
 
 StreamEvent = StreamDelta | StreamEnd

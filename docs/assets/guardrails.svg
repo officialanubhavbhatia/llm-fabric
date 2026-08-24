@@ -24,7 +24,8 @@
   <line x1="398" y1="130" x2="434" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
   <rect x="436" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
   <text x="448" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">CONTEXT</text>
-  <text x="448" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">compiler not on path</text>
+  <text x="448" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">compiler is separate</text>
+  <text x="448" y="145" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">stage still unbound</text>
   <rect x="510" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="547" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">pluggable</text>
   <line x1="596" y1="130" x2="632" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
   <rect x="634" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
@@ -36,7 +37,7 @@
   <text x="844" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">OUTPUT</text>
   <text x="844" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">deterministic engines</text>
   <text x="844" y="145" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">on chat completions</text>
-  <rect x="906" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="943" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">wired</text>
+  <rect x="906" y="98" width="74" height="16" rx="8" fill="none" stroke="#7fd99a"/><text x="943" y="110" text-anchor="middle" fill="#7fd99a" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">wired</text>
   <rect x="40" y="210" width="952" height="90" rx="8" fill="#1a222c" stroke="#2a3542"/>
   <text x="52" y="232" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Baseline engines</text>
   <text x="52" y="250" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Deterministic allow / block / redact / transform / escalate. Model-backed classifiers are adapters and are not on the request path unless configured.</text>

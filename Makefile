@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := help
-.PHONY: help install dev dev-ollama serve doctor migrate test test-isolation lint format typecheck check clean \
+.PHONY: help install dev dev-ollama dev-litellm-ollama serve doctor migrate test test-isolation lint format typecheck check clean \
 	dashboard benchmark bench-intent bench-intent-cache bench-load bench-load-target bench-load-all \
 	profile-request eval-gate eval-run heal-analyze bench-stages model-probe eval-models eval-routing \
-	test-vllm-live docker-build docker-up docker-test docker-down docker-ollama ollama-pull \
-	ollama-pull-grades docker-desktop-ollama grade-chat-check \
+	test-vllm-live test-litellm-live docker-build docker-up docker-test docker-down docker-ollama docker-litellm-ollama \
+	docker-litellm-vllm ollama-pull \
+	ollama-pull-grades docker-desktop-ollama docker-desktop-litellm-ollama grade-chat-check \
 	k8s-local-up k8s-local-test k8s-local-down k8s-local-ollama-up k8s-local-ollama-grades-up \
-	k8s-ollama-pull k8s-ollama-pull-grades helm-check docker-desktop
+	k8s-local-litellm-ollama-up k8s-ollama-pull k8s-ollama-pull-grades helm-check docker-desktop
 
 PYTHON_VERSION := 3.12
 UV := uv
@@ -25,6 +26,15 @@ dev: install ## Run the gateway locally with reload
 dev-ollama: install ## Run the gateway against local Ollama
 	LLM_FABRIC_ENVIRONMENT=development \
 	LLM_FABRIC_REGISTRY_PATH=config/models.local.yaml \
+	$(UV) run uvicorn llm_fabric.gateway.app:create_app --factory --reload
+
+# LiteLLM must already be listening (typically :4000) with num_retries: 0.
+# Direct Ollama remains available via make dev-ollama.
+dev-litellm-ollama: install ## Run the gateway against local LiteLLM→Ollama
+	LLM_FABRIC_ENVIRONMENT=development \
+	LLM_FABRIC_REGISTRY_PATH=config/models.litellm-ollama.yaml \
+	LLM_FABRIC_LITELLM_BASE_URL=http://127.0.0.1:4000/v1 \
+	LLM_FABRIC_LITELLM_NUM_RETRIES=0 \
 	$(UV) run uvicorn llm_fabric.gateway.app:create_app --factory --reload
 
 dashboard: ## Print the local Command Center URL (gateway must already be running)
@@ -55,6 +65,23 @@ docker-ollama: ## Start Fabric and Ollama as separate containers
 	@echo "Pull a model with: make ollama-pull MODEL=llama3.2"
 	@echo "Or the Grade00–Grade29 ladder: make ollama-pull-grades"
 
+docker-litellm-ollama: ## Fabric + LiteLLM transport + Ollama (no Kubernetes)
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile litellm-ollama up --build --detach --wait
+	@echo "Fabric: http://127.0.0.1:47317"
+	@echo "LiteLLM is Compose-internal; Ollama is published on 11434 for local pulls"
+
+docker-litellm-vllm: ## LiteLLM transport to an existing vLLM endpoint (GPU required)
+	@if [ -z "$$VLLM_API_BASE" ]; then \
+		echo "LITELLM→VLLM LIVE GPU VERIFICATION: PENDING"; \
+		echo "Set VLLM_API_BASE to a real vLLM OpenAI-compatible root. Do not fake a GPU."; \
+		exit 2; \
+	fi
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile litellm-vllm up --build --detach --wait
+	@echo "Fabric: http://127.0.0.1:47317"
+	@echo "LiteLLM is Compose-internal; vLLM is the external GPU endpoint in VLLM_API_BASE"
+
 ollama-pull: ## Deliberately pull an Ollama model into its persistent volume
 	docker compose -f deployments/docker/docker-compose.yml \
 		--profile local up --detach ollama
@@ -77,6 +104,18 @@ docker-desktop-ollama: ## Docker Desktop: Fabric + Ollama grades registry + plat
 	@echo "Grafana:     http://127.0.0.1:3000  (admin / admin)"
 	@echo "Pull tags:   make ollama-pull-grades"
 
+docker-desktop-litellm-ollama: ## Docker Desktop: Fabric + LiteLLM + Ollama + platform + Grafana
+	docker compose -f deployments/docker/docker-compose.yml \
+		-f deployments/docker/docker-compose.desktop.yml \
+		--profile litellm-ollama --profile platform --profile observability \
+		up --build --detach --wait
+	@echo "Fabric:      http://127.0.0.1:47317"
+	@echo "Command Center: http://127.0.0.1:47317/command-center"
+	@echo "Ollama:      http://127.0.0.1:11434 (local pulls only; not a production ingress)"
+	@echo "LiteLLM:     Compose-internal :4000 (not published)"
+	@echo "Prometheus:  http://127.0.0.1:9090"
+	@echo "Grafana:     http://127.0.0.1:3000  (admin / admin)"
+
 grade-chat-check: ## 30-grade smoke plus 1000 short/medium/large chats (gateway must be up)
 	$(UV) run python deployments/docker/grade-chat-check.py \
 		--host 127.0.0.1 --port 47317 --requests $(or $(REQUESTS),1000) \
@@ -86,7 +125,7 @@ grade-chat-check: ## 30-grade smoke plus 1000 short/medium/large chats (gateway 
 docker-down: ## Stop all local Compose profiles and retain model volumes
 	docker compose -f deployments/docker/docker-compose.yml \
 		-f deployments/docker/docker-compose.desktop.yml \
-		--profile mock --profile local --profile observability --profile platform down
+		--profile mock --profile local --profile litellm-ollama --profile litellm-vllm --profile observability --profile platform down
 
 docker-desktop: ## Full Docker Desktop stack: mock Fabric, Postgres, Redis, Prometheus, Grafana
 	docker compose -f deployments/docker/docker-compose.yml \
@@ -122,6 +161,10 @@ k8s-local-ollama-up: ## Deploy Fabric plus separate Ollama workload to kind
 	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-ollama-values.yaml \
 		deployments/kind/up.sh
 
+k8s-local-litellm-ollama-up: ## kind: Fabric + LiteLLM transport + Ollama
+	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-litellm-ollama-values.yaml \
+		deployments/kind/up.sh
+
 k8s-local-ollama-grades-up: ## kind + Ollama using the Grade00–Grade29 registry
 	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-ollama-grades-values.yaml \
 	LLM_FABRIC_MODELS_FILE=config/models.ollama-grades.yaml \
@@ -155,6 +198,10 @@ test-isolation: ## Run only the adversarial cross-tenant suite
 test-vllm-live: ## Optional live vLLM OpenAI-compatible integration profile
 	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_LIVE_VLLM=1 \
 	$(UV) run pytest --strict-markers tests/integration/live_vllm -v
+
+test-litellm-live: ## Optional live LiteLLM transport integration profile
+	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_LIVE_LITELLM=1 \
+	$(UV) run pytest --strict-markers tests/integration/live_litellm -v
 
 lint: ## Check formatting and lint rules
 	$(UV) run ruff check .

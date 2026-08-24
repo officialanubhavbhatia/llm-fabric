@@ -1,7 +1,7 @@
 # Intent → capability → preferred-tier policy.
 #
-# This file does not enable IntentOS on the serving path. Classification stays
-# off unless LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED is set. Preview and
+# This file does not itself enable IntentOS. Production requires
+# LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true at process start. Preview and
 # `llm-fabric route explain --intent ...` can look up these policies without
 # classifying live traffic.
 #

@@ -41,14 +41,27 @@ LIFECYCLE_STAGES: tuple[str, ...] = (
     "context",
     "retrieval",
     "route",
+    "litellm",
     "llm",
     "tool",
     "output_guardrails",
+    "usage",
     "eval",
 )
 
 BUILT_STAGES: frozenset[str] = frozenset(
-    {"request", "auth", "input_guardrails", "output_guardrails", "intent", "route", "llm"}
+    {
+        "request",
+        "auth",
+        "input_guardrails",
+        "intent",
+        "context",
+        "route",
+        "litellm",
+        "llm",
+        "output_guardrails",
+        "usage",
+    }
 )
 
 DEFAULT_SPAN_BUFFER = 5_000

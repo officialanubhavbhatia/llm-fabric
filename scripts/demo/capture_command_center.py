@@ -21,20 +21,33 @@ import websockets
 
 BASE_URL = os.environ.get("MYVISTA_BASE_URL", "http://127.0.0.1:47317").rstrip("/")
 OUT = Path(__file__).resolve().parents[2] / "docs" / "assets"
+TOKEN_FILE = Path(__file__).resolve().parents[2] / "artifacts" / "demo" / "demo.token"
+SDK_HTML = Path(__file__).resolve().parents[2] / "artifacts" / "demo" / "sdk-request.html"
 VIEWS = (
     "overview",
     "requests",
     "traces",
     "intents",
+    "context",
+    "models",
+    "kv_cache",
     "routing",
-    "economics",
-    "reliability",
 )
 CHROME = os.environ.get(
     "CHROME_BIN",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 )
 PORT = int(os.environ.get("CDP_PORT", "9229"))
+
+
+def _token() -> str:
+    env = os.environ.get("MYVISTA_API_KEY", "").strip()
+    if env:
+        return env[7:].strip() if env.lower().startswith("bearer ") else env
+    if TOKEN_FILE.is_file():
+        raw = TOKEN_FILE.read_text(encoding="utf-8").strip()
+        return raw[7:].strip() if raw.lower().startswith("bearer ") else raw
+    return ""
 
 
 async def cdp(ws, method: str, params: dict | None = None, session_id: str | None = None) -> dict:
@@ -50,6 +63,12 @@ async def cdp(ws, method: str, params: dict | None = None, session_id: str | Non
             return message.get("result") or {}
 
 
+async def _shot(ws, dest: Path) -> None:
+    shot = await cdp(ws, "Page.captureScreenshot", {"format": "png", "fromSurface": True})
+    dest.write_bytes(base64.b64decode(shot["data"]))
+    print(dest, dest.stat().st_size)
+
+
 async def capture() -> list[Path]:
     OUT.mkdir(parents=True, exist_ok=True)
     pages = json.load(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5))
@@ -57,24 +76,50 @@ async def capture() -> list[Path]:
     if page is None:
         raise SystemExit("no Chrome page target")
     paths: list[Path] = []
+    token = _token()
     async with websockets.connect(page["webSocketDebuggerUrl"], max_size=20_000_000) as ws:
         await cdp(ws, "Page.enable")
         await cdp(ws, "Runtime.enable")
+        await cdp(ws, "Network.enable")
+        if token:
+            await cdp(
+                ws,
+                "Network.setExtraHTTPHeaders",
+                {"headers": {"Authorization": f"Bearer {token}"}},
+            )
+        if SDK_HTML.is_file():
+            await cdp(ws, "Page.navigate", {"url": SDK_HTML.resolve().as_uri()})
+            await asyncio.sleep(1.0)
+            dest = OUT / "sdk-request.png"
+            await _shot(ws, dest)
+            paths.append(dest)
         await cdp(ws, "Page.navigate", {"url": f"{BASE_URL}/command-center"})
         await asyncio.sleep(2.5)
+        if token:
+            await cdp(
+                ws,
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "document.getElementById('token').value = "
+                        + json.dumps(token)
+                        + "; load('overview')"
+                    ),
+                    "awaitPromise": True,
+                },
+            )
+            await asyncio.sleep(1.2)
         for view in VIEWS:
             await cdp(
                 ws,
                 "Runtime.evaluate",
                 {"expression": f"load({view!r})", "awaitPromise": True},
             )
-            await asyncio.sleep(1.2)
-            shot = await cdp(ws, "Page.captureScreenshot", {"format": "png", "fromSurface": True})
+            await asyncio.sleep(1.4)
             name = "command-center.png" if view == "overview" else f"command-center-{view}.png"
             dest = OUT / name
-            dest.write_bytes(base64.b64decode(shot["data"]))
+            await _shot(ws, dest)
             paths.append(dest)
-            print(dest, dest.stat().st_size)
     return paths
 
 
@@ -90,7 +135,7 @@ def start_chrome(profile: Path) -> subprocess.Popen:
             "--window-size=1440,900",
             f"--remote-debugging-port={PORT}",
             f"--user-data-dir={profile}",
-            f"{BASE_URL}/command-center",
+            "about:blank",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

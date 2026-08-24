@@ -87,7 +87,23 @@ async def get_dashboard(
         raise InvalidRequestError(f"unknown dashboard '{view}'")
 
     fleet = principal.may_observe_fleet if principal is not None else False
-    intent_snapshot = cascade.metrics.snapshot() if cascade is not None else None
+    if cascade is not None:
+        intent_snapshot = dict(cascade.metrics.snapshot())
+        intent_snapshot["classifier_version"] = cascade.version
+        intent_snapshot["taxonomy_version"] = cascade.taxonomy.version
+    else:
+        intent_snapshot = {
+            "classifications": 0,
+            "serving_requests": 0,
+            "known": 0,
+            "unknown": 0,
+            "abstentions": 0,
+            "safe_fallback": 0,
+            "errors": 0,
+            "missing": 0,
+        }
+    intent_snapshot["routing_enabled"] = settings.intent_classification_enabled
+    intent_snapshot["cascade_present"] = cascade is not None
     assembler = DashboardAssembler(
         meter=meter,
         journal=telemetry.tracer.journal,
@@ -99,6 +115,7 @@ async def get_dashboard(
         incidents=stores.incidents.list(scope, limit=50),
         remediations=stores.remediations.list(scope, limit=50),
         promotion_state_path=settings.promotion_state_path,
+        context_records=telemetry.recent_context(),
     )
     return assembler.render(
         view,

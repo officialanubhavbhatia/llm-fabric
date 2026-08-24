@@ -28,6 +28,9 @@ fabricConfig:
     models:
       - id: ollama-local
         provider: ollama-local
+        provider_adapter: ollama
+        transport: direct
+        runtime: ollama
         provider_model: llama3.2
         grade: Grade08
         context_window: 8192

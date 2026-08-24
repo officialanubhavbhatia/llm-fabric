@@ -11,6 +11,9 @@ config:
   environment: production
   allowAnonymous: "false"
   authMode: oidc
+  intentClassificationEnabled: "true"
+  intentEmbedder: hashing
+  intentAllowHashingEmbedder: "true"
 
 secretName: llm-fabric
 migrations:

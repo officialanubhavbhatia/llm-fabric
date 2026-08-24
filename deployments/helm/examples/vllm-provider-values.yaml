@@ -10,7 +10,16 @@ fabricConfig:
     models:
       - id: vllm-general
         provider: vllm-general
+        provider_adapter: vllm
+        transport: direct
+        runtime: vllm
         provider_model: REPLACE_WITH_PINNED_MODEL_ID
+        served_model_name: REPLACE_WITH_PINNED_MODEL_ID
+        health_endpoint: http://vllm-general.inference.svc.cluster.local:8000/health
+        metrics_endpoint: http://vllm-general.inference.svc.cluster.local:8000/metrics
+        supports_kv_metrics: true
+        supports_batch_metrics: true
+        supports_queue_metrics: true
         revision: REPLACE_WITH_PINNED_REVISION
         digest: REPLACE_WITH_MODEL_DIGEST
         grade: Grade10

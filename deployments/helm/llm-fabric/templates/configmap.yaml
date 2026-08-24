@@ -10,7 +10,9 @@ data:
   LLM_FABRIC_PORT: {{ .Values.config.port | quote }}
   LLM_FABRIC_ALLOW_ANONYMOUS: {{ .Values.config.allowAnonymous | quote }}
   LLM_FABRIC_AUTH_MODE: {{ .Values.config.authMode | quote }}
-  LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "false"
+  LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: {{ .Values.config.intentClassificationEnabled | quote }}
+  LLM_FABRIC_INTENT_EMBEDDER: {{ .Values.config.intentEmbedder | quote }}
+  LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER: {{ .Values.config.intentAllowHashingEmbedder | quote }}
   LLM_FABRIC_REGISTRY_PATH: /app/config/models.yaml
   LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
   LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
@@ -21,6 +23,10 @@ data:
   {{- end }}
   {{- if .Values.providers.baseUrls }}
   LLM_FABRIC_PROVIDER_BASE_URLS: {{ toJson .Values.providers.baseUrls | quote }}
+  {{- end }}
+  {{- if .Values.litellm.enabled }}
+  LLM_FABRIC_LITELLM_BASE_URL: {{ printf "http://%s-litellm:4000/v1" (include "llm-fabric.fullname" .) | quote }}
+  LLM_FABRIC_LITELLM_NUM_RETRIES: "0"
   {{- end }}
   {{- if .Values.observability.otlp.endpoint }}
   LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otlp.endpoint | quote }}

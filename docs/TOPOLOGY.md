@@ -6,17 +6,18 @@ configuration can express. AKS, EKS, and GKE layouts are Helm-rendered
 examples, not live cloud tests.
 
 ```text
-Ingress / load balancer / NodePort
+client
         |
         v
-LLM Fabric replicas  (one OCI image, Helm chart deployments/helm/llm-fabric)
+MyVista / LLM Fabric   (only production ingress)
         |
-        +--> Ollama                (local / kind optional sidecar)
-        +--> vLLM general pool     (OpenAI-compatible :8000/v1)
-        +--> vLLM coding pool
-        +--> vLLM reasoning pool
-        +--> vLLM long-context pool
-        +--> OpenAI / Anthropic    (optional, credentials in a Secret)
+        +--> Ollama                 transport=direct  runtime=ollama
+        +--> vLLM-compatible        transport=direct  runtime=vllm
+        +--> LiteLLM (ClusterIP)    transport=litellm
+                +--> Ollama
+                +--> vLLM
+                +--> approved external providers
+        +--> OpenAI / Anthropic     (optional, credentials in a Secret)
 ```
 
 Shared pieces that **are** implemented:
@@ -27,9 +28,12 @@ Shared pieces that **are** implemented:
 - PostgreSQL usage ledger and Redis quotas when those URLs are set (production requires them)
 
 Local Ollama is an optional separate workload (`make docker-ollama` or Helm
-`ollama.enabled`). Model weights live in that workload's volume, never in the
-Fabric image. A reachable Ollama or vLLM Service does not promote a model;
-lifecycle stays evidence-bound.
+`ollama.enabled`). LiteLLM is an optional ClusterIP proxy (`make
+docker-litellm-ollama` or Helm `litellm.enabled`). Model weights live in the
+inference workload's volume, never in the Fabric image. A reachable Ollama,
+vLLM, or LiteLLM Service does not promote a model; lifecycle stays
+evidence-bound. LiteLLM is not a public Ingress. Compose publishes Ollama
+`:11434` for local operator pulls only.
 
 Not implied by this topology:
 

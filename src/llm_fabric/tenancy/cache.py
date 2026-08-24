@@ -37,6 +37,7 @@ class CacheNamespace(StrEnum):
     EXACT_RESPONSE = "exact_response"
     SEMANTIC_RESPONSE = "semantic_response"
     INTENT = "intent"
+    SEMANTIC_INTENT = "semantic_intent"
     EMBEDDING = "embedding"
     RETRIEVAL = "retrieval"
     PROMPT = "prompt"
@@ -56,6 +57,7 @@ DEFAULT_POLICIES: Mapping[CacheNamespace, CachePolicy] = {
     # Semantic hits are approximate, so they expire sooner by design.
     CacheNamespace.SEMANTIC_RESPONSE: CachePolicy(ttl_seconds=120.0, max_entries_per_tenant=1_000),
     CacheNamespace.INTENT: CachePolicy(ttl_seconds=600.0, max_entries_per_tenant=5_000),
+    CacheNamespace.SEMANTIC_INTENT: CachePolicy(ttl_seconds=120.0, max_entries_per_tenant=2_000),
     CacheNamespace.EMBEDDING: CachePolicy(ttl_seconds=3_600.0, max_entries_per_tenant=5_000),
     CacheNamespace.RETRIEVAL: CachePolicy(ttl_seconds=180.0, max_entries_per_tenant=1_000),
     CacheNamespace.PROMPT: CachePolicy(ttl_seconds=3_600.0, max_entries_per_tenant=500),

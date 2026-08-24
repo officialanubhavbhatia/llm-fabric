@@ -92,11 +92,10 @@ async def get_quota(request: Request) -> QuotaLedger:
 
 
 async def get_intent_cascade(request: Request) -> IntentCascade | None:
-    """The classifier, or `None` when intent classification is switched off.
+    """The serving-path cascade, or `None` when development/test disabled it.
 
-    Optional by design: the cascade is only built when
-    `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` is set, so callers must handle
-    its absence rather than assume every request carries an intent.
+    Production always builds the cascade. When it is absent, chat still attaches
+    a SAFE_FALLBACK IntentResult rather than invoking a provider without intent.
     """
     cascade = getattr(request.app.state, "intent", None)
     return cascade if isinstance(cascade, IntentCascade) else None

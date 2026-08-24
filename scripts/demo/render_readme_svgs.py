@@ -83,31 +83,46 @@ def write(name: str, width: int, height: int, title: str, desc: str, body: str) 
 def overview() -> None:
     body = f"""
   <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">MyVista LLM Fabric</text>
-  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Architecture — serving-path IntentOS routing is OFF. Context compiler is not on the serving path.</text>
-  {card(40, 80, 160, 56, title="Developer / SDK", lines=("Python myvista", "curl / OpenAI-shaped"))}
-  {arrow(200, 108, 248, 108)}
-  {card(250, 80, 170, 56, title="MyVista Gateway", lines=("auth · quotas · /v1/chat", "Command Center"))}
-  {arrow(420, 108, 468, 108)}
-  {card(470, 72, 200, 72, title="IntentOS", lines=("classify API exists", "serving-path routing OFF"), stroke=WARN, tag="experimental", tag_fill=WARN)}
-  {arrow(570, 144, 570, 176)}
-  {card(470, 178, 200, 64, title="Context compiler", lines=("not on serving path"), dashed=True, tag="not built", tag_fill=MUTED)}
-  {arrow(570, 242, 570, 274)}
-  {card(430, 276, 280, 72, title="Route planner", lines=("policy · health · fallback graph", "Grade00–Grade29 declared classes"), tag="built")}
-  {arrow(570, 348, 570, 380)}
-  {card(250, 382, 640, 52, title="Inference fabric", lines=("Adapters: mock, OpenAI, Anthropic, Ollama, vLLM, generic OpenAI-compatible. LiteLLM is not a native adapter."))}
-  {card(250, 444, 145, 52, title="Ollama", lines=("local / Compose"))}
-  {card(405, 444, 155, 52, title="OpenAI-compat", lines=("vLLM · custom URLs"))}
-  {card(570, 444, 145, 52, title="OpenAI", lines=("hosted API"))}
-  {card(725, 444, 165, 52, title="Anthropic", lines=("hosted API"))}
-  {card(40, 180, 190, 316, title="Parallel systems", lines=("Guardrails  INPUT+OUTPUT wired", "Usage metering  durable ledger", "Evaluations  first-class gates", "OpenTelemetry  traces/metrics", "Command Center  live views"), stroke=ACCENT)}
-  <text x="40" y="538" fill="{MUTED}" font-family="{FONT}" font-size="10">Retrieval / context / execution guardrails are pluggable types. RAG, tools, and KV-cache views are not on the serving path.</text>
+  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Serving path: Auth → Tenant → Guardrails → IntentOS (required) → Context compiler (required) → Route planner. LiteLLM is transport, not an inference engine.</text>
+  {card(40, 80, 160, 64, title="Client / SDK", lines=("Python myvista", "curl / OpenAI-shaped"))}
+  {arrow(200, 112, 248, 112)}
+  {card(250, 72, 500, 80, title="MyVista control plane", lines=("Auth · Tenant · INPUT guardrails", "IntentOS REQUIRED · Context compiler REQUIRED", "Route planner · OUTPUT guardrails · usage / OTEL"), stroke=ACCENT)}
+  {arrow(500, 152, 500, 188)}
+  {card(40, 190, 200, 70, title="Ollama", lines=("direct runtime"), tag="runtime", tag_fill=OK)}
+  {card(280, 190, 220, 70, title="LiteLLM", lines=("transport only", "not an inference engine"), stroke=WARN, tag="transport", tag_fill=WARN)}
+  {card(540, 190, 210, 70, title="vLLM direct", lines=("OpenAI-compatible runtime"), tag="runtime", tag_fill=OK)}
+  {arrow(390, 260, 390, 296)}
+  {card(40, 298, 180, 64, title="Ollama", lines=("via LiteLLM"))}
+  {card(240, 298, 180, 64, title="vLLM", lines=("via LiteLLM"))}
+  {card(440, 298, 180, 64, title="External", lines=("hosted APIs"))}
+  {card(700, 190, 260, 172, title="Parallel systems", lines=("Command Center", "Usage ledger", "Evaluations", "OpenTelemetry"), stroke=ACCENT)}
+  <text x="40" y="390" fill="{MUTED}" font-family="{FONT}" font-size="11">KV / prefix / running / waiting are DEPLOYMENT engine scrapes, never “this request used X% KV”. Retrieval, tools, and agents are not on the serving path.</text>
 """
     write(
         "myvista-overview.svg",
-        920,
-        560,
+        980,
+        420,
         "MyVista LLM Fabric architecture",
-        "SDK to gateway to IntentOS classify, route planner, and inference adapters, with parallel guardrails, usage, evals, OpenTelemetry, and Command Center.",
+        "Client SDK to MyVista auth, tenant, guardrails, required IntentOS, required context compiler, and route planner, then Ollama, LiteLLM transport, or direct vLLM.",
+        body,
+    )
+
+
+def inference_topologies() -> None:
+    body = f"""
+  <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Inference topologies</text>
+  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">LiteLLM never appears as an engine. Direct Ollama and direct vLLM remain valid without it.</text>
+  {card(40, 80, 280, 220, title="MyVista → Ollama", lines=("direct adapter", "local / Compose / Helm", "KV/prefix: UNAVAILABLE", "native tokens when reported"), tag="runtime")}
+  {card(350, 80, 280, 220, title="MyVista → LiteLLM → runtime", lines=("LiteLLM is HTTP transport", "upstream: Ollama, vLLM, external", "do not relabel vLLM KV as LiteLLM", "Route planner still selects"), stroke=WARN, tag="transport", tag_fill=WARN)}
+  {card(660, 80, 280, 220, title="MyVista → vLLM", lines=("direct OpenAI-compatible", "optional /metrics scrape", "KV/prefix/running/waiting", "DEPLOYMENT scope only"), tag="runtime")}
+  {card(40, 320, 900, 70, title="Not claimed by a YAML file", lines=("A Compose or Helm example is configuration, not live verification. See the README deployment matrix for VERIFIED / PARTIALLY VERIFIED / NOT VERIFIED."))}
+"""
+    write(
+        "inference-topologies.svg",
+        980,
+        420,
+        "MyVista inference topologies",
+        "Three serving topologies: direct Ollama, LiteLLM as transport in front of a runtime, and direct vLLM. LiteLLM is not an inference engine.",
         body,
     )
 
@@ -115,26 +130,26 @@ def overview() -> None:
 def command_center() -> None:
     body = f"""
   <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Command Center overview</text>
-  <text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Observability model — schematic, not a live screenshot. Metrics named here exist in this build unless marked unavailable.</text>
-  {card(32, 78, 140, 70, title="Requests/sec", lines=("process buffer rps", "not a fleet SLA"))}
-  {card(184, 78, 140, 70, title="Latency", lines=("p50 / p95 / p99 ms", "from usage records"))}
-  {card(336, 78, 140, 70, title="Prompt tokens", lines=("ledger + provenance"))}
-  {card(488, 78, 140, 70, title="Completion tokens", lines=("ledger + provenance"))}
-  {card(640, 78, 140, 70, title="Cost", lines=("registry price × tokens", "estimated vs measured"))}
-  {card(792, 78, 140, 70, title="Failovers", lines=("fallback attempts"))}
-  {card(32, 168, 280, 150, title="Live views", lines=("overview · users · tenants", "requests · traces · intents", "models · promotion · tiers", "routing · fallbacks · tokens", "economics · evals · drift", "reliability"))}
-  {card(328, 168, 280, 150, title="Unavailable views", lines=("threads — no conversation persist", "kv_cache — not scraped", "batching — not scraped", "context — compiler not on path"), dashed=True, tag="not built", tag_fill=MUTED)}
-  {card(624, 168, 308, 150, title="Not sourced in this build", lines=("quality / safety scores", "tokens per second (TPS)", "queue depth as a fleet queue", "GPU hours / electricity"), dashed=True)}
-  {card(32, 338, 280, 100, title="Route decision", lines=("selected model · provider", "policy · fallback graph"))}
-  {card(328, 338, 280, 100, title="IntentOS (frozen eval)", lines=("serving-path routing OFF", "HN gate not cleared"))}
-  {card(624, 338, 308, 100, title="Dependency health", lines=("Postgres / Redis", "/healthz vs /readyz"))}
+  <text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Observability model — schematic, not a live screenshot. Coverage cards are attachment metrics, not accuracy.</text>
+  {card(32, 78, 180, 70, title="Intent serving", lines=("IntentResult coverage", "not classification accuracy"))}
+  {card(224, 78, 180, 70, title="Context records", lines=("compiler coverage"))}
+  {card(416, 78, 180, 70, title="Provenance", lines=("supported metrics labelled"))}
+  {card(608, 78, 160, 70, title="Requests", lines=("process buffer"))}
+  {card(780, 78, 160, 70, title="Reliability", lines=("error rate in buffer"))}
+  {card(32, 164, 160, 70, title="Latency", lines=("p50 / p95 / p99 ms"))}
+  {card(204, 164, 160, 70, title="Token volume", lines=("ledger + provenance"))}
+  {card(376, 164, 160, 70, title="Cost", lines=("estimated vs measured"))}
+  {card(548, 164, 392, 70, title="Not sourced", lines=("quality · safety · TPS as a single number · fleet queue depth"), dashed=True)}
+  {card(32, 250, 300, 150, title="Live views", lines=("overview · users · tenants", "requests · traces · intents", "models · promotion · tiers", "routing · fallbacks · tokens", "context · kv_cache", "economics · evals · drift", "reliability"))}
+  {card(348, 250, 300, 150, title="Unavailable views", lines=("threads — no conversation persist", "batching — no stable vLLM series"), dashed=True, tag="not built", tag_fill=MUTED)}
+  {card(664, 250, 276, 150, title="KV / engine", lines=("vLLM scrape when configured", "Ollama KV: UNAVAILABLE", "DEPLOYMENT scope, not request"), stroke=WARN)}
 """
     write(
         "command-center-overview.svg",
         960,
-        460,
+        430,
         "Command Center observability model",
-        "Schematic of Command Center metrics that exist: requests, latency, tokens, cost, failovers, plus views that are live versus not built.",
+        "Schematic of Command Center coverage, request, reliability, latency, token, and cost cards, plus live versus unbuilt views.",
         body,
     )
 
@@ -142,16 +157,16 @@ def command_center() -> None:
 def observability() -> None:
     body = f"""
   <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Observability pipeline</text>
-  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Built spans: request, auth, input_guardrails, intent, route, llm, output_guardrails. Unbuilt: context, retrieval, tool, eval.</text>
+  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Built spans: request, auth, input_guardrails, intent, context, route, litellm, llm, output_guardrails, usage. Unbuilt: retrieval, tool, eval.</text>
   {card(40, 80, 140, 52, title="SDK request")}
   {arrow(180, 106, 220, 106)}
   {card(222, 80, 140, 52, title="Gateway trace")}
   {arrow(362, 106, 402, 106)}
   {card(404, 80, 140, 52, title="IntentOS span")}
   {arrow(544, 106, 584, 106)}
-  {card(586, 80, 140, 52, title="Routing span")}
+  {card(586, 80, 140, 52, title="Context span")}
   {arrow(726, 106, 766, 106)}
-  {card(768, 80, 160, 52, title="Provider generation")}
+  {card(768, 80, 160, 52, title="Route + provider")}
   {arrow(500, 132, 500, 168)}
   {card(40, 170, 200, 64, title="Usage event", lines=("invocation ledger row"))}
   {card(260, 170, 220, 64, title="Guardrail evaluation", lines=("input + output on chat"))}
@@ -187,7 +202,7 @@ def intentos() -> None:
     ]
     parts = [
         f'<text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">IntentOS cascade</text>',
-        f'<text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Classify API exists. Serving-path IntentOS routing is OFF. Frozen eval n=98 is a regression tripwire, not production quality.</text>',
+        f'<text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Every chat invocation carries an IntentResult (coverage). Serving-path routing is OFF. Frozen eval n=98 is a regression tripwire, not production accuracy.</text>',
     ]
     for i, (y, title, line, color, dashed, tag) in enumerate(layers):
         parts.append(
@@ -243,6 +258,7 @@ def intentos() -> None:
                 "taxonomy version returned by classify",
                 "tenant cache isolation",
                 "MiniLM embedder is opt-in (--extra embed)",
+                "serving-path routing OFF until HN gate",
                 "Phase B 30-grade IntentOS planner: not started",
             ),
         )
@@ -261,7 +277,7 @@ def routing() -> None:
     body = f"""
   <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Intelligent routing</text>
   <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Policy-based planner with health, circuit breakers, and a fallback graph. Grade00–Grade29 are declared classes, not 30 production-ranked models.</text>
-  {card(32, 80, 150, 64, title="Intent", lines=("classify API only", "not on chat path"), dashed=True, tag="OFF", tag_fill=WARN)}
+  {card(32, 80, 150, 64, title="IntentOS", lines=("required on chat", "routing still OFF"), tag="coverage", tag_fill=OK)}
   {card(194, 80, 150, 64, title="Capabilities", lines=("registry vectors"))}
   {card(356, 80, 150, 64, title="Tenant policy", lines=("quotas · allowlists"))}
   {card(518, 80, 150, 64, title="Latency SLO", lines=("optional preview"))}
@@ -273,14 +289,57 @@ def routing() -> None:
   {card(360, 282, 300, 64, title="Primary model", lines=("selected deployment"))}
   {arrow(512, 346, 512, 378)}
   {card(360, 380, 300, 70, title="Fallback graph", lines=("health-aware failover", "each attempt is a usage invocation"))}
-  {card(32, 178, 300, 272, title="Honest limits", lines=("Intent-aware serving-path routing: OFF", "Model-grade IntentOS planner: planned", "Context compiler requirement: not built", "Quality cells are declared/measured/unknown", "LiteLLM is not a native adapter"), stroke=WARN)}
+  {card(32, 178, 300, 272, title="Honest limits", lines=("Intent-aware serving-path routing: OFF", "Model-grade IntentOS planner: planned", "Context compiler: on the serving path", "Quality cells are declared/measured/unknown", "LiteLLM is transport, not an engine"), stroke=WARN)}
 """
     write(
         "routing.svg",
         1000,
         480,
         "MyVista routing and fallback graph",
-        "Inputs to the route planner and the primary-then-fallback path. Intent-aware serving-path routing and a 30-grade quality planner are not shipped.",
+        "Inputs to the route planner and the primary-then-fallback path. IntentResult is required on chat; intent-aware serving-path routing remains off.",
+        body,
+    )
+
+
+def context_pipeline() -> None:
+    body = f"""
+  <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Context compiler</text>
+  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Required on the serving path after IntentOS and before the route planner. Raw prompt text is not stored on the Command Center record.</text>
+  {card(40, 80, 160, 80, title="Typed blocks", lines=("system · user", "policy · conversation"))}
+  {arrow(200, 120, 236, 120)}
+  {card(238, 80, 180, 80, title="Compiler", lines=("order · budget", "dedup · drop"))}
+  {arrow(418, 120, 454, 120)}
+  {card(456, 80, 200, 80, title="ContextRecord", lines=("before / after tokens", "stable prefix label"), stroke=ACCENT)}
+  {arrow(656, 120, 692, 120)}
+  {card(694, 80, 240, 80, title="Route planner", lines=("compiled prompt", "usage event id"))}
+  {card(40, 180, 280, 120, title="Counted", lines=("before / after optimization", "deduplicated · dropped", "utilization when limit known"), tag="built")}
+  {card(340, 180, 280, 120, title="Labelled, not a KV hit", lines=("stable_prefix_tokens", "volatile suffix", "prompt-shape only"), stroke=WARN)}
+  {card(640, 180, 294, 120, title="Unavailable unless configured", lines=("compression (0 if none)", "overflow rejection counter", "raw prompt text in the UI"), dashed=True)}
+"""
+    write(
+        "context-pipeline.svg",
+        960,
+        330,
+        "Context compiler pipeline",
+        "Typed blocks are compiled into a ContextRecord with before/after token accounting, then passed to the route planner. Stable prefix is prompt-shape labelling, not a runtime KV hit.",
+        body,
+    )
+
+
+def kv_cache_observability() -> None:
+    body = f"""
+  <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">KV / inference observability</text>
+  <text x="32" y="56" fill="{MUTED}" font-family="{FONT}" font-size="12">Engine gauges are DEPLOYMENT-scoped. They are never “this request used X% KV”.</text>
+  {card(40, 80, 430, 210, title="vLLM /metrics (when scraped)", lines=("KV utilization", "prefix-cache hit ratio", "cached prompt tokens", "running / waiting / preemptions", "TTFT / TPOT histograms", "prefill / decode TPS only with durations"), tag="DEPLOYMENT", tag_fill=OK)}
+  {card(500, 80, 430, 210, title="Ollama", lines=("loaded models · VRAM size", "native token counts when present", "KV utilization: UNAVAILABLE", "prefix hits: UNAVAILABLE", "running / waiting: UNAVAILABLE", "do not copy vLLM series onto Ollama"), stroke=WARN, tag="honest", tag_fill=WARN)}
+  {card(40, 310, 890, 80, title="LiteLLM", lines=("Transport only. Do not relabel an upstream vLLM KV scrape as a LiteLLM engine metric. GPU series belong to DCGM, not the gateway."), dashed=True)}
+"""
+    write(
+        "kv-cache-observability.svg",
+        960,
+        420,
+        "KV-cache and inference observability",
+        "vLLM deployment scrapes can show KV, prefix cache, and queue gauges. Ollama does not expose those series. LiteLLM is transport and is not an engine.",
         body,
     )
 
@@ -315,6 +374,7 @@ def usage() -> None:
                 "fallback attempts",
                 "prompt + completion tokens",
                 "token provenance",
+                "intent_result_id + context_record_id",
                 "estimated vs measured cost",
             ),
         )
@@ -391,7 +451,7 @@ def eval_loop() -> None:
   {card(250, 182, 140, 58, title="Shadow / canary")}
   {arrow(390, 211, 430, 211)}
   {card(432, 182, 140, 58, title="Promote")}
-  {card(32, 270, 220, 140, title="IntentOS", lines=("frozen 98-case tripwire", "HN gate not cleared", "serving-path routing OFF"))}
+  {card(32, 270, 220, 140, title="IntentOS", lines=("frozen 98-case tripwire", "HN gate not cleared", "serving coverage ≠ accuracy"))}
   {card(268, 270, 220, 140, title="Routing", lines=("planner-match labels", "not routing-quality eval"))}
   {card(504, 270, 220, 140, title="Guardrails", lines=("deterministic engines", "no dedicated safety suite"))}
   {card(740, 270, 200, 140, title="Generation", lines=("named suite ci exists", "DeepEval optional adapter"))}
@@ -414,7 +474,7 @@ def guardrails() -> None:
   {arrow(200, 130, 236, 130)}
   {card(238, 90, 160, 80, title="RETRIEVAL", lines=("no RAG path"), dashed=True, tag="pluggable", tag_fill=MUTED)}
   {arrow(398, 130, 434, 130)}
-  {card(436, 90, 160, 80, title="CONTEXT", lines=("compiler not on path"), dashed=True, tag="pluggable", tag_fill=MUTED)}
+  {card(436, 90, 160, 80, title="CONTEXT", lines=("compiler is separate", "stage still unbound"), dashed=True, tag="pluggable", tag_fill=MUTED)}
   {arrow(596, 130, 632, 130)}
   {card(634, 90, 160, 80, title="EXECUTION", lines=("no tool runtime"), dashed=True, tag="pluggable", tag_fill=MUTED)}
   {arrow(794, 130, 830, 130)}
@@ -433,9 +493,12 @@ def guardrails() -> None:
 
 def main() -> None:
     overview()
+    inference_topologies()
     command_center()
     observability()
     intentos()
+    context_pipeline()
+    kv_cache_observability()
     routing()
     usage()
     dependency()

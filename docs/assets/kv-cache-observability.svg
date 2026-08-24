@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">KV-cache and inference observability</title>
+  <desc id="desc">vLLM deployment scrapes can show KV, prefix cache, and queue gauges. Ollama does not expose those series. LiteLLM is transport and is not an engine.</desc>
+  <rect width="960" height="420" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">KV / inference observability</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Engine gauges are DEPLOYMENT-scoped. They are never “this request used X% KV”.</text>
+  <rect x="40" y="80" width="430" height="210" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">vLLM /metrics (when scraped)</text>
+  <text x="52" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">KV utilization</text>
+  <text x="52" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">prefix-cache hit ratio</text>
+  <text x="52" y="150" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">cached prompt tokens</text>
+  <text x="52" y="165" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">running / waiting / preemptions</text>
+  <text x="52" y="180" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">TTFT / TPOT histograms</text>
+  <text x="52" y="195" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">prefill / decode TPS only with durations</text>
+  <rect x="384" y="88" width="74" height="16" rx="8" fill="none" stroke="#7fd99a"/><text x="421" y="100" text-anchor="middle" fill="#7fd99a" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">DEPLOYMENT</text>
+  <rect x="500" y="80" width="430" height="210" rx="8" fill="#1a222c" stroke="#e6b84d"/>
+  <text x="512" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Ollama</text>
+  <text x="512" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">loaded models · VRAM size</text>
+  <text x="512" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">native token counts when present</text>
+  <text x="512" y="150" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">KV utilization: UNAVAILABLE</text>
+  <text x="512" y="165" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">prefix hits: UNAVAILABLE</text>
+  <text x="512" y="180" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">running / waiting: UNAVAILABLE</text>
+  <text x="512" y="195" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">do not copy vLLM series onto Ollama</text>
+  <rect x="844" y="88" width="74" height="16" rx="8" fill="none" stroke="#e6b84d"/><text x="881" y="100" text-anchor="middle" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">honest</text>
+  <rect x="40" y="310" width="890" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="52" y="332" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">LiteLLM</text>
+  <text x="52" y="350" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Transport only. Do not relabel an upstream vLLM KV scrape as a LiteLLM engine metric. GPU series belong to DCGM, not the gateway.</text>
+
+</svg>

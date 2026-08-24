@@ -109,7 +109,7 @@ def test_engine_snapshots_are_unavailable_until_an_adapter_exists() -> None:
         )
     )
     assert all(value is None for value in vllm.measurements.values())
-    assert "not scraped" in ollama.note
+    assert "not configured" in ollama.note or "stay" in ollama.note
     for name in OLLAMA_MEASUREMENTS:
         assert name in ollama.measurements
 
@@ -197,7 +197,7 @@ def test_every_named_dashboard_exists_and_unbuilt_ones_stay_empty() -> None:
     for view in VIEWS:
         payload = assembler.render(view, tenant_id="acme", fleet=False, scope_note="test")
         assert payload["view"] == view
-        if view in {"kv_cache", "batching", "context", "threads"}:
+        if view in {"batching", "threads"}:
             assert payload["available"] is False
             assert payload["data"] is None
             assert payload["note"]
@@ -222,10 +222,15 @@ def test_overview_does_not_invent_quality_or_safety() -> None:
     assert "quality" not in payload["data"]
     assert "safety" in payload["unavailable_fields"]
     assert payload["data"]["requests"] == 1
+    coverage = payload["data"]["coverage"]
+    assert coverage["intent_serving"] is None
+    assert coverage["context_record"] is None
+    assert coverage["supported_telemetry_provenance"] is None
+    assert "tps" in payload["unavailable_fields"]
 
 
 def test_unbuilt_lifecycle_stages_are_listed_not_timed() -> None:
-    assert "context" not in BUILT_STAGES
+    assert "context" in BUILT_STAGES
     assert "eval" not in BUILT_STAGES
     assert "request" in BUILT_STAGES
 

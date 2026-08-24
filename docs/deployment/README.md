@@ -16,6 +16,8 @@ Detailed runbooks:
 | --- | --- | --- |
 | Docker Compose (`mock`) | yes | yes, local (2026-08-24) |
 | Docker Compose (`local` Ollama stack) | yes | stack-up yes; model pull is a separate operator step |
+| Docker Compose (`litellm-ollama`) | yes | live chat is an operator step; not claimed from unit tests |
+| Docker Compose (`litellm-vllm`) | yes (manifest) | **PENDING** without a real GPU/`VLLM_API_BASE` |
 | Docker Compose (`local` + Grade00–Grade29 tags) | yes | pull and chat-check are operator/live steps; not a quality ranking |
 | kind | yes | yes (`make k8s-local-test`, 2026-08-24) |
 | Azure AKS | yes (`deployments/helm/examples/aks-values.yaml`) | **no** |
@@ -28,7 +30,12 @@ Do not treat a successful `helm template` as a cloud go-live.
 
 - Dockerfile: [`deployments/docker/Dockerfile`](../../deployments/docker/Dockerfile)
 - Compose: [`deployments/docker/docker-compose.yml`](../../deployments/docker/docker-compose.yml)
+  (`mock`, `local`, `litellm-ollama`, `litellm-vllm`; vLLM is never started by Compose)
 - Chart: [`deployments/helm/llm-fabric`](../../deployments/helm/llm-fabric)
+  Helm topology examples: `local-ollama-values.yaml` (direct Ollama),
+  `local-litellm-ollama-values.yaml`, `vllm-provider-values.yaml` (direct vLLM),
+  `local-litellm-vllm-values.yaml`. LiteLLM/Ollama/vLLM Services are ClusterIP.
+  Ingress, when enabled, fronts Fabric only.
 - Examples: [`deployments/helm/examples`](../../deployments/helm/examples)
 - kind: [`deployments/kind`](../../deployments/kind)
 
@@ -54,7 +61,9 @@ production capacity result.
 
 ## IntentOS and promotion
 
-Helm sets `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=false`. vLLM example
+Helm development values leave serving-path IntentOS off (`SAFE_FALLBACK` still
+covers chat). Production examples set `intentClassificationEnabled: "true"`.
+The process refuses to start in production if that flag is false. vLLM example
 values leave models at `lifecycle: registered`. A Kubernetes Service does not
 approve a model.
 

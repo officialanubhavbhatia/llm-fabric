@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420" role="img" aria-labelledby="title desc">
+  <title id="title">MyVista inference topologies</title>
+  <desc id="desc">Three serving topologies: direct Ollama, LiteLLM as transport in front of a runtime, and direct vLLM. LiteLLM is not an inference engine.</desc>
+  <rect width="980" height="420" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Inference topologies</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">LiteLLM never appears as an engine. Direct Ollama and direct vLLM remain valid without it.</text>
+  <rect x="40" y="80" width="280" height="220" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">MyVista → Ollama</text>
+  <text x="52" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">direct adapter</text>
+  <text x="52" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">local / Compose / Helm</text>
+  <text x="52" y="150" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">KV/prefix: UNAVAILABLE</text>
+  <text x="52" y="165" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">native tokens when reported</text>
+  <rect x="234" y="88" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="271" y="100" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">runtime</text>
+  <rect x="350" y="80" width="280" height="220" rx="8" fill="#1a222c" stroke="#e6b84d"/>
+  <text x="362" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">MyVista → LiteLLM → runtime</text>
+  <text x="362" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">LiteLLM is HTTP transport</text>
+  <text x="362" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">upstream: Ollama, vLLM, external</text>
+  <text x="362" y="150" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">do not relabel vLLM KV as LiteLLM</text>
+  <text x="362" y="165" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Route planner still selects</text>
+  <rect x="544" y="88" width="74" height="16" rx="8" fill="none" stroke="#e6b84d"/><text x="581" y="100" text-anchor="middle" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">transport</text>
+  <rect x="660" y="80" width="280" height="220" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="672" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">MyVista → vLLM</text>
+  <text x="672" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">direct OpenAI-compatible</text>
+  <text x="672" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">optional /metrics scrape</text>
+  <text x="672" y="150" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">KV/prefix/running/waiting</text>
+  <text x="672" y="165" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">DEPLOYMENT scope only</text>
+  <rect x="854" y="88" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="891" y="100" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">runtime</text>
+  <rect x="40" y="320" width="900" height="70" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="342" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Not claimed by a YAML file</text>
+  <text x="52" y="360" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">A Compose or Helm example is configuration, not live verification. See the README deployment matrix for VERIFIED / PARTIALLY VERIFIED / NOT VERIFIED.</text>
+
+</svg>

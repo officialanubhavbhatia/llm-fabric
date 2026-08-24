@@ -114,6 +114,8 @@ def _clean_env(tmp_path: Path, **overrides: str) -> dict[str, str]:
     env["LLM_FABRIC_ALLOW_ANONYMOUS"] = "false"
     env["LLM_FABRIC_API_KEYS"] = API_KEY
     env["LLM_FABRIC_HOST"] = "127.0.0.1"
+    env["LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED"] = "true"
+    env["LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER"] = "true"
     env["LLM_FABRIC_DATABASE_URL"] = _live_postgres_url()
     env["LLM_FABRIC_REDIS_URL"] = _live_redis_url()
     env.update(overrides)

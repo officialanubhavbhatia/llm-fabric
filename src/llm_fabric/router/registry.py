@@ -42,6 +42,7 @@ from llm_fabric.errors import ConfigurationError, ModelNotFoundError
 from llm_fabric.router.capabilities import CapabilityVector
 from llm_fabric.router.grades import Grade
 from llm_fabric.router.tiers import ServiceTier, parse_service_tier
+from llm_fabric.serving.topology import RuntimeKind, TransportKind, defaults_for_provider
 
 
 class Locality(StrEnum):
@@ -106,7 +107,9 @@ class PromotionState(StrEnum):
 
 #: Provider names the factory can construct. Pool ids `ollama-*` / `vllm-*` are
 #: accepted in addition to this closed set.
-_KNOWN_PROVIDERS = frozenset({"mock", "openai", "anthropic", "ollama", "vllm", "openai-compatible"})
+_KNOWN_PROVIDERS = frozenset(
+    {"mock", "openai", "anthropic", "ollama", "vllm", "openai-compatible", "litellm"}
+)
 
 
 #: Quality dimensions the constitution names. Each is optional on a deployment:
@@ -284,6 +287,17 @@ class ModelSpec:
     performance: PerformanceProfile = field(default_factory=PerformanceProfile)
     placement: Placement = field(default_factory=Placement)
 
+    provider_adapter: str = ""
+    transport: TransportKind = TransportKind.DIRECT
+    runtime: RuntimeKind = RuntimeKind.EXTERNAL
+    api_base: str | None = None
+    health_endpoint: str | None = None
+    metrics_endpoint: str | None = None
+    served_model_name: str | None = None
+    supports_kv_metrics: bool = False
+    supports_batch_metrics: bool = False
+    supports_queue_metrics: bool = False
+
     enabled: bool = True
     fallbacks: tuple[str, ...] = ()
 
@@ -323,6 +337,30 @@ class ModelSpec:
                 f"model '{self.id}' sets trust_remote_code: the fabric refuses arbitrary "
                 "remote code execution. Pin a revision and serve through Ollama or vLLM "
                 "without enabling untrusted remote code."
+            )
+        adapter, transport, runtime = defaults_for_provider(self.provider)
+        if not self.provider_adapter:
+            object.__setattr__(self, "provider_adapter", adapter)
+        if self.transport is TransportKind.DIRECT and self.provider_adapter == "litellm":
+            object.__setattr__(self, "transport", TransportKind.LITELLM)
+        if self.runtime is RuntimeKind.EXTERNAL and runtime is not RuntimeKind.EXTERNAL:
+            object.__setattr__(self, "runtime", runtime)
+        if (
+            self.transport is TransportKind.LITELLM
+            and self.provider_adapter not in {"litellm", self.provider}
+            and not self.provider.startswith("litellm-")
+        ):
+            raise ConfigurationError(
+                f"model '{self.id}' sets transport=litellm but provider "
+                f"'{self.provider}' is not a LiteLLM adapter; use provider: litellm "
+                "and runtime: ollama|vllm|external"
+            )
+        if (
+            self.provider == "ollama" or self.provider.startswith("ollama-")
+        ) and self.transport is TransportKind.LITELLM:
+            raise ConfigurationError(
+                f"model '{self.id}' mixes provider '{self.provider}' with "
+                "transport=litellm; use provider: litellm and runtime: ollama"
             )
         if self.input_cost_per_mtok is not None and self.input_cost_per_mtok < 0:
             raise ConfigurationError(f"model '{self.id}' has a negative input_cost_per_mtok")
@@ -469,6 +507,18 @@ class ModelSpec:
             "quality": self.quality.as_dict(),
             "performance": self.performance.as_dict(),
             "placement": self.placement.as_dict(),
+            "topology": {
+                "provider_adapter": self.provider_adapter,
+                "transport": self.transport.value,
+                "runtime": self.runtime.value,
+                "api_base": self.api_base,
+                "health_endpoint": self.health_endpoint,
+                "metrics_endpoint": self.metrics_endpoint,
+                "served_model_name": self.served_model_name,
+                "supports_kv_metrics": self.supports_kv_metrics,
+                "supports_batch_metrics": self.supports_batch_metrics,
+                "supports_queue_metrics": self.supports_queue_metrics,
+            },
             "fallbacks": list(self.fallbacks),
             "identity": {
                 "huggingface_id": self.huggingface_id,
@@ -510,7 +560,7 @@ def _valid_provider(name: str) -> bool:
     """
     if not name or "://" in name or "/" in name or " " in name:
         return False
-    if name in _KNOWN_PROVIDERS or name.startswith("ollama-") or name.startswith("vllm-"):
+    if name in _KNOWN_PROVIDERS or name.startswith(("ollama-", "vllm-", "litellm-")):
         return True
     token = name.replace("_", "").replace("-", "").replace(".", "")
     return bool(token) and token.isalnum() and name[0].isalpha()
@@ -668,6 +718,32 @@ def _capabilities_from(entry: dict[str, Any]) -> CapabilityVector:
     return CapabilityVector.from_config(raw)
 
 
+def _transport_from(entry: dict[str, Any]) -> TransportKind:
+    raw = entry.get("transport")
+    if raw is None or raw == "":
+        return TransportKind.DIRECT
+    try:
+        return TransportKind(str(raw))
+    except ValueError:
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' has unknown transport {raw!r} "
+            f"(available: {[member.value for member in TransportKind]})"
+        ) from None
+
+
+def _runtime_from(entry: dict[str, Any]) -> RuntimeKind:
+    raw = entry.get("runtime")
+    if raw is None or raw == "":
+        return RuntimeKind.EXTERNAL
+    try:
+        return RuntimeKind(str(raw))
+    except ValueError:
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' has unknown runtime {raw!r} "
+            f"(available: {[member.value for member in RuntimeKind]})"
+        ) from None
+
+
 def _spec_from(entry: dict[str, Any]) -> ModelSpec:
     missing = {"id", "provider"} - entry.keys()
     if missing:
@@ -678,7 +754,7 @@ def _spec_from(entry: dict[str, Any]) -> ModelSpec:
     if not _valid_provider(provider):
         raise ConfigurationError(
             f"model '{entry.get('id')}' names unknown provider '{provider}' "
-            f"(available: {sorted(_KNOWN_PROVIDERS)} plus ollama-* / vllm-* pools)"
+            f"(available: {sorted(_KNOWN_PROVIDERS)} plus ollama-* / vllm-* / litellm-* pools)"
         )
     return ModelSpec(
         id=str(entry["id"]),
@@ -703,6 +779,16 @@ def _spec_from(entry: dict[str, Any]) -> ModelSpec:
         quality=_quality_from(entry),
         performance=_performance_from(entry),
         placement=_placement_from(entry),
+        provider_adapter=str(entry.get("provider_adapter") or ""),
+        transport=_transport_from(entry),
+        runtime=_runtime_from(entry),
+        api_base=_optional_str(entry.get("api_base")),
+        health_endpoint=_optional_str(entry.get("health_endpoint")),
+        metrics_endpoint=_optional_str(entry.get("metrics_endpoint")),
+        served_model_name=_optional_str(entry.get("served_model_name")),
+        supports_kv_metrics=bool(entry.get("supports_kv_metrics", False)),
+        supports_batch_metrics=bool(entry.get("supports_batch_metrics", False)),
+        supports_queue_metrics=bool(entry.get("supports_queue_metrics", False)),
         enabled=bool(entry.get("enabled", True)),
         fallbacks=_as_tuple(entry.get("fallbacks")),
         huggingface_id=_optional_str(entry.get("huggingface_id") or entry.get("hf_id")),

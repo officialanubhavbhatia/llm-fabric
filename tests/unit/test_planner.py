@@ -57,6 +57,7 @@ def _intent(
     modality: Modality = Modality.TEXT,
     capabilities: frozenset[str] = frozenset(),
     abstain: bool = False,
+    confidence: float = 0.9,
 ) -> IntentClassification:
     if abstain:
         return IntentClassification.unknown(classifier_version="test", taxonomy_version="test")
@@ -71,7 +72,7 @@ def _intent(
         latency_class=latency,
         quality_class=quality,
         cost_class=cost,
-        confidence=0.9,
+        confidence=confidence,
         classifier_version="test",
         taxonomy_version="test",
         required_capabilities=capabilities,
@@ -140,6 +141,29 @@ def test_an_abstaining_intent_does_not_override_a_pinned_model(registry: ModelRe
         RouteRequest(synthetic_model_id(Grade.GRADE00), intent=_intent(abstain=True))
     )
     assert plan.policy is RoutePolicy.DECLARED
+
+
+def test_medium_confidence_uses_balanced_instead_of_cheapest(
+    registry: ModelRegistry,
+) -> None:
+    planner = RoutePlanner(registry, default_policy="cost_first")
+    plan = planner.plan(
+        RouteRequest("synth-cheap", intent=_intent(quality=QualityClass.MAXIMUM, confidence=0.8))
+    )
+    assert plan.policy is RoutePolicy.BALANCED
+
+
+def test_unknown_serving_state_uses_balanced_floor(registry: ModelRegistry) -> None:
+    planner = RoutePlanner(registry, default_policy="cost_first")
+    plan = planner.plan(
+        RouteRequest(
+            "synth-cheap",
+            intent=IntentClassification.unknown_result(
+                classifier_version="test", taxonomy_version="test"
+            ),
+        )
+    )
+    assert plan.policy is RoutePolicy.BALANCED
 
 
 # -- capability filtering -----------------------------------------------------

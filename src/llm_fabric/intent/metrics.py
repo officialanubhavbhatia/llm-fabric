@@ -19,7 +19,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from llm_fabric.intent.schema import ClassifierLayer
+from llm_fabric.intent.schema import ClassifierLayer, ServingClassificationState
 
 #: Fixed confidence buckets. Ten is enough to see a distribution shift and few
 #: enough to stay cheap.
@@ -79,6 +79,11 @@ class IntentMetrics:
         self._classifications = 0
         self._abstentions = 0
         self._unknown = 0
+        self._known = 0
+        self._safe_fallback = 0
+        self._errors = 0
+        self._missing = 0
+        self._serving_requests = 0
         self._ambiguous = 0
         self._exact_hits = 0
         self._semantic_hits = 0
@@ -102,17 +107,34 @@ class IntentMetrics:
         latency_ms: float,
         cost_usd: float,
         cache_hit: bool,
+        serving_state: ServingClassificationState | None = None,
     ) -> None:
+        state = serving_state
+        if state is None:
+            if abstained:
+                state = ServingClassificationState.ABSTAIN
+            elif intent_id == "unknown":
+                state = ServingClassificationState.UNKNOWN
+            else:
+                state = ServingClassificationState.KNOWN
         with self._lock:
             self._classifications += 1
+            self._serving_requests += 1
             self._by_layer[layer.value] = self._by_layer.get(layer.value, 0) + 1
             self._confidence.observe(confidence)
             self._latency.observe(latency_ms)
             self._cost_usd += cost_usd
 
-            if abstained:
+            if state is ServingClassificationState.ABSTAIN:
                 self._abstentions += 1
+            elif state is ServingClassificationState.UNKNOWN:
                 self._unknown += 1
+            elif state is ServingClassificationState.SAFE_FALLBACK:
+                self._safe_fallback += 1
+            else:
+                self._known += 1
+            if abstained and state is not ServingClassificationState.ABSTAIN:
+                self._abstentions += 1
             if ambiguous:
                 self._ambiguous += 1
             if cache_hit:
@@ -127,6 +149,27 @@ class IntentMetrics:
                 self._by_intent[intent_id] = 1
             else:
                 self._intents_dropped += 1
+
+    def record_error(self) -> None:
+        with self._lock:
+            self._errors += 1
+
+    def record_missing(self) -> None:
+        with self._lock:
+            self._missing += 1
+
+    def record_serving(self, state: ServingClassificationState) -> None:
+        """Count a serving-path IntentResult that did not go through `record()`."""
+        with self._lock:
+            self._serving_requests += 1
+            if state is ServingClassificationState.KNOWN:
+                self._known += 1
+            elif state is ServingClassificationState.UNKNOWN:
+                self._unknown += 1
+            elif state is ServingClassificationState.ABSTAIN:
+                self._abstentions += 1
+            else:
+                self._safe_fallback += 1
 
     def record_escalation(self) -> None:
         with self._lock:
@@ -159,8 +202,13 @@ class IntentMetrics:
         with self._lock:
             return {
                 "classifications": self._classifications,
-                "abstentions": self._abstentions,
+                "serving_requests": self._serving_requests,
+                "known": self._known,
                 "unknown": self._unknown,
+                "abstentions": self._abstentions,
+                "safe_fallback": self._safe_fallback,
+                "errors": self._errors,
+                "missing": self._missing,
                 "escalations": self._escalations,
                 "disagreements": self._disagreements,
                 "abstention_rate": (
@@ -193,6 +241,11 @@ class IntentMetrics:
             self._classifications = 0
             self._abstentions = 0
             self._unknown = 0
+            self._known = 0
+            self._safe_fallback = 0
+            self._errors = 0
+            self._missing = 0
+            self._serving_requests = 0
             self._ambiguous = 0
             self._exact_hits = 0
             self._semantic_hits = 0

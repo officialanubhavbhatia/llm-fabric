@@ -44,8 +44,16 @@ Present on every buffered response:
 | Header | Meaning |
 | --- | --- |
 | `x-fabric-request-id` | Correlation id. Echoes a caller-supplied `x-request-id`. |
+| `x-fabric-route-id` | Route Planner decision id for this request. |
 | `x-fabric-requested-model` | What the caller asked for. |
 | `x-fabric-served-model` | What actually served it. |
+| `x-fabric-deployment-id` | Registry deployment that served the last attempt. |
+| `x-fabric-provider-adapter` | Adapter name (`ollama`, `litellm`, `vllm`, …). |
+| `x-fabric-transport` | `direct` or `litellm`. |
+| `x-fabric-runtime` | `ollama`, `vllm`, `external`, or `mock`. |
+| `x-fabric-grade` | Declared grade of the last attempt, when set. |
+| `x-fabric-litellm-model` | LiteLLM model name the planner selected, when transport is LiteLLM. |
+| `x-fabric-actual-served-model` | Model id the backend reported on the wire, when present. |
 | `x-fabric-selected-tier` | Public service tier of the served deployment (`L12`), when declared. |
 | `x-fabric-policy` | The policy that chose it. |
 | `x-fabric-failovers` | How many candidates failed first. |
@@ -89,8 +97,8 @@ One envelope everywhere, including schema validation failures:
 | `not_found` | 404 |
 | `quota_exceeded` | 429 |
 | `no_candidate` | 503 |
-| `all_candidates_failed` | 502 |
-| `provider_timeout`, `provider_unavailable`, `upstream_error` | 502 |
+| `route_exhausted` (formerly `all_candidates_failed`) | 502 |
+| `runtime_timeout` (formerly `provider_timeout`), `provider_unavailable`, `litellm_unavailable`, `ollama_unavailable`, `vllm_unavailable`, `rate_limited`, `model_unavailable`, `upstream_error` | 429 or 502 |
 | `configuration_error` | 500 |
 
 Validation failures add a `details` array of `{location, message, type}`.

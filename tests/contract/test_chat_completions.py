@@ -46,7 +46,7 @@ def test_response_reports_the_model_that_served_it(client: TestClient) -> None:
     assert response.headers["x-fabric-requested-model"] == "auto"
     assert response.headers["x-fabric-served-model"] == "cheap"
     assert response.headers["x-fabric-provider"] == "mock"
-    assert response.headers["x-fabric-policy"] == "cost_first"
+    assert response.headers["x-fabric-policy"] == "balanced"
 
 
 def test_failover_is_visible_to_the_caller(client: TestClient) -> None:

@@ -2,8 +2,14 @@
 # Profiles:
 #   mock            Fabric with deterministic in-process inference
 #   local           Fabric plus Ollama (weights persist outside the Fabric image)
+#   litellm-ollama  Fabric plus LiteLLM transport plus Ollama
+#   litellm-vllm    Fabric plus LiteLLM transport; vLLM is external (GPU required)
 #   observability   OTLP collector, Prometheus, and Grafana
 #   platform        PostgreSQL and Redis for production-state integration tests
+#   tools           one-shot Ollama pull
+#
+# There is no Compose service that starts vLLM. A GPU host must supply
+# VLLM_API_BASE. Do not fake a GPU.
 
 services:
   postgres:
@@ -62,7 +68,7 @@ services:
 
   ollama:
     image: ollama/ollama:0.32.15
-    profiles: ["local"]
+    profiles: ["local", "litellm-ollama"]
     ports:
       - "11434:11434"
     environment:
@@ -73,6 +79,37 @@ services:
       - ollama-models:/root/.ollama
     healthcheck:
       test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.63.11-stable
+    profiles: ["litellm-ollama"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--port"
+      - "4000"
+      - "--num_workers"
+      - "1"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml:ro
+    expose:
+      - "4000"
+    environment:
+      LITELLM_LOG: ERROR
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health')",
+        ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -103,6 +140,8 @@ services:
       LLM_FABRIC_HOST: 0.0.0.0
       LLM_FABRIC_PORT: 47317
       LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "true"
+      LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER: "true"
       LLM_FABRIC_REGISTRY_PATH: /app/config/models.yaml
       LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
       LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
@@ -136,11 +175,124 @@ services:
       LLM_FABRIC_HOST: 0.0.0.0
       LLM_FABRIC_PORT: 47317
       LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "true"
+      LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER: "true"
       LLM_FABRIC_REGISTRY_PATH: ${LLM_FABRIC_COMPOSE_REGISTRY:-/app/config/models.local.yaml}
       LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
       LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
       LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
       LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+      LLM_FABRIC_REQUEST_TIMEOUT_S: "300"
+    volumes:
+      - ../../config:/app/config:ro
+    ports:
+      - "47317:47317"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  gateway-litellm-ollama:
+    profiles: ["litellm-ollama"]
+    image: ${LLM_FABRIC_IMAGE:-llm-fabric:dev}
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+      args:
+        VERSION: ${LLM_FABRIC_VERSION:-0.1.0}
+        REVISION: ${LLM_FABRIC_REVISION:-dev}
+    depends_on:
+      ollama:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+    environment:
+      LLM_FABRIC_ENVIRONMENT: development
+      LLM_FABRIC_HOST: 0.0.0.0
+      LLM_FABRIC_PORT: 47317
+      LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "true"
+      LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER: "true"
+      LLM_FABRIC_REGISTRY_PATH: /app/config/models.litellm-ollama.yaml
+      LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
+      LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
+      LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
+      LLM_FABRIC_LITELLM_BASE_URL: http://litellm:4000/v1
+      LLM_FABRIC_LITELLM_NUM_RETRIES: "0"
+      LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+      LLM_FABRIC_REQUEST_TIMEOUT_S: "300"
+    volumes:
+      - ../../config:/app/config:ro
+    ports:
+      - "47317:47317"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  litellm-vllm:
+    image: ghcr.io/berriai/litellm:v1.63.11-stable
+    profiles: ["litellm-vllm"]
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--port"
+      - "4000"
+      - "--num_workers"
+      - "1"
+    volumes:
+      - ./litellm-vllm-config.yaml:/app/config.yaml:ro
+    expose:
+      - "4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      LITELLM_LOG: ERROR
+      VLLM_API_BASE: ${VLLM_API_BASE:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-sk-none}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway-litellm-vllm:
+    profiles: ["litellm-vllm"]
+    image: ${LLM_FABRIC_IMAGE:-llm-fabric:dev}
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+      args:
+        VERSION: ${LLM_FABRIC_VERSION:-0.1.0}
+        REVISION: ${LLM_FABRIC_REVISION:-dev}
+    depends_on:
+      litellm-vllm:
+        condition: service_healthy
+    environment:
+      LLM_FABRIC_ENVIRONMENT: development
+      LLM_FABRIC_HOST: 0.0.0.0
+      LLM_FABRIC_PORT: 47317
+      LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "true"
+      LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER: "true"
+      LLM_FABRIC_REGISTRY_PATH: /app/config/models.litellm-vllm.yaml
+      LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
+      LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
+      LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
+      LLM_FABRIC_LITELLM_BASE_URL: http://litellm-vllm:4000/v1
+      LLM_FABRIC_LITELLM_NUM_RETRIES: "0"
       LLM_FABRIC_REQUEST_TIMEOUT_S: "300"
     volumes:
       - ../../config:/app/config:ro

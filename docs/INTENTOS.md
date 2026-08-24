@@ -10,8 +10,10 @@ is [`INTENTOS_SUCCESS_CRITERIA.md`](INTENTOS_SUCCESS_CRITERIA.md). Dataset
 hygiene is [`INTENT_DATASET_REPORT.md`](../INTENT_DATASET_REPORT.md).
 
 Nothing here claims competitor comparisons. Nothing here claims multilingual
-production quality. Serving-path classification is **off by default**
-(`LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED`).
+production quality. Serving-path IntentOS is **mandatory in production**.
+Development and test may disable the cascade; they still attach a
+`SAFE_FALLBACK` IntentResult so `provider_invocations_without_intent` stays 0.
+See [ADR 0006](adr/0006-serving-path-intentos.md).
 
 ## Architecture
 
@@ -233,8 +235,9 @@ and emits `x-fabric-intent-shadow-*` headers without changing the route.
 | semantic cache down | skip L1, continue |
 | embedder down | skip L3, continue |
 | L4/L5 provider down | skip, continue or abstain |
-| cascade exception on chat | log, serve without intent |
-| abstain / unknown / conf < 0.50 | balanced capability floor |
+| cascade exception on chat | SAFE_FALLBACK IntentResult, never skip |
+| abstain / unknown / medium / low confidence | balanced capability floor |
+| high-confidence known (>= 0.90) | may infer an optimized route policy |
 | intent extras no candidate | drop extras, route on hard requirements |
 
 ## Metrics
@@ -243,17 +246,22 @@ Prometheus names (bounded labels only — no user id, request id, or raw text):
 
 ```
 fabric_intent_classifications_total
+fabric_intent_serving_requests_total
+fabric_intent_known_total
 fabric_intent_abstentions_total
 fabric_intent_unknown_total
+fabric_intent_safe_fallback_total
+fabric_intent_error_total
+fabric_intent_missing_total
 fabric_intent_cache_hits_total
 fabric_intent_classifier_latency_seconds
 fabric_intent_escalations_total
 fabric_intent_disagreements_total
 ```
 
-Command Center `intents` view shows cascade counters: distribution by layer,
-confidence histogram, abstention, unknown, cache hits, latency. It does not
-show accuracy; that requires labels.
+Command Center `intents` view exposes serving coverage (known / unknown /
+abstain / safe_fallback) plus cascade counters. It does not show accuracy;
+that requires labels. Frozen hard-negative accuracy stays 0.50 / required 0.58.
 
 ## Preview contract
 
@@ -263,7 +271,8 @@ POST /v1/intents/classify
 
 Auth and tenant rules are the same as the rest of `/v1`. The Python SDK
 exposes `client.intents.classify(...)`. Chat, when classification is enabled,
-echoes `x-fabric-intent`, `x-fabric-intent-confidence`,
+echoes `x-fabric-intent`, `x-fabric-intent-state`,
+`x-fabric-intent-result-id`, `x-fabric-intent-confidence`,
 `x-fabric-intent-layer`, `x-fabric-intent-cache`,
 `x-fabric-taxonomy-version`, `x-fabric-classifier-version`.
 

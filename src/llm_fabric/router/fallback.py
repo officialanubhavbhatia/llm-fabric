@@ -36,9 +36,11 @@ from llm_fabric.errors import (
     ContextTooLargeError,
     InvalidRequestError,
     ModelNotFoundError,
+    ModelUnavailableError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     QuotaExceededError,
+    RateLimitedError,
     RetryableError,
 )
 
@@ -80,11 +82,11 @@ def reason_for_error(error: BaseException) -> FallbackReason:
     """
     if isinstance(error, ProviderTimeoutError):
         return FallbackReason.TIMEOUT
-    if isinstance(error, QuotaExceededError):
+    if isinstance(error, (QuotaExceededError, RateLimitedError)):
         return FallbackReason.RATE_LIMITED
     if isinstance(error, ContextTooLargeError):
         return FallbackReason.CONTEXT_TOO_LARGE
-    if isinstance(error, ModelNotFoundError):
+    if isinstance(error, (ModelNotFoundError, ModelUnavailableError)):
         return FallbackReason.MODEL_UNAVAILABLE
     if isinstance(error, ProviderUnavailableError):
         return FallbackReason.PROVIDER_DOWN

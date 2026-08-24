@@ -67,7 +67,7 @@ carries the delegation scope. See [`SECURITY.md`](../SECURITY.md) and
 | `LLM_FABRIC_MIGRATION_DATABASE_URL` | DSN | falls back to `DATABASE_URL` | migrate Job | table-owner role, never the app role | Alembic only (`alembic/env.py`). Not a `Settings` field. |
 | `LLM_FABRIC_ANALYTICS_URL` | DSN | unset (discard) | no | optional ClickHouse | Off the request path. Unset discards analytics events. |
 
-Workers refuse to start in production unless Alembic revision `0003_revoke_app_ddl`
+Workers refuse to start in production unless Alembic revision `0004_usage_topology`
 is applied. Do not run `alembic upgrade` as `fabric_app`.
 
 ## Quotas
@@ -112,6 +112,9 @@ These are operator ceilings, not billing-grade metering. See
 | `LLM_FABRIC_OLLAMA_API_KEY` | secret | unset | no | only if the daemon is locked | Optional bearer for Ollama. |
 | `LLM_FABRIC_VLLM_BASE_URL` | URL | `http://127.0.0.1:8000/v1` | no | the vLLM pool URL | vLLM OpenAI-compatible root. No OpenAI key required. |
 | `LLM_FABRIC_VLLM_API_KEY` | secret | unset | no | if vLLM `--api-key` is set | Optional bearer for vLLM. |
+| `LLM_FABRIC_LITELLM_BASE_URL` | URL | `http://127.0.0.1:4000/v1` | no | ClusterIP LiteLLM `/v1` | LiteLLM OpenAI-compatible root. Transport only. |
+| `LLM_FABRIC_LITELLM_API_KEY` | secret | unset | no | if the proxy requires a key | Optional bearer; defaults to `litellm` when unset. |
+| `LLM_FABRIC_LITELLM_NUM_RETRIES` | int | `0` | no | `0` | Expected LiteLLM `num_retries`. Values above 1, or a retry product above 9, refuse startup. |
 | `LLM_FABRIC_PROVIDER_BASE_URLS` | JSON object | `{}` | no | per-pool URLs | e.g. `{"vllm-coding":"http://vllm-coding:8000/v1"}`. |
 | `LLM_FABRIC_ANTHROPIC_API_KEY` / `ANTHROPIC_API_KEY` | secret | unset | when anthropic models enabled | secret store | Anthropic adapter. |
 | `LLM_FABRIC_ANTHROPIC_BASE_URL` | URL | `https://api.anthropic.com/v1` | no | leave unless proxying | Anthropic API root. |
@@ -132,16 +135,25 @@ Circuit breakers (per deployment, EWMA + consecutive failures):
 
 ## IntentOS
 
-Serving-path classification is **off**. Shadow is the recommended observation
-method. See [`docs/INTENTOS.md`](INTENTOS.md).
+Serving-path classification is **mandatory in production**. Development and
+test may disable the cascade; they still attach `SAFE_FALLBACK`. See
+[`docs/INTENTOS.md`](INTENTOS.md) and [ADR 0006](adr/0006-serving-path-intentos.md).
 
 | Variable | Type | Default | Production recommendation | Purpose |
 | --- | --- | --- | --- | --- |
-| `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` | bool | `false` | **`false`** | Classify every chat request and allow the planner to infer policy from the result. |
-| `LLM_FABRIC_INTENT_SHADOW` | bool | `false` | optional observation | Classify on the serving path but **do not change the route**. Headers `x-fabric-intent-shadow-*`. Ignored when classification is on. |
-| `LLM_FABRIC_INTENT_EMBEDDER` | `hashing` \| `minilm` \| `local` / `bge-small` | `hashing` | `hashing` | L3 embedder. MiniLM needs `uv sync --extra embed`. |
+| `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` | bool | `false` | **`true` (required)** | Classify every chat request. Production refuses to start when false. |
+| `LLM_FABRIC_INTENT_SHADOW` | bool | `false` | optional observation | Classify without changing the route when classification is off. Headers `x-fabric-intent-shadow-*`. |
+| `LLM_FABRIC_INTENT_EMBEDDER` | `hashing` \| `minilm` \| `local` / `bge-small` | `hashing` | `local` or `minilm`, or hashing with the allow flag | L3 embedder. MiniLM needs `uv sync --extra embed`. |
+| `LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER` | bool | `false` | required if embedder is hashing | Explicit acceptance that L3 is lexical hashing, not a semantic model. |
 | `LLM_FABRIC_INTENT_L4_RERANK` | bool | `false` | `false` | Local description reranker as L4. L5 stays off in code. |
 | `LLM_FABRIC_ROUTING_QUALITY_SHADOW` | bool | `false` | `false` until measured | Rank the same eligible set under `quality_first` and record the comparison. Does **not** change the served route. |
+
+## Context compiler
+
+The compiler always runs on `/v1/chat/completions`. Registry YAML may set
+`metrics_endpoint` (vLLM `/metrics`) and `api_base` (Ollama `/api/ps`) for
+off-path engine scrapes. See [`docs/CONTEXT.md`](CONTEXT.md) and
+[ADR 0007](adr/0007-context-compiler-observability.md).
 
 ## Observability
 

@@ -133,7 +133,7 @@ async def evaluate_spec(
 ) -> dict[str, Any]:
     factory = ProviderFactory(settings)
     try:
-        provider = factory.get(spec.provider)
+        provider = factory.get(spec.provider, base_url=spec.api_base)
     except Exception as exc:  # noqa: BLE001
         return {
             "deployment": spec.id,

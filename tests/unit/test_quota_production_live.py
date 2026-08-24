@@ -107,6 +107,8 @@ def test_four_workers_share_finite_production_quota(tmp_path: Path) -> None:
                     ),
                     "LLM_FABRIC_REDIS_URL": redis_url,
                     "LLM_FABRIC_REGISTRY_PATH": str(registry),
+                    "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+                    "LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER": "true",
                     "LLM_FABRIC_QUOTA_TENANT_REQUESTS_PER_MINUTE": "5",
                     "LLM_FABRIC_QUOTA_TENANT_MAX_CONCURRENCY": "8",
                 }

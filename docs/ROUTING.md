@@ -6,7 +6,8 @@ different questions. Mixing them produces a toy router.
 ```text
 Request
   → authentication / tenant / policy
-  → optional IntentOS classification (serving path OFF by default)
+  → IntentOS (KNOWN / UNKNOWN / ABSTAIN / SAFE_FALLBACK)
+  → context compiler (ContextRecord)
   → capability requirements
   → service tier L0–L30 (public spelling of Grade00–Grade29; L30 → Grade29)
   → eligible registry deployments
@@ -15,10 +16,11 @@ Request
   → execution with bounded fallback
 ```
 
-IntentOS does **not** pick a provider. A classification, when present, may
-contribute capabilities and a preferred-tier list from `config/routing.yaml`.
-Serving-path classification stays off (`LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED`
-defaults to false) until IntentOS gates pass.
+IntentOS does **not** pick a provider. A classification may contribute
+capabilities and a preferred-tier list from `config/routing.yaml`. Production
+cannot disable serving-path IntentOS. High-confidence known results may infer
+an optimized policy; uncertain results use a balanced capability floor, never
+cheapest-by-uncertainty.
 
 ## L0–L30
 

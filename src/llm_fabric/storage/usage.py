@@ -12,12 +12,17 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from llm_fabric.observability.usage_event import InvocationTotals, PersistResult, UsageEvent
+from llm_fabric.observability.usage_event import (
+    InvocationTotals,
+    PersistResult,
+    UsageEvent,
+    UsageOperation,
+)
 from llm_fabric.storage.postgres import UsageEventRow, bind_isolation
 from llm_fabric.tenancy.scope import TenantScope
 
@@ -38,8 +43,13 @@ def event_to_payload(event: UsageEvent) -> dict[str, Any]:
         "requested_model": event.requested_model,
         "policy": event.policy,
         "deployment_id": event.deployment_id,
+        "route_id": event.route_id,
         "operation": event.operation,
         "intent_id": event.intent_id,
+        "intent_result_id": event.intent_result_id,
+        "taxonomy_version": event.taxonomy_version,
+        "classifier_version": event.classifier_version,
+        "context_record_id": event.context_record_id,
         "prompt_tokens": event.prompt_tokens,
         "completion_tokens": event.completion_tokens,
         "cached_tokens": event.cached_tokens,
@@ -55,6 +65,12 @@ def event_to_payload(event: UsageEvent) -> dict[str, Any]:
         "attempt_number": event.attempt_number,
         "streaming": event.streaming,
         "error": event.error,
+        "provider_adapter": event.provider_adapter,
+        "transport": event.transport,
+        "runtime": event.runtime,
+        "grade": event.grade,
+        "litellm_model": event.litellm_model,
+        "actual_served_model": event.actual_served_model,
     }
 
 
@@ -80,7 +96,12 @@ def row_to_event(row: UsageEventRow) -> UsageEvent:
         user_id=row.user_id,
         project_id=row.project_id,
         deployment_id=row.deployment_id,
+        route_id=row.route_id,
         intent_id=row.intent_id,
+        intent_result_id=getattr(row, "intent_result_id", None),
+        taxonomy_version=getattr(row, "taxonomy_version", None),
+        classifier_version=getattr(row, "classifier_version", None),
+        context_record_id=getattr(row, "context_record_id", None),
         cached_tokens=row.cached_tokens,
         reasoning_tokens=row.reasoning_tokens,
         provider_cost_usd=row.provider_cost_usd,
@@ -89,6 +110,12 @@ def row_to_event(row: UsageEventRow) -> UsageEvent:
         attempt_number=row.attempt_number,
         streaming=row.streaming,
         error=row.error,
+        provider_adapter=row.provider_adapter,
+        transport=row.transport,
+        runtime=row.runtime,
+        grade=row.grade,
+        litellm_model=row.litellm_model,
+        actual_served_model=row.actual_served_model,
     )
 
 
@@ -188,6 +215,44 @@ class UsageLedger:
     def request_ids(self, *, tenant_id: str | None, observe: bool = False) -> set[str]:
         events = self.list_events(tenant_id=tenant_id, observe=observe, limit=1_000_000)
         return {event.request_id for event in events}
+
+    def provider_invocations_without_intent(self, *, observe: bool = True) -> int:
+        """Count USER_RESPONSE rows missing an IntentResult id. PASS is 0."""
+        if not observe:
+            raise PermissionError("fleet intent-coverage reads require explicit observe scope")
+        with Session(self._engine) as session:
+            bind_isolation(session, "", observe=True)
+            query = (
+                select(func.count())
+                .select_from(UsageEventRow)
+                .where(
+                    UsageEventRow.operation == UsageOperation.USER_RESPONSE.value,
+                    or_(
+                        UsageEventRow.intent_result_id.is_(None),
+                        UsageEventRow.intent_result_id == "",
+                    ),
+                )
+            )
+            return int(session.scalar(query) or 0)
+
+    def provider_invocations_without_context_record(self, *, observe: bool = True) -> int:
+        """Count USER_RESPONSE rows missing a ContextRecord id. PASS is 0."""
+        if not observe:
+            raise PermissionError("fleet context-coverage reads require explicit observe scope")
+        with Session(self._engine) as session:
+            bind_isolation(session, "", observe=True)
+            query = (
+                select(func.count())
+                .select_from(UsageEventRow)
+                .where(
+                    UsageEventRow.operation == UsageOperation.USER_RESPONSE.value,
+                    or_(
+                        UsageEventRow.context_record_id.is_(None),
+                        UsageEventRow.context_record_id == "",
+                    ),
+                )
+            )
+            return int(session.scalar(query) or 0)
 
     def day_buckets(self, *, tenant_id: str | None, observe: bool = False) -> list[dict[str, Any]]:
         """Ledger sums grouped by tenant and UTC day, for Redis reconciliation."""

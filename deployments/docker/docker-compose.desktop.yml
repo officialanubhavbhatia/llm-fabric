@@ -1,6 +1,7 @@
 # Overlay for Docker Desktop: Postgres, Redis, and observability wired into
-# whichever Fabric gateway profile is active. Do not combine --profile mock
-# and --profile local; both gateways bind host port 47317.
+# whichever Fabric gateway profile is active. Do not combine --profile mock,
+# --profile local, --profile litellm-ollama, or --profile litellm-vllm; those
+# gateways all bind host port 47317.
 
 services:
   gateway-mock:
@@ -33,6 +34,25 @@ services:
       otel-collector:
         condition: service_started
       ollama:
+        condition: service_healthy
+
+  gateway-litellm-ollama:
+    environment:
+      LLM_FABRIC_DATABASE_URL: postgresql://fabric_app:fabric@postgres:5432/fabric
+      LLM_FABRIC_REDIS_URL: redis://redis:6379/0
+      LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+      litellm:
         condition: service_healthy
 
   grafana:

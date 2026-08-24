@@ -17,7 +17,7 @@ from llm_fabric.storage.postgres import create_database_engine
 
 #: Linear Alembic head for this release. Update when adding a revision.
 #: `expected_heads()` prefers the on-disk Alembic scripts when they are present.
-EXPECTED_HEAD = "0003_revoke_app_ddl"
+EXPECTED_HEAD = "0006_context_record"
 
 REQUIRED_TABLES = frozenset(
     {

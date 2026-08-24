@@ -51,7 +51,7 @@ def test_chat_writes_a_request_trace(client: TestClient) -> None:
     assert "request" in names
     assert "route" in names
     assert "llm" in names
-    assert "context" not in names
+    assert "context" in names
     assert "eval" not in names
 
 
@@ -63,6 +63,48 @@ def test_intents_view_leads_with_frozen_safety_gates(client: TestClient) -> None
     assert gates["required"] == 0.58
     assert gates["routing"] == "OFF"
     assert gates["serving_path_classification"] is False
+    serving = payload["data"]["serving"]
+    assert serving["missing"] == 0
+    assert "known_pct" in serving
+    assert "classifier_layers" in serving
+    assert "l0_hits" in serving
+    assert "l1_hits" in serving
+    assert "classifier_version" in serving
+    assert "taxonomy_version" in serving
+    assert "not classification accuracy" in (payload.get("note") or "")
+
+
+def test_overview_and_request_detail_after_chat(client: TestClient) -> None:
+    chat = client.post(
+        "/v1/chat/completions",
+        json={"model": "cheap", "messages": [{"role": "user", "content": "hi"}]},
+    )
+    assert chat.status_code == 200
+    overview = client.get("/v1/observability/dashboards/overview").json()
+    coverage = overview["data"]["coverage"]
+    assert coverage["provider_invocations_without_intent"] == 0
+    assert coverage["provider_invocations_without_context_record"] == 0
+    assert coverage["supported_metrics_without_provenance"] == 0
+    assert coverage["intent_serving"] == 1.0
+    assert coverage["context_record"] == 1.0
+    assert coverage["supported_telemetry_provenance"] == 1.0
+    assert "quality" not in overview["data"]
+    requests = client.get("/v1/observability/dashboards/requests").json()
+    row = requests["data"]["recent"][0]
+    assert row["identity"]["request_id"]
+    assert "trace_id" in row["identity"]
+    assert row["identity"]["tenant_id"]
+    assert "domain_task" in row["intent"]
+    assert row["context"]["before_tokens"]["value"] is not None
+    assert row["route"]["actual_served_model"]
+    assert row["tokens"]["prompt"] is not None
+    assert row["tokens"]["cached"]["provenance"] == "UNAVAILABLE"
+    assert row["performance"]["total_ms"] is not None
+    assert row["performance"]["prefill_tps"]["provenance"] == "UNAVAILABLE"
+    assert row["engine_snapshot"]["scope"] == "DEPLOYMENT"
+    html = client.get("/command-center").text
+    assert "Intent serving coverage" in html
+    assert "Request detail" in html
 
 
 def test_tiers_view_has_l0_to_l30_histogram(client: TestClient) -> None:

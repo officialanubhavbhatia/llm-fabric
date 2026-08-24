@@ -115,6 +115,50 @@ def test_fabric_serves_ollama_and_sets_routing_headers() -> None:
     assert response.headers.get("x-fabric-served-model") == "local-small"
     assert response.headers.get("x-fabric-provider") == "ollama"
     assert response.headers.get("x-fabric-selected-tier") == "L3"
+    assert response.headers.get("x-fabric-transport") == "direct"
+    assert response.headers.get("x-fabric-runtime") == "ollama"
+    assert response.headers.get("x-fabric-provider-adapter") == "ollama"
+    assert response.headers.get("x-fabric-route-id")
+    assert response.headers.get("x-fabric-deployment-id") == "local-small"
+    usage = response.json().get("usage") or {}
+    assert int(usage.get("total_tokens") or 0) > 0
+
+
+@pytest.mark.skipif(not _ollama_up(), reason="Ollama daemon not reachable")
+def test_fabric_streams_ollama() -> None:
+    tag = _first_tag()
+    if not tag:
+        pytest.skip("Ollama has no pulled models")
+    registry = ModelRegistry.from_mapping(
+        {
+            "models": [
+                {
+                    "id": "local-small",
+                    "provider": "ollama",
+                    "provider_model": tag,
+                    "grade": "L3",
+                    "capabilities": ["chat", "streaming"],
+                    "lifecycle": "approved",
+                }
+            ]
+        }
+    )
+    app = create_app(settings=Settings(environment="test"), registry=registry)
+    with TestClient(app) as client, client.stream(
+        "POST",
+        "/v1/chat/completions",
+        json={
+            "model": "local-small",
+            "messages": [{"role": "user", "content": "Hi"}],
+            "max_tokens": 8,
+            "stream": True,
+        },
+    ) as response:
+        assert response.status_code == 200
+        assert response.headers.get("x-fabric-transport") == "direct"
+        body = "".join(response.iter_text())
+    assert "data:" in body
+    assert "[DONE]" in body
 
 
 @pytest.mark.skipif(not _ollama_up(), reason="Ollama daemon not reachable")

@@ -1,8 +1,28 @@
 global:
   scrape_interval: 15s
 
+# Scrapes are off the user request path. A missing profile target fails this
+# scrape job; it does not stall `/v1/chat/completions`.
 scrape_configs:
   - job_name: fabric
     static_configs:
-      - targets: ["gateway-mock:47317", "gateway-ollama:47317"]
+      - targets: ["gateway-mock:47317", "gateway-ollama:47317", "gateway-litellm-ollama:47317", "gateway-litellm-vllm:47317"]
+    metrics_path: /metrics
+
+  - job_name: litellm
+    static_configs:
+      - targets: ["litellm:4000", "litellm-vllm:4000"]
+    metrics_path: /metrics
+
+  # Compose does not start vLLM. Operators add the engine host when one exists.
+  # Do not treat LiteLLM /metrics as vLLM engine series.
+  - job_name: vllm
+    static_configs:
+      - targets: ["vllm:8000"]
+    metrics_path: /metrics
+
+  # NVIDIA DCGM exporter is the GPU source. The gateway does not run nvidia-smi.
+  - job_name: dcgm
+    static_configs:
+      - targets: ["dcgm-exporter:9400"]
     metrics_path: /metrics

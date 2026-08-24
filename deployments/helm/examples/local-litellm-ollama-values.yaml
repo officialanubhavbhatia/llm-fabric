@@ -1,0 +1,65 @@
+replicaCount: 1
+
+image:
+  repository: llm-fabric
+  tag: dev
+  digest: ""
+  pullPolicy: IfNotPresent
+
+config:
+  environment: development
+  allowAnonymous: "true"
+  authMode: disabled
+
+secretName: ""
+migrations:
+  enabled: false
+
+service:
+  type: NodePort
+  nodePort: 30017
+
+providers:
+  baseUrls:
+    litellm: http://llm-fabric-litellm:4000/v1
+    ollama-local: http://llm-fabric-ollama:11434/v1
+
+fabricConfig:
+  models: |
+    models:
+      - id: litellm-ollama-smollm2-135m
+        provider: litellm
+        provider_adapter: litellm
+        transport: litellm
+        runtime: ollama
+        provider_model: smollm2-135m
+        grade: Grade00
+        context_window: 8192
+        capabilities: [chat, streaming]
+        placement:
+          locality: local
+        enabled: true
+        lifecycle: approved
+        fallbacks: [mock-small]
+      - id: mock-small
+        provider: mock
+        provider_model: mock-small
+        grade: Grade02
+        context_window: 8192
+        capabilities: [chat, streaming]
+        placement:
+          locality: local
+        enabled: true
+        lifecycle: approved
+    aliases:
+      - id: auto
+        policy: declared
+        candidates: [litellm-ollama-smollm2-135m, mock-small]
+
+ollama:
+  enabled: true
+  persistence:
+    enabled: false
+
+litellm:
+  enabled: true

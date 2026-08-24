@@ -94,7 +94,7 @@ async def test_completion_records_the_decision(registry: ModelRegistry) -> None:
     decision = routed.decision
 
     assert decision.requested_model == "auto"
-    assert decision.policy == "cost_first"
+    assert decision.policy == "balanced"
     assert decision.considered == ["cheap", "premium"]
     assert decision.selected_model == "cheap"
     assert decision.failover_count == 0

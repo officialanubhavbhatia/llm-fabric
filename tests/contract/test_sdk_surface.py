@@ -85,7 +85,9 @@ def test_chat_shadow_classifies_without_changing_the_route(registry) -> None:
     assert chat.status_code == 200
     assert "x-fabric-intent-shadow" in chat.headers
     assert chat.headers["x-fabric-intent-shadow"] == "translation"
-    assert "x-fabric-intent" not in chat.headers
+    assert chat.headers["x-fabric-intent"] == "unknown"
+    assert chat.headers["x-fabric-intent-state"] == "safe_fallback"
+    assert chat.headers["x-fabric-intent-result-id"]
     assert "authorization" not in chat.json()
 
 

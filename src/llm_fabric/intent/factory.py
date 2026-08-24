@@ -67,7 +67,7 @@ def build_offline_cascade(
     return IntentCascade(
         taxonomy=taxonomy,
         exact_cache=ExactIntentCache(cache),
-        semantic_cache=SemanticIntentCache(policy=semantic_policy),
+        semantic_cache=SemanticIntentCache(policy=semantic_policy, cache=cache),
         rules=DeterministicClassifier(),
         embedding=embedding,
         structured=rerank,
@@ -112,7 +112,7 @@ def build_full_cascade(
     return IntentCascade(
         taxonomy=taxonomy,
         exact_cache=ExactIntentCache(cache),
-        semantic_cache=SemanticIntentCache(policy=semantic_policy),
+        semantic_cache=SemanticIntentCache(policy=semantic_policy, cache=cache),
         rules=DeterministicClassifier(),
         embedding=EmbeddingClassifier(resolved_embedder, prototype=PrototypeKind.EXAMPLES),
         structured=StructuredIntentClassifier(

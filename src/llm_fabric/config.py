@@ -234,15 +234,17 @@ class Settings(BaseSettings):
 
     #: Classify every chat request and route on the result.
     #:
-    #: Off by default deliberately. Classification adds work to the synchronous
-    #: path, and no measurement in this repository establishes what that costs at
-    #: load. Turn it on once you have measured your own traffic.
+    #: Production refuses to start when this is false. Development and test may
+    #: disable the cascade for focused testing; they still attach a SAFE_FALLBACK
+    #: IntentResult so provider invocations are never intent-less.
     intent_classification_enabled: bool = False
     #: Classify on the serving path but do not change the route. Recorded on
     #: `x-fabric-intent-shadow-*` headers. Ignored when classification is on.
     intent_shadow: bool = False
-    #: hashing (default, deterministic) | local/bge-small | minilm
+    #: hashing (deterministic tests) | local/bge-small | minilm
     intent_embedder: str = "hashing"
+    #: Production refuses HashingEmbedder unless this is explicitly true.
+    intent_allow_hashing_embedder: bool = False
     #: Attach the local description reranker as L4. Off by default. L5 stays off.
     intent_l4_rerank: bool = False
 
@@ -294,6 +296,13 @@ class Settings(BaseSettings):
     #: Production vLLM OpenAI-compatible endpoint. No OpenAI key is required.
     vllm_base_url: str = "http://127.0.0.1:8000/v1"
     vllm_api_key: str | None = None
+
+    #: LiteLLM proxy. Transport only; MyVista still selects the model name.
+    litellm_base_url: str = "http://127.0.0.1:4000/v1"
+    litellm_api_key: str | None = None
+    #: Expected LiteLLM-side num_retries. Used to refuse retry amplification.
+    #: The LiteLLM config itself must set num_retries to this value.
+    litellm_num_retries: int = 0
 
     #: Intent → capability → preferred-tier policy. Missing file loads empty.
     routing_config_path: Path = Path("config/routing.yaml")
@@ -615,6 +624,12 @@ def validate_startup(settings: Settings) -> None:
     contradictory or development-only identity configuration is a startup
     failure, not a warning.
     """
+    from llm_fabric.serving.topology import refuse_retry_amplification
+
+    refuse_retry_amplification(
+        fabric_attempts=settings.max_attempts,
+        transport_retries=settings.litellm_num_retries,
+    )
     mode = settings.effective_auth_mode
 
     if settings.environment == "production":
@@ -668,6 +683,18 @@ def _validate_production_auth(settings: Settings, mode: AuthMode) -> None:
         )
     if not settings.redis_url:
         raise ConfigurationError("production refused to start: LLM_FABRIC_REDIS_URL is required")
+    if not settings.intent_classification_enabled:
+        raise ConfigurationError(
+            "production refused to start: serving-path IntentOS is mandatory; "
+            "set LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true"
+        )
+    embedder = (settings.intent_embedder or "hashing").strip().lower()
+    if embedder in {"hashing", "hash", "lexical"} and not settings.intent_allow_hashing_embedder:
+        raise ConfigurationError(
+            "production refused to start: HashingEmbedder is not a semantic model; "
+            "set LLM_FABRIC_INTENT_EMBEDDER to local or minilm, or set "
+            "LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER=true to accept lexical hashing"
+        )
     if settings.workers and settings.workers > 1 and not settings.redis_url:
         raise ConfigurationError(
             "production refused to start with multiple workers: quotas, "

@@ -250,6 +250,7 @@ class ContextBlock:
     type: ContextType
     tenant_id: str
     provenance: Provenance
+    source: str = "request"
     trust_level: TrustLevel = TrustLevel.RETRIEVED
     priority: Priority = Priority.NORMAL
     cacheability: Cacheability = Cacheability.VOLATILE
@@ -324,6 +325,7 @@ class ContextBlock:
         row: dict[str, Any] = {
             "block_id": self.block_id,
             "type": self.type.value,
+            "source": self.source,
             "trust_level": self.trust_level.value,
             "priority": self.priority.value,
             "cacheability": self.cacheability.value,

@@ -34,7 +34,6 @@ from typing import Any, Protocol
 
 from llm_fabric.errors import ConfigurationError, ModelNotFoundError, NoCandidateError
 from llm_fabric.intent.schema import (
-    UNKNOWN_INTENT_ID,
     CostClass,
     IntentClassification,
     LatencyClass,
@@ -509,13 +508,9 @@ class RoutePlanner:
             parsed_alias = parse_policy(alias_policy)
             if parsed_alias is RoutePolicy.DECLARED:
                 return parsed_alias, alias_policy, notes
-        if request.intent is not None and (
-            request.intent.abstain
-            or request.intent.intent_id == UNKNOWN_INTENT_ID
-            or request.intent.confidence < 0.50
-        ):
+        if request.intent is not None and not request.intent.allows_optimized_route:
             notes.append(
-                "IntentOS abstained or was low-confidence; "
+                "IntentOS is not high-confidence known; "
                 "using balanced as the capability floor instead of cheapest."
             )
             return RoutePolicy.BALANCED, RoutePolicy.BALANCED.value, notes
@@ -534,7 +529,7 @@ class RoutePlanner:
         never selects a policy: routing an unrecognised prompt to the most
         expensive model because "quality" seemed safe would be the wrong default.
         """
-        if intent is None or intent.abstain or intent.intent_id == UNKNOWN_INTENT_ID:
+        if intent is None or not intent.allows_optimized_route:
             return None
         if intent.quality_class is QualityClass.MAXIMUM:
             return RoutePolicy.QUALITY_FIRST

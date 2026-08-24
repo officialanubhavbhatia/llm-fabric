@@ -22,6 +22,7 @@ from llm_fabric.router.fallback import ContextTooLargeError, FallbackBudget, Fal
 from llm_fabric.router.grades import Grade
 from llm_fabric.router.health import BreakerPolicy, BreakerState, HealthTracker
 from llm_fabric.router.plan import RouteRequest
+from llm_fabric.router.policy import RoutePolicy
 from llm_fabric.router.synthetic import SyntheticFleet, synthetic_model_id
 from llm_fabric.serving.base import StreamDelta, StreamEnd
 from llm_fabric.serving.factory import ProviderFactory
@@ -63,7 +64,7 @@ async def test_a_successful_route_records_its_plan(fleet: SyntheticFleet) -> Non
     assert decision.failover_count == 0
     assert decision.fallback_depth == 0
     assert decision.plan is not None
-    assert decision.plan.policy.value == "cost_first"
+    assert decision.plan.policy.value == "balanced"
     assert decision.attempts[0].reason is None
 
 
@@ -72,7 +73,7 @@ async def test_the_decision_explains_itself(fleet: SyntheticFleet) -> None:
     payload = routed.decision.explain()
 
     assert payload["selected_model"] == G00
-    assert payload["plan"]["policy"] == "cost_first"
+    assert payload["plan"]["policy"] == "balanced"
     assert payload["plan"]["explanation"]
     assert payload["attempts"][0]["error"] is None
 
@@ -324,7 +325,7 @@ async def test_a_stream_ends_with_usage(fleet: SyntheticFleet) -> None:
 
 async def test_a_route_request_can_be_supplied_explicitly(fleet: SyntheticFleet) -> None:
     router = _router(fleet)
-    route = RouteRequest(requested_model="synth-best")
+    route = RouteRequest(requested_model="synth-best", policy=RoutePolicy.QUALITY_FIRST)
     routed = await router.complete(_request("synth-best"), route=route)
     assert routed.spec.id == G29
 

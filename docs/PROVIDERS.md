@@ -14,17 +14,17 @@ Statuses mean:
 | **not executed** | Accepted on the wire or declared on a registry entry; the fabric does not run tools, validate JSON schema, or serve embeddings. |
 | **not built** | No serving path. |
 
-| Feature | mock | Ollama | vLLM | Generic OpenAI-compatible | Anthropic |
-| --- | --- | --- | --- | --- | --- |
-| Chat | yes | same contract | same contract | same contract | yes |
-| Streaming | yes | same contract | same contract | same contract | yes |
-| JSON / structured output | not executed | not executed | not executed | not executed | not executed |
-| Tool calling | not executed | not executed | not executed | not executed | not executed |
-| Embeddings HTTP | not built | not built | not built | not built | not built |
-| Vision | model-dependent, not executed | model-dependent | model-dependent | provider-dependent | model-dependent, not executed |
-| Reasoning | declared capability only | model-dependent | model-dependent | model-dependent | declared capability only |
-| Long context | registry `context_window` | model-dependent | model-dependent | provider-dependent | provider-dependent |
-| Engine `/metrics` (KV, batching) | n/a | not scraped | not scraped | n/a | n/a |
+| Feature | mock | Ollama | vLLM | LiteLLM transport | Generic OpenAI-compatible | Anthropic |
+| --- | --- | --- | --- | --- | --- | --- |
+| Chat | yes | same contract | same contract | same contract | same contract | yes |
+| Streaming | yes | same contract | same contract | same contract | same contract | yes |
+| JSON / structured output | not executed | not executed | not executed | not executed | not executed | not executed |
+| Tool calling | not executed | not executed | not executed | not executed | not executed | not executed |
+| Embeddings HTTP | not built | not built | not built | not built | not built | not built |
+| Vision | model-dependent, not executed | model-dependent | model-dependent | runtime-dependent | provider-dependent | model-dependent, not executed |
+| Reasoning | declared capability only | model-dependent | model-dependent | runtime-dependent | model-dependent | declared capability only |
+| Long context | registry `context_window` | model-dependent | model-dependent | runtime-dependent | provider-dependent | provider-dependent |
+| Engine `/metrics` (KV, batching) | n/a | `/api/ps` loaded models only; KV UNAVAILABLE | scraped when `metrics_endpoint` is set | transport `/metrics` only; not vLLM KV | n/a | n/a |
 
 LLM Fabric is designed to support a broad range of open-source models through
 Ollama, vLLM, Hugging Face **identities in the registry**, and OpenAI-compatible
@@ -44,7 +44,17 @@ evaluation checks. There is no fixed model whitelist in application logic.
 | `anthropic` | Anthropic Messages | `ANTHROPIC_API_KEY` / `LLM_FABRIC_ANTHROPIC_API_KEY` |
 | `ollama`, `ollama-*` | OpenAI-compatible HTTP | none required; optional `LLM_FABRIC_OLLAMA_API_KEY` |
 | `vllm`, `vllm-*` | OpenAI-compatible HTTP | none required; optional `LLM_FABRIC_VLLM_API_KEY` |
+| `litellm`, `litellm-*` | OpenAI-compatible HTTP to LiteLLM | none required; optional `LLM_FABRIC_LITELLM_API_KEY` |
 | `openai-compatible` | OpenAI-compatible HTTP | uses `LLM_FABRIC_OPENAI_BASE_URL`; key optional |
+
+LiteLLM is a **transport**, not a second route planner. Registry fields
+`transport: litellm` and `runtime: ollama|vllm|external` are declared; they are
+never inferred from the model id. The Route Planner selects `provider_model`
+(the LiteLLM `model_name`). LiteLLM `num_retries` defaults to 0; MyVista owns
+semantic fallback. See [`adr/0005-litellm-is-transport.md`](adr/0005-litellm-is-transport.md).
+
+Do not mix `provider: ollama` with `transport: litellm`. Use `provider: litellm`
+and `runtime: ollama`.
 
 Multiple vLLM **pools** are different provider names (`vllm-coding`,
 `vllm-reasoning`, …) with URLs in `LLM_FABRIC_PROVIDER_BASE_URLS`:
@@ -68,6 +78,16 @@ Fabric observes availability, request latency, errors, timeouts, fallback and
 breaker state. TTFT and output tokens/second are recorded only when the API
 response/stream makes them measurable. Fabric does not parse private vLLM
 metrics or treat API token price `0.0` as zero compute cost.
+
+After starting a real LiteLLM proxy (Ollama behind it):
+
+```bash
+export LLM_FABRIC_LITELLM_BASE_URL=http://127.0.0.1:4000/v1
+export LLM_FABRIC_LIVE_LITELLM_MODEL=smollm2-135m
+make test-litellm-live
+```
+
+Skipped tests are not passing benchmarks.
 
 ### Optional live profile
 

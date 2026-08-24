@@ -199,7 +199,7 @@ async def probe_deployment(
     spec = registry.get(deployment_id)
     factory = ProviderFactory(resolved)
     try:
-        provider = factory.get(spec.provider)
+        provider = factory.get(spec.provider, base_url=spec.api_base)
     except Exception as exc:  # noqa: BLE001
         return _unavailable(
             deployment=spec.id,

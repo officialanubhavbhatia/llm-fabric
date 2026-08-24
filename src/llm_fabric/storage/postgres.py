@@ -116,8 +116,13 @@ class UsageEventRow(Base):
     requested_model: Mapped[str | None] = mapped_column(String(256), nullable=True)
     policy: Mapped[str | None] = mapped_column(String(64), nullable=True)
     deployment_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    route_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     operation: Mapped[str] = mapped_column(String(64), nullable=False)
     intent_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    intent_result_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    taxonomy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    classifier_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    context_record_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cached_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -133,6 +138,12 @@ class UsageEventRow(Base):
     attempt_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     streaming: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provider_adapter: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    transport: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    runtime: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    grade: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    litellm_model: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    actual_served_model: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
 
 STARTUP_PROBE_TIMEOUT_S = 3

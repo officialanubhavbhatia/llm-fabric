@@ -132,6 +132,8 @@ def _production(database_url: str) -> Settings:
         api_keys=[API_KEY],
         database_url=database_url,
         redis_url=_redis_url(),
+        intent_classification_enabled=True,
+        intent_allow_hashing_embedder=True,
     )
 
 
@@ -149,6 +151,8 @@ def _clean_env(tmp_path: Path, **overrides: str) -> dict[str, str]:
     env["LLM_FABRIC_ALLOW_ANONYMOUS"] = "false"
     env["LLM_FABRIC_API_KEYS"] = API_KEY
     env["LLM_FABRIC_HOST"] = "127.0.0.1"
+    env["LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED"] = "true"
+    env["LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER"] = "true"
     env["LLM_FABRIC_REGISTRY_PATH"] = str(REPO / "config" / "models.yaml")
     env.update(overrides)
     return env

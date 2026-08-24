@@ -6,11 +6,13 @@ the same tracer, the same Prometheus registry and the same Langfuse sink.
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from typing import Any
 
+from llm_fabric.context.record import ContextRecord
 from llm_fabric.observability.engine import EngineMetricsHub
 from llm_fabric.observability.langfuse import LangfuseSink, NullLangfuse
 from llm_fabric.observability.metering import UsageRecord
@@ -61,6 +63,14 @@ class Telemetry:
         self.metrics = metrics or FabricMetrics()
         self.langfuse = langfuse or NullLangfuse()
         self.engines = engines or EngineMetricsHub()
+        self._context_records: deque[ContextRecord] = deque(maxlen=1_000)
+
+    def record_context(self, record: ContextRecord) -> None:
+        self._context_records.append(record)
+
+    def recent_context(self, limit: int = 50) -> list[ContextRecord]:
+        items = list(self._context_records)
+        return items[-limit:]
 
     @contextmanager
     def span(self, name: str, **attributes: Any) -> Iterator[Any]:
@@ -79,6 +89,7 @@ class Telemetry:
             latency_s=record.latency_ms / 1000.0,
             error=record.error is not None,
             ttft_s=record.ttft_ms / 1000.0 if record.ttft_ms is not None else None,
+            tpot_s=record.tpot_ms / 1000.0 if record.tpot_ms is not None else None,
         )
         if record.intent_layer:
             self.metrics.observe_intent(

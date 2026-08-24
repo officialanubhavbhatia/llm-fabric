@@ -1,0 +1,15 @@
+# LiteLLM transport in front of an external vLLM OpenAI-compatible endpoint.
+# This file does not start vLLM. Set VLLM_API_BASE to a real GPU endpoint.
+# Do not fake a GPU.
+
+model_list:
+  - model_name: vllm-served
+    litellm_params:
+      model: openai/vllm-served
+      api_base: os.environ/VLLM_API_BASE
+      api_key: os.environ/VLLM_API_KEY
+      timeout: 300
+
+litellm_settings:
+  num_retries: 0
+  request_timeout: 300

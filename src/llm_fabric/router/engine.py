@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
+from collections.abc import AsyncIterator, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from llm_fabric.contract.openai import ChatCompletionRequest
@@ -71,6 +72,24 @@ from llm_fabric.serving.factory import ProviderFactory
 from llm_fabric.serving.tokens import approximate_prompt_tokens
 
 
+@contextmanager
+def _provider_spans(spec: ModelSpec, **attributes: Any) -> Iterator[None]:
+    """`llm` always; `litellm` wraps it when the transport is LiteLLM."""
+    if spec.transport.value == "litellm":
+        with (
+            optional_span(
+                "litellm",
+                fabric_litellm_model=spec.provider_model,
+                fabric_model_id=spec.id,
+            ),
+            optional_span("llm", **attributes),
+        ):
+            yield
+        return
+    with optional_span("llm", **attributes):
+        yield
+
+
 @dataclass(slots=True)
 class Attempt:
     """One call to one deployment."""
@@ -94,6 +113,12 @@ class Attempt:
     provider_cost_usd: float | None = None
     compute_cost_estimate_usd: float | None = None
     operation: str = UsageOperation.USER_RESPONSE.value
+    provider_adapter: str = ""
+    transport: str = ""
+    runtime: str = ""
+    grade: str | None = None
+    actual_served_model: str | None = None
+    litellm_model: str | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -111,6 +136,10 @@ class Attempt:
             "token_source": self.token_source,
             "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens,
+            "provider_adapter": self.provider_adapter or None,
+            "transport": self.transport or None,
+            "runtime": self.runtime or None,
+            "actual_served_model": self.actual_served_model,
         }
 
 
@@ -126,6 +155,7 @@ class RouteDecision:
     selected_provider: str | None = None
     plan: RoutePlan | None = None
     fallback: FallbackTrace = field(default_factory=FallbackTrace)
+    route_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     @property
     def failover_count(self) -> int:
@@ -138,6 +168,7 @@ class RouteDecision:
     def explain(self) -> dict[str, Any]:
         """Everything about this decision, for tracing and the preview API."""
         payload: dict[str, Any] = {
+            "route_id": self.route_id,
             "requested_model": self.requested_model,
             "policy": self.policy,
             "considered": list(self.considered),
@@ -185,6 +216,8 @@ def _apply_stream_usage(attempt: Attempt, event: StreamEnd, spec: ModelSpec) -> 
     attempt.provider_cost_usd = _provider_cost(
         spec, event.prompt_tokens, event.completion_tokens, source
     )
+    if event.served_model:
+        attempt.actual_served_model = event.served_model
 
 
 def _new_attempt(
@@ -224,6 +257,12 @@ def _new_attempt(
         completed_at=completed_at,
         provider_cost_usd=_provider_cost(spec, prompt, completion, source),
         compute_cost_estimate_usd=_compute_cost_usd(spec, elapsed),
+        provider_adapter=spec.provider_adapter,
+        transport=spec.transport.value,
+        runtime=spec.runtime.value,
+        grade=spec.grade.value if spec.grade else None,
+        actual_served_model=result.served_model if result is not None else None,
+        litellm_model=spec.provider_model if spec.transport.value == "litellm" else None,
     )
 
 
@@ -355,6 +394,11 @@ class Router:
 
     def _start(self, request: ChatCompletionRequest, route: RouteRequest | None) -> _Walk:
         resolved = route or self.build_request(request)
+        if resolved.intent is None:
+            resolved = replace(resolved, intent=IntentClassification.safe_fallback())
+            telemetry = current_telemetry()
+            if telemetry is not None:
+                telemetry.metrics.observe_intent_missing()
         with optional_span(
             "route",
             requested_model=resolved.requested_model,
@@ -398,14 +442,17 @@ class Router:
             started_at = time.time()
             try:
                 with self._health.in_flight(spec.deployment_id):
-                    provider = self._providers.get(spec.provider)
+                    provider = self._providers.get(spec.provider, base_url=spec.api_base)
                     _mark_in_flight(spec.provider, 1)
                     try:
-                        with optional_span(
-                            "llm",
+                        with _provider_spans(
+                            spec,
                             gen_ai_system=spec.provider,
                             gen_ai_request_model=spec.provider_model,
                             fabric_model_id=spec.id,
+                            fabric_transport=spec.transport.value,
+                            fabric_runtime=spec.runtime.value,
+                            fabric_provider_adapter=spec.provider_adapter,
                         ):
                             result = await provider.generate(
                                 self._to_inference_request(request, spec)
@@ -473,13 +520,16 @@ class Router:
             stream = None
             try:
                 with self._health.in_flight(spec.deployment_id):
-                    provider = self._providers.get(spec.provider)
+                    provider = self._providers.get(spec.provider, base_url=spec.api_base)
                     _mark_in_flight(spec.provider, 1)
-                    with optional_span(
-                        "llm",
+                    with _provider_spans(
+                        spec,
                         gen_ai_system=spec.provider,
                         gen_ai_request_model=spec.provider_model,
                         fabric_model_id=spec.id,
+                        fabric_transport=spec.transport.value,
+                        fabric_runtime=spec.runtime.value,
+                        fabric_provider_adapter=spec.provider_adapter,
                         streamed=True,
                     ):
                         stream = provider.stream(self._to_inference_request(request, spec))

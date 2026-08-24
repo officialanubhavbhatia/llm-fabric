@@ -1,0 +1,39 @@
+# LiteLLM transport in front of local Ollama. Direct Ollama remains first-class
+# in config/models.local.yaml. This registry does not replace it.
+#
+# provider_model is the LiteLLM model_name. Runtime is Ollama. Grade is a
+# declared class, not a quality ranking.
+
+models:
+  - id: litellm-ollama-smollm2-135m
+    provider: litellm
+    provider_adapter: litellm
+    transport: litellm
+    runtime: ollama
+    provider_model: smollm2-135m
+    grade: Grade00
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    enabled: true
+    lifecycle: approved
+    fallbacks: [mock-small]
+
+  - id: mock-small
+    provider: mock
+    provider_model: mock-small
+    grade: Grade02
+    context_window: 8192
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    enabled: true
+    lifecycle: approved
+
+aliases:
+  - id: auto
+    policy: declared
+    candidates: [litellm-ollama-smollm2-135m, mock-small]

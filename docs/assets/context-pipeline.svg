@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="330" viewBox="0 0 960 330" role="img" aria-labelledby="title desc">
+  <title id="title">Context compiler pipeline</title>
+  <desc id="desc">Typed blocks are compiled into a ContextRecord with before/after token accounting, then passed to the route planner. Stable prefix is prompt-shape labelling, not a runtime KV hit.</desc>
+  <rect width="960" height="330" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Context compiler</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Required on the serving path after IntentOS and before the route planner. Raw prompt text is not stored on the Command Center record.</text>
+  <rect x="40" y="80" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Typed blocks</text>
+  <text x="52" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">system · user</text>
+  <text x="52" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">policy · conversation</text>
+  <line x1="200" y1="120" x2="236" y2="120" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="238" y="80" width="180" height="80" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="250" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Compiler</text>
+  <text x="250" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">order · budget</text>
+  <text x="250" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">dedup · drop</text>
+  <line x1="418" y1="120" x2="454" y2="120" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="456" y="80" width="200" height="80" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="468" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">ContextRecord</text>
+  <text x="468" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">before / after tokens</text>
+  <text x="468" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">stable prefix label</text>
+  <line x1="656" y1="120" x2="692" y2="120" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="694" y="80" width="240" height="80" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="706" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Route planner</text>
+  <text x="706" y="120" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">compiled prompt</text>
+  <text x="706" y="135" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">usage event id</text>
+  <rect x="40" y="180" width="280" height="120" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="202" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Counted</text>
+  <text x="52" y="220" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">before / after optimization</text>
+  <text x="52" y="235" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">deduplicated · dropped</text>
+  <text x="52" y="250" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">utilization when limit known</text>
+  <rect x="234" y="188" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="271" y="200" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">built</text>
+  <rect x="340" y="180" width="280" height="120" rx="8" fill="#1a222c" stroke="#e6b84d"/>
+  <text x="352" y="202" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Labelled, not a KV hit</text>
+  <text x="352" y="220" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">stable_prefix_tokens</text>
+  <text x="352" y="235" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">volatile suffix</text>
+  <text x="352" y="250" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">prompt-shape only</text>
+  <rect x="640" y="180" width="294" height="120" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="652" y="202" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Unavailable unless configured</text>
+  <text x="652" y="220" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">compression (0 if none)</text>
+  <text x="652" y="235" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">overflow rejection counter</text>
+  <text x="652" y="250" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">raw prompt text in the UI</text>
+
+</svg>

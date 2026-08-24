@@ -36,6 +36,8 @@ def _production(**overrides: object) -> Settings:
         "environment": "production",
         "allow_anonymous": False,
         "api_keys": [],
+        "intent_classification_enabled": True,
+        "intent_allow_hashing_embedder": True,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)  # type: ignore[arg-type]
@@ -211,6 +213,32 @@ def test_production_refuses_missing_database_url() -> None:
                 oidc_issuer="https://issuer.example",
                 oidc_audience="myvista",
                 redis_url="redis://127.0.0.1:6379/0",
+            )
+        )
+
+
+def test_production_refuses_disabled_intentos() -> None:
+    with pytest.raises(ConfigurationError, match="IntentOS is mandatory"):
+        validate_startup(
+            _production(
+                oidc_issuer="https://issuer.example",
+                oidc_audience="myvista",
+                database_url="postgresql://fabric:fabric@127.0.0.1:5432/fabric",
+                redis_url="redis://127.0.0.1:6379/0",
+                intent_classification_enabled=False,
+            )
+        )
+
+
+def test_production_refuses_implicit_hashing_embedder() -> None:
+    with pytest.raises(ConfigurationError, match="HashingEmbedder"):
+        validate_startup(
+            _production(
+                oidc_issuer="https://issuer.example",
+                oidc_audience="myvista",
+                database_url="postgresql://fabric:fabric@127.0.0.1:5432/fabric",
+                redis_url="redis://127.0.0.1:6379/0",
+                intent_allow_hashing_embedder=False,
             )
         )
 

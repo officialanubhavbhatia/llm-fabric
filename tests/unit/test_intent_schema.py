@@ -43,6 +43,7 @@ MANDATED_FIELDS = (
     "confidence",
     "alternatives",
     "abstain",
+    "serving_state",
     "classifier_version",
     "taxonomy_version",
 )
@@ -98,7 +99,7 @@ def test_abstention_and_a_concrete_intent_cannot_coexist() -> None:
     with pytest.raises(ValueError, match="mutually exclusive"):
         classification(abstain=True)
 
-    with pytest.raises(ValueError, match="only valid on an abstaining result"):
+    with pytest.raises(ValueError, match="cannot carry the unknown intent id"):
         classification(intent_id=UNKNOWN_INTENT_ID, domain=UNKNOWN_INTENT_ID, abstain=False)
 
 
@@ -107,7 +108,23 @@ def test_the_unknown_factory_produces_a_valid_abstention() -> None:
 
     assert result.abstain is True
     assert result.intent_id == UNKNOWN_INTENT_ID
+    assert result.serving_state.value == "abstain"
     assert result.layer is ClassifierLayer.ABSTAIN
+    assert result.intent_result_id
+
+
+def test_unknown_and_safe_fallback_are_valid_without_abstaining() -> None:
+    unknown = IntentClassification.unknown_result(
+        classifier_version="test-1", taxonomy_version="v1"
+    )
+    fallback = IntentClassification.safe_fallback()
+
+    assert unknown.serving_state.value == "unknown"
+    assert unknown.abstain is False
+    assert fallback.serving_state.value == "safe_fallback"
+    assert fallback.abstain is False
+    assert unknown.intent_id == UNKNOWN_INTENT_ID
+    assert fallback.intent_id == UNKNOWN_INTENT_ID
 
 
 def test_an_abstention_retains_the_confidence_of_the_guess_it_rejected() -> None:

@@ -82,7 +82,9 @@ class UsageRecord:
     intent_confidence: float | None = None
     intent_cache_hit: bool | None = None
     ttft_ms: float | None = None
+    tpot_ms: float | None = None
     trace_id: str | None = None
+    context_record_id: str | None = None
     created_at: float = field(default_factory=time.time)
     invocation_count: int = 1
     ledger_prompt_tokens: int | None = None
@@ -563,7 +565,11 @@ def events_from_decision(
     streamed: bool,
     error: str | None,
     intent_id: str | None,
-    trace_id: str | None,
+    intent_result_id: str | None = None,
+    taxonomy_version: str | None = None,
+    classifier_version: str | None = None,
+    context_record_id: str | None = None,
+    trace_id: str | None = None,
     spec: Any | None = None,
     now: float | None = None,
 ) -> list[UsageEvent]:
@@ -609,8 +615,13 @@ def events_from_decision(
                 requested_model=getattr(decision, "requested_model", None),
                 policy=getattr(decision, "policy", None),
                 deployment_id=getattr(attempt, "deployment_id", None) or None,
+                route_id=getattr(decision, "route_id", None) or request_id,
                 operation=getattr(attempt, "operation", "USER_RESPONSE"),
                 intent_id=intent_id,
+                intent_result_id=intent_result_id,
+                taxonomy_version=taxonomy_version,
+                classifier_version=classifier_version,
+                context_record_id=context_record_id,
                 prompt_tokens=prompt,
                 completion_tokens=completion,
                 token_source=str(source),
@@ -623,6 +634,12 @@ def events_from_decision(
                 attempt_number=index + 1,
                 streaming=streamed if is_last else False,
                 error=attempt.error if not is_last else (error or attempt.error),
+                provider_adapter=getattr(attempt, "provider_adapter", None) or None,
+                transport=getattr(attempt, "transport", None) or None,
+                runtime=getattr(attempt, "runtime", None) or None,
+                grade=getattr(attempt, "grade", None),
+                litellm_model=getattr(attempt, "litellm_model", None),
+                actual_served_model=getattr(attempt, "actual_served_model", None),
             )
         )
     return events

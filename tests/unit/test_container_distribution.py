@@ -28,7 +28,14 @@ def test_compose_keeps_gateway_and_inference_as_separate_workloads() -> None:
     text = COMPOSE.read_text(encoding="utf-8")
     assert "gateway-mock:" in text
     assert "gateway-ollama:" in text
+    assert "gateway-litellm-ollama:" in text
+    assert "gateway-litellm-vllm:" in text
     assert "\n  ollama:" in text
+    assert 'profiles: ["litellm-ollama"]' in text
+    assert 'profiles: ["litellm-vllm"]' in text
+    assert "num_retries: 0" in (ROOT / "deployments/docker/litellm-config.yaml").read_text(
+        encoding="utf-8"
+    )
     assert "ollama-models:/root/.ollama" in text
     assert 'profiles: ["mock"]' in text
     assert 'profiles: ["local"]' in text
@@ -38,6 +45,8 @@ def test_compose_keeps_gateway_and_inference_as_separate_workloads() -> None:
     prometheus = (ROOT / "deployments/docker/prometheus.yml").read_text(encoding="utf-8")
     assert "gateway-mock:47317" in prometheus
     assert "gateway-ollama:47317" in prometheus
+    assert "gateway-litellm-ollama:47317" in prometheus
+    assert "gateway-litellm-vllm:47317" in prometheus
     assert "ollama/ollama:0.32.15" in text
     assert "models.local.yaml" in text
     assert "models.ollama-grades.yaml" in (ROOT / "Makefile").read_text(encoding="utf-8")

@@ -99,6 +99,8 @@ def test_sigterm_drains_in_flight_mock_stream(tmp_path: Path) -> None:
             ),
             "LLM_FABRIC_REDIS_URL": _redis().rstrip("/") + "/12",
             "LLM_FABRIC_REGISTRY_PATH": str(registry),
+            "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+            "LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER": "true",
             "LLM_FABRIC_MOCK_DELAY_S": "0.4",
             "LLM_FABRIC_GRACEFUL_SHUTDOWN_TIMEOUT_S": "20",
         }

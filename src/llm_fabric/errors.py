@@ -141,15 +141,41 @@ class RetryableError(FabricError):
 
 
 class ProviderTimeoutError(RetryableError):
-    error_type = "provider_timeout"
+    error_type = "runtime_timeout"
 
 
 class ProviderUnavailableError(RetryableError):
     error_type = "provider_unavailable"
 
 
+class LiteLLMUnavailableError(ProviderUnavailableError):
+    error_type = "litellm_unavailable"
+
+
+class OllamaUnavailableError(ProviderUnavailableError):
+    error_type = "ollama_unavailable"
+
+
+class VllmUnavailableError(ProviderUnavailableError):
+    error_type = "vllm_unavailable"
+
+
+class RateLimitedError(RetryableError):
+    status_code = 429
+    error_type = "rate_limited"
+    retryable = True
+
+    def __init__(self, message: str, *, retry_after_s: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
+class ModelUnavailableError(RetryableError):
+    error_type = "model_unavailable"
+
+
 class AllCandidatesFailedError(FabricError):
     """Every candidate in the fallback chain was attempted and failed."""
 
     status_code = 502
-    error_type = "all_candidates_failed"
+    error_type = "route_exhausted"

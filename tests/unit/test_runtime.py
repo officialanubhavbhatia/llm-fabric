@@ -30,6 +30,8 @@ def _production(**overrides: object) -> Settings:
         "api_keys": ["a-long-enough-api-key"],
         "database_url": "postgresql://fabric:supersecret@127.0.0.1:1/fabric",
         "redis_url": "redis://127.0.0.1:1/0",
+        "intent_classification_enabled": True,
+        "intent_allow_hashing_embedder": True,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)  # type: ignore[arg-type]
@@ -182,5 +184,7 @@ def test_validate_startup_does_not_require_a_live_database() -> None:
             api_keys=["a-long-enough-api-key"],
             database_url="postgresql://fabric:fabric@127.0.0.1:5432/fabric",
             redis_url="redis://127.0.0.1:6379/0",
+            intent_classification_enabled=True,
+            intent_allow_hashing_embedder=True,
         )
     )

@@ -6,6 +6,7 @@ import pytest
 
 from llm_fabric.config import Settings
 from llm_fabric.errors import ProviderUnavailableError
+from llm_fabric.serving.adapters.litellm import LiteLLMProvider
 from llm_fabric.serving.adapters.openai import OpenAIProvider
 from llm_fabric.serving.factory import ProviderFactory
 
@@ -27,6 +28,13 @@ def test_vllm_pool_names_share_the_openai_compatible_adapter() -> None:
     provider = factory.get("vllm-coding")
     assert isinstance(provider, OpenAIProvider)
     assert provider.name == "vllm-coding"
+
+
+def test_litellm_builds_without_an_openai_key() -> None:
+    factory = ProviderFactory(Settings(_env_file=None, openai_api_key=None))
+    provider = factory.get("litellm")
+    assert isinstance(provider, LiteLLMProvider)
+    assert provider.name == "litellm"
 
 
 def test_openai_still_requires_a_key() -> None:

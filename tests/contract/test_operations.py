@@ -93,7 +93,7 @@ def test_served_requests_appear_in_usage(client: TestClient) -> None:
     record = payload["recent"][0]
     assert record["requested_model"] == "auto"
     assert record["served_model"] == "cheap"
-    assert record["policy"] == "cost_first"
+    assert record["policy"] == "balanced"
 
 
 def test_estimated_cost_is_flagged(client: TestClient) -> None:

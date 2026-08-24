@@ -329,8 +329,9 @@ def _unavailable_backends() -> tuple[DriftSignal, ...]:
             "distribution drift cannot be computed."
         ),
         DriftKind.CONTEXT_LENGTH: (
-            "The context compiler is not on the serving path. prompt_tokens is "
-            "an input-size proxy and is not reported as compiler context length."
+            "The context compiler is on the serving path. Compiler "
+            "context-length drift is not computed as a fleet baseline yet; "
+            "per-request ContextRecords exist in-process."
         ),
         DriftKind.SAFETY_BLOCKS: (
             "The guardrail engine is not built, so safety-block frequency is unmeasured."

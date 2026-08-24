@@ -77,8 +77,9 @@
 > This build is **not** production-ready: P0 and P1 issues remain.
 >
 > **Scope warning.** Phases 1 to 4 and 7 to 12 are a small fraction of the specified
-> system. Phases 5 and 6 (context compiler, guardrails) are not built. Read §9
-> before treating anything below as the target architecture.
+> system. The context compiler is on the chat serving path. Retrieval, tools,
+> and agents are not. Read §9 before treating anything below as the target
+> architecture.
 
 ---
 
@@ -124,12 +125,15 @@ client
   └─ observability  meter, trace, explain            §6
 ```
 
-The router now reads an `IntentClassification` when one is present, and can infer
-a policy from it. Classification on the serving path is **off by default**
-(`LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED`), because putting a cascade in front
-of every request adds the 0.58 ms p50 in-process cost measured in
-[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) §10. The extra HTTP cost of turning
-it on has not been measured; §4 and §8 describe both halves of that wire.
+The router now reads an `IntentClassification` on every serving request.
+Production refuses to start with IntentOS disabled. Development and test may
+disable the cascade; they still attach `SAFE_FALLBACK` so a provider
+invocation is never intent-less. High-confidence known results may infer an
+optimized policy; uncertain results use a balanced capability floor.
+
+Every chat request also produces a `ContextRecord` before the Route Planner.
+See [`docs/CONTEXT.md`](docs/CONTEXT.md) and
+[`docs/adr/0007-context-compiler-observability.md`](docs/adr/0007-context-compiler-observability.md).
 
 ---
 
@@ -337,16 +341,22 @@ that interface.
 | `mock` | No credentials. Performs **no inference**; returns text assembled from the request. Exists so the fabric runs and is testable out of the box, and can be told to fail on demand to exercise failover. |
 | `openai` | Chat-completions API, requesting `stream_options.include_usage` so streamed responses still carry real token counts. |
 | `anthropic` | Messages API. Absorbs the dialect differences — system prompt as a top-level field, `max_tokens` required — so they never leak upward. |
+| `ollama` / `ollama-*` | OpenAI-compatible HTTP to a running Ollama daemon. Direct path; LiteLLM is not required. |
+| `vllm` / `vllm-*` | OpenAI-compatible HTTP to a running vLLM-compatible endpoint. Direct path; not exposed as a public Ingress by default. |
+| `litellm` / `litellm-*` | OpenAI-compatible HTTP to a LiteLLM proxy. **Transport only.** The Route Planner still selects `deployment_id` and `provider_model`. Runtime (`ollama` / `vllm` / `external`) is declared on the registry, never inferred from the model id. |
 
 Adapters share one job beyond transport: **classifying failures**. Timeouts,
 transport errors, and 429/5xx become retryable; a 4xx that is the caller's fault
 does not. That classification is what the router's failover consumes, so it is
-centralised in `adapters/_http.py` rather than repeated per provider.
+centralised in `adapters/_http.py` rather than repeated per provider. Named
+connect failures become `ollama_unavailable`, `vllm_unavailable`, or
+`litellm_unavailable`.
 
-**Not built:** self-hosted serving. No engine integration, replica pool
-selection, or KV-cache-aware placement exists. This is the largest gap against
-the "Serving and Inferencing Layers" in the repository description, and the
-`Provider` interface is where it would attach.
+**Not built:** embedding the vLLM or Ollama engines in the Fabric process. No
+KV-cache-aware placement. Engine `/metrics` and `/api/ps` are scraped **off
+the request path** when the registry names an endpoint. See
+[`docs/CONTEXT.md`](docs/CONTEXT.md) and
+[`docs/adr/0007-context-compiler-observability.md`](docs/adr/0007-context-compiler-observability.md).
 
 ---
 
@@ -387,30 +397,28 @@ when a provider attempt actually began. Authentication failures and input
 guardrail blocks produce no invocation events.
 
 Every served request also opens an OpenTelemetry span tree for the stages that
-actually ran (`request`, `auth`, `intent` when enabled, `route`, `llm`). Unbuilt
-stages — guardrails, context compilation, retrieval, tools, output validation,
-evaluations — are listed as unavailable. They do not receive invented timings.
+actually ran (`request`, `auth`, `input_guardrails`, `intent`, `context`,
+`route`, `litellm` when the transport is LiteLLM, `llm`, `output_guardrails`,
+`usage`). Unbuilt stages — retrieval, tools, evaluations — are listed as
+unavailable. They do not receive invented timings.
 
 Prometheus metrics live at `/metrics` with a closed set of path labels and
 capped model/provider/policy labels. Request ids, tenant ids and user ids are
-never Prometheus labels.
+never Prometheus labels. Compose Prometheus also lists LiteLLM, optional vLLM,
+and optional DCGM exporter jobs. Those scrapes are independent of chat.
+
+The Command Center is at `/command-center`, backed by
+`/v1/observability/dashboards/{view}`. Every named view exists. `context` and
+`kv_cache` are available with provenance and scope. `threads` remains unbuilt.
+`batching` stays `available: false` because vLLM does not expose a stable
+batch-utilisation series in the catalog this build parses. KV gauges are
+DEPLOYMENT-scoped and are never shown as "this request used X% KV". GPU
+series are DCGM infrastructure metrics when Prometheus scrapes
+`dcgm-exporter`; the gateway does not run `nvidia-smi`.
 
 Langfuse is reached through `HttpLangfuseAdapter` when host and keys are set,
 and is a no-op otherwise. Export failure is logged and never fails a request.
 Prompt content is not sent.
-
-The Command Center is at `/command-center`, backed by
-`/v1/observability/dashboards/{view}`. Every named view exists. Views whose
-backend is not built (`kv_cache`, `batching`, `context`,
-`threads`) return `available: false` and empty data. The `evals` view lists
-in-process runs. The `drift` view reports signals this process can compute
-and lists embedding, compiler context-length and safety-block drift as
-unavailable. Agent and safety suites are absent; DeepEval and
-lm-evaluation-harness stay empty until those packages are installed and mapped. Ollama and vLLM engine
-metrics are consumed only when that adapter is present; neither adapter is
-built, so those measurements stay unavailable. Ollama's supported set, when it
-exists, will not include KV-cache utilisation — that is not something Ollama
-exposes.
 
 **Not built:** the span journal is in-memory and bounded — **not durable**.
 OTLP export is configured only when `LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT`
@@ -769,7 +777,7 @@ These exist and work, but are materially narrower than what is mandated.
 | **Routing evals** | Labelled planner match against the mock registry (`route_match`, `policy_match`). Declared regret stays unavailable without quality/latency numbers. | A routing eval proving decision *quality*, not just that the planner hit a fixture label |
 | **Tenant storage** | Interfaces enforced, backed by bounded in-memory stores | The same isolation, durably, across Postgres, Redis, ClickHouse, object and vector storage |
 | **Quotas** | Per-tenant and per-user, in-process fixed windows | Fleet-wide enforcement, so limits do not multiply by replica count |
-| **Adapters** | `openai`, `anthropic`, `mock` | `LiteLLM`, `Ollama`, OpenAI-compatible, vLLM-compatible. A direct Anthropic adapter is not in the mandated set. |
+| **Adapters** | `openai`, `anthropic`, `mock`, `ollama`/`ollama-*`, `vllm`/`vllm-*`, `litellm`/`litellm-*` (OpenAI-compatible HTTP; LiteLLM is transport only) | The same set. A direct Anthropic adapter is not in the mandated set; it remains extra. |
 | **Reliability** | Bounded attempts, retryable-error classification, admission control, circuit breakers, EWMA latency/error tracking | Also backoff with jitter, load shedding, deadlines, cancellation propagation, graceful shutdown, idempotency |
 | **Observability** | OpenTelemetry spans for built stages, in-process journal, bounded-cardinality Prometheus scrape, optional Langfuse adapter, Command Center UI | The same plus ClickHouse; spans for every constitution stage once those stages exist; fleet-wide aggregation |
 | **Prompt registry** | Tenant-scoped versioned storage, published versions immutable | Promotion workflow, evaluation gating, model-family adapters |
@@ -778,22 +786,23 @@ These exist and work, but are materially narrower than what is mandated.
 | **Intent learning loop** | Redact, dedup, tenant-scoped draft store, sampled shadow. No auto-promotion. | Sanitisation → dedup → dataset → candidate → offline eval → shadow → canary → statistical gate → promotion, with a rollback artifact |
 | **Intent confidence** | Heuristic scores, monotone and bounded. Temperature scaling is identity until a larger val set is fitted offline. Measured ECE on the v1 frozen set is 0.177. | *Calibrated* thresholds against datasets that are not self-authored |
 | **Intent evals** | Every mandated metric computed by `llm-fabric-bench` | The same metrics against datasets that are not self-authored, plus maintained hard-negative sets |
-| **Route consumption** | The planner reads an `IntentClassification` and can infer a policy from it, but gateway classification is off by default | Intent routed on by default, once the added latency has been measured |
+| **Route consumption** | Serving-path IntentOS is mandatory in production. Development/test may disable the cascade and still attach SAFE_FALLBACK. Context compiler always runs before the planner. | Intent routed on by default; context compiled on the serving path |
 | **Drift / self-healing** | In-process usage windows, held breakers, traffic overlay, remembered rollbacks, incidents and unevaluated learning jobs | Fleet-wide baselines, embedding drift, compiler context-length drift, safety-block drift, the rest of the learning-loop pipeline |
 
 ### 9.3 Not built at all
 
 Entire mandated subsystems with no code in this repository:
 
-control plane / data plane split · context compiler · guardrail engine (five
+control plane / data plane split · guardrail engine (five
 stages) · structured-output validation and bounded repair · economics subsystem
 (the Command Center economics view is registry prices × tokens, not this) ·
 agent and safety eval suites · DeepEval / lm-eval mapped runners (adapters exist,
 packages are not installed) · chaos suite · ClickHouse,
-object storage · native vLLM Python engine and engine `/metrics` scrape · Terraform.
+object storage · in-process vLLM Python engine · Terraform.
 
-IntentOS moved out of this list in Phase 3; §8 describes what was built and §9.2
-records where it falls short of the specification. The load harness and
+IntentOS moved out of this list in Phase 2. The context compiler and off-path
+vLLM `/metrics` parser moved out in Phase 3; §6 and
+[`docs/CONTEXT.md`](docs/CONTEXT.md) describe what was built. The load harness and
 `BENCHMARKS.md` moved out when the throughput target was measured: the harness
 is `llm-fabric-load` rather than k6, which the constitution permits, and it
 covers seven of the nine workload classes it names — agent and real-generation
@@ -813,8 +822,10 @@ Facts about the current tree, recorded rather than quietly fixed:
 4. **OpenTelemetry has no durable sink.** Spans exist for the stages that run
    and can be exported over OTLP when configured. There is no ClickHouse store,
    and unbuilt stages are not given empty timings.
-5. **No `docker compose` stack.** `make dev` exists; the local Postgres, Redis
-   and ClickHouse services it should depend on do not.
+5. **ClickHouse is still absent from the local stack.** `make docker-up`,
+   `make docker-ollama`, `make docker-litellm-ollama`, and the `platform`
+   profile start Fabric, optional Ollama/LiteLLM, Postgres, and Redis. The
+   constitution also names ClickHouse; that service is not in Compose.
 6. **`mypy` is strict only in `identity/`, `tenancy/`, `intent/`, `eval/`,
    `heal/` and `errors`.** The rest of the package is checked at default
    strictness.
@@ -828,11 +839,11 @@ Facts about the current tree, recorded rather than quietly fixed:
    real provider has ever been load tested. See
    [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md), whose §1 and §8 state the limits
    before and after the numbers.
-9. **Intent classification is off on the serving path.** The planner reads a
-   classification when given one, but the gateway does not produce one unless
-   `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED` is set. The offline cascade is
-   0.58 ms p50 in-process; the HTTP cost of running it on every request has
-   not been measured.
+9. **Serving-path IntentOS is mandatory in production.** Coverage is not
+   accuracy: UNKNOWN / ABSTAIN / SAFE_FALLBACK are valid IntentResults.
+   Hard-negative accuracy on the frozen set remains 0.50 (gate 0.58). The
+   HTTP cost of classification under production load has not been measured
+   as generation throughput and must not be quoted as such.
 10. **Intent confidence is uncalibrated.** The cascade gates on confidence
     scores whose measured expected calibration error is 0.175. The thresholds
     were deliberately *not* tuned against the evaluation dataset, so they remain

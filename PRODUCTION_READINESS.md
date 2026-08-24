@@ -21,8 +21,9 @@ The P1 items that previously kept this tree at CONDITIONAL GO were closed on
 live PostgreSQL, Redis, Docker Compose, and kind:
 
 - Production workers do not DDL. They refuse to start unless `alembic_version`
-  is `0003_revoke_app_ddl`. The Helm pre-upgrade Job runs
-  `python -m alembic upgrade head` as the table-owner role.
+  is the Alembic head (`0004_usage_topology` in this tree). The Helm
+  pre-upgrade Job runs `python -m alembic upgrade head` as the table-owner
+  role. Kind evidence below was captured when head was `0003_revoke_app_ddl`.
 - `fabric_app` has no `CREATE` on `public`. Kind and Compose serve as
   `fabric_app`. Kind chat as that role returned 200.
 - CI `quality` is green on this tree: `ruff check`, `ruff format --check`,
@@ -122,7 +123,7 @@ No unresolved P0 was found. That is why the verdict is not NO-GO.
 
 | issue | status | evidence |
 | --- | --- | --- |
-| Schema lifecycle is `create_all` on worker start | **closed** | Production `build_engine` skips `init_schema`. Startup asserts `alembic_version=0003_revoke_app_ddl`. Helm migrate Job: `python -m alembic upgrade head`. kind after upgrade: `0003_revoke_app_ddl`. |
+| Schema lifecycle is `create_all` on worker start | **closed** | Production `build_engine` skips `init_schema`. Startup asserts the Alembic head (`EXPECTED_HEAD`, currently `0004_usage_topology`). Helm migrate Job: `python -m alembic upgrade head`. Prior kind capture: `0003_revoke_app_ddl`. |
 | App role can DDL (`CREATE` on `public`) | **closed** | `0003_revoke_app_ddl` revokes CREATE. kind: `has_schema_privilege(fabric_app, public, CREATE)=f`. Compose live tests serve as `fabric_app`. |
 | Default quotas unlimited; no 429 overload shed | **closed** | Production fills finite RPM/RPD/concurrency/token ceilings. Live: 4 workers, Redis db 14, tenant RPM=5 → 5×200, 7×429 `quota_exceeded`, 5 usage rows, no 500/503. |
 | HPA enabled without metrics-server | **closed** | Chart default `autoscaling.enabled: false`. kind after helm upgrade: `No resources found` for HPA. Autoscaling **not** claimed. |

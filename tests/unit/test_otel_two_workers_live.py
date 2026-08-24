@@ -128,6 +128,8 @@ def test_two_workers_export_traces_to_shared_otlp_sink(tmp_path: Path) -> None:
                     ),
                     "LLM_FABRIC_REDIS_URL": _redis().rstrip("/") + "/13",
                     "LLM_FABRIC_REGISTRY_PATH": str(registry),
+                    "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+                    "LLM_FABRIC_INTENT_ALLOW_HASHING_EMBEDDER": "true",
                     "LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT": (
                         f"http://127.0.0.1:{collector_port}"
                     ),

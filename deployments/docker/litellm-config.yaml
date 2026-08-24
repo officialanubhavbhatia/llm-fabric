@@ -1,0 +1,14 @@
+# LiteLLM proxy in front of Compose Ollama. MyVista still selects the model name.
+#
+# num_retries: 0 — semantic fallback belongs to MyVista.
+
+model_list:
+  - model_name: smollm2-135m
+    litellm_params:
+      model: ollama/smollm2:135m
+      api_base: http://ollama:11434
+      timeout: 300
+
+litellm_settings:
+  num_retries: 0
+  request_timeout: 300

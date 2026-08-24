@@ -8,7 +8,11 @@ import httpx
 import pytest
 
 from llm_fabric.contract.openai import ChatMessage
-from llm_fabric.errors import ConfigurationError, InvalidRequestError, ProviderUnavailableError
+from llm_fabric.errors import (
+    ConfigurationError,
+    InvalidRequestError,
+    RateLimitedError,
+)
 from llm_fabric.serving.adapters.anthropic import AnthropicProvider, _anthropic_messages
 from llm_fabric.serving.adapters.openai import OpenAIProvider
 from llm_fabric.serving.base import InferenceRequest, StreamDelta, StreamEnd
@@ -75,7 +79,7 @@ async def test_openai_generate_maps_429_to_retryable() -> None:
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(429, json={"error": {"message": "slow down"}})
 
-    with pytest.raises(ProviderUnavailableError, match="slow down"):
+    with pytest.raises(RateLimitedError, match="slow down"):
         await OpenAIProvider(api_key="k", client=_client(handler)).generate(_request())
 
 

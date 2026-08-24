@@ -32,11 +32,19 @@ Every invocation stores `token_source`:
 | Value | Meaning |
 | --- | --- |
 | `PROVIDER_MEASURED` | Backend reported token fields |
+| `TOKENIZER_MEASURED` | An exact tokenizer counted it |
+| `ESTIMATED` | Approximate local counter (same honesty as `LOCAL_TOKENIZER_ESTIMATE`) |
 | `LOCAL_TOKENIZER_ESTIMATE` | Fabric heuristic (`approximate_token_count`) |
 | `DERIVED` | Computed from other measured fields |
 | `UNAVAILABLE` | No reliable count (failed before tokens, missing metadata) |
 
 Estimates are never labelled measured.
+
+Each invocation also stores topology identity when known: `route_id`,
+`deployment_id`, `provider_adapter`, `transport`, `runtime`, `grade`,
+`litellm_model`, `actual_served_model`. LiteLLM must not silently replace the
+planner's model; `litellm_model` is what MyVista sent and `actual_served_model`
+is what the backend reported.
 
 ## Internal model calls
 

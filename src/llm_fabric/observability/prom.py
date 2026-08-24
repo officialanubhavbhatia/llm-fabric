@@ -139,10 +139,74 @@ class FabricMetrics:
             "Times cheap classifier layers named different intents",
             registry=self.registry,
         )
+        self.intent_serving_requests_total = Counter(
+            "fabric_intent_serving_requests_total",
+            "Chat requests that produced an IntentResult before routing",
+            registry=self.registry,
+        )
+        self.intent_known_total = Counter(
+            "fabric_intent_known_total",
+            "Serving-path IntentResults in the known state",
+            registry=self.registry,
+        )
+        self.intent_safe_fallback_total = Counter(
+            "fabric_intent_safe_fallback_total",
+            "Serving-path IntentResults in the safe_fallback state",
+            registry=self.registry,
+        )
+        self.intent_error_total = Counter(
+            "fabric_intent_error_total",
+            "Intent cascade failures that degraded instead of skipping",
+            registry=self.registry,
+        )
+        self.intent_missing_total = Counter(
+            "fabric_intent_missing_total",
+            "Provider executions that had to synthesize a SAFE_FALLBACK IntentResult",
+            registry=self.registry,
+        )
         self.ttft_seconds = Histogram(
             "fabric_ttft_seconds",
             "Time to first streamed byte. Unobserved on buffered responses.",
             buckets=LATENCY_BUCKETS,
+            registry=self.registry,
+        )
+        self.tpot_seconds = Histogram(
+            "fabric_tpot_seconds",
+            "Time per output token after the first streamed byte. Unobserved without streaming.",
+            buckets=LATENCY_BUCKETS,
+            registry=self.registry,
+        )
+        self.context_compile_seconds = Histogram(
+            "fabric_context_compile_seconds",
+            "Context compiler latency on the serving path",
+            buckets=LATENCY_BUCKETS,
+            registry=self.registry,
+        )
+        self.context_tokens = Counter(
+            "fabric_context_tokens_total",
+            "Compiled context tokens",
+            ["stage"],
+            registry=self.registry,
+        )
+        self.litellm_transport_seconds = Histogram(
+            "fabric_litellm_transport_seconds",
+            "LiteLLM HTTP transport duration. Not a vLLM engine metric.",
+            buckets=LATENCY_BUCKETS,
+            registry=self.registry,
+        )
+        self.litellm_transport_errors_total = Counter(
+            "fabric_litellm_transport_errors_total",
+            "LiteLLM transport failures seen by this process",
+            registry=self.registry,
+        )
+        self.litellm_rate_limit_events_total = Counter(
+            "fabric_litellm_rate_limit_events_total",
+            "HTTP 429 responses from the LiteLLM proxy",
+            registry=self.registry,
+        )
+        self.litellm_retries_total = Counter(
+            "fabric_litellm_retries_total",
+            "Adapter-level LiteLLM retries. Router failovers are fabric_fallbacks_total.",
             registry=self.registry,
         )
         # Gauges for quantities the constitution names that this process can
@@ -236,6 +300,7 @@ class FabricMetrics:
         latency_s: float,
         error: bool,
         ttft_s: float | None = None,
+        tpot_s: float | None = None,
     ) -> None:
         self.tokens_total.labels("prompt").inc(prompt_tokens)
         self.tokens_total.labels("completion").inc(completion_tokens)
@@ -250,6 +315,8 @@ class FabricMetrics:
             self.fallbacks_total.labels("failover").inc(failover_count)
         if ttft_s is not None:
             self.ttft_seconds.observe(ttft_s)
+        if tpot_s is not None:
+            self.tpot_seconds.observe(tpot_s)
 
     def observe_intent(
         self,
@@ -265,7 +332,6 @@ class FabricMetrics:
         self.intent_classifications_total.labels(layer, "true" if cache_hit else "false").inc()
         if abstained:
             self.intent_abstentions_total.inc()
-            self.intent_unknown_total.inc()
         if cache_hit:
             kind = cache_source if cache_source in {"l0_exact", "l1_semantic"} else "other"
             self.intent_cache_hits_total.labels(kind).inc()
@@ -275,6 +341,46 @@ class FabricMetrics:
             self.intent_escalations_total.inc()
         if disagreed:
             self.intent_disagreements_total.inc()
+
+    def observe_intent_serving(self, state: str) -> None:
+        self.intent_serving_requests_total.inc()
+        if state == "known":
+            self.intent_known_total.inc()
+        elif state == "unknown":
+            self.intent_unknown_total.inc()
+        elif state == "abstain":
+            self.intent_abstentions_total.inc()
+        else:
+            self.intent_safe_fallback_total.inc()
+
+    def observe_intent_missing(self) -> None:
+        self.intent_missing_total.inc()
+        self.intent_safe_fallback_total.inc()
+        self.intent_serving_requests_total.inc()
+
+    def observe_intent_error(self) -> None:
+        self.intent_error_total.inc()
+
+    def observe_context(self, *, compile_s: float, tokens_before: int, tokens_after: int) -> None:
+        self.context_compile_seconds.observe(compile_s)
+        self.context_tokens.labels("before").inc(tokens_before)
+        self.context_tokens.labels("after").inc(tokens_after)
+
+    def observe_litellm_transport(
+        self,
+        *,
+        latency_s: float,
+        error: bool = False,
+        rate_limited: bool = False,
+        retries: int = 0,
+    ) -> None:
+        self.litellm_transport_seconds.observe(latency_s)
+        if error:
+            self.litellm_transport_errors_total.inc()
+        if rate_limited:
+            self.litellm_rate_limit_events_total.inc()
+        if retries:
+            self.litellm_retries_total.inc(retries)
 
     def _dependency_label(self, name: str) -> str:
         if name in {"postgres", "redis", "telemetry"}:

@@ -32,6 +32,7 @@ from typing import Any
 
 from llm_fabric.intent.embeddings import Vector, cosine_similarity
 from llm_fabric.intent.schema import ClassificationRequest, IntentClassification
+from llm_fabric.storage.codec import decode, encode
 from llm_fabric.tenancy.cache import CacheNamespace, TenantScopedCache
 from llm_fabric.tenancy.scope import TenantScope
 from llm_fabric.tenancy.store import TenantScopedStore
@@ -161,13 +162,17 @@ class ExactIntentCache:
         text: str,
         discriminators: IntentCacheDiscriminators,
     ) -> IntentClassification | None:
-        found = self._cache.get(scope, CacheNamespace.INTENT, self._parts(text, discriminators))
+        try:
+            found = self._cache.get(scope, CacheNamespace.INTENT, self._parts(text, discriminators))
+        except Exception:  # noqa: BLE001 - cache outage is a miss, not a skip of IntentOS
+            found = None
+        hydrated = _hydrate_classification(found)
         with self._lock:
-            if isinstance(found, IntentClassification):
+            if hydrated is not None:
                 self._stats.hits += 1
             else:
                 self._stats.misses += 1
-        return found if isinstance(found, IntentClassification) else None
+        return hydrated
 
     def put(
         self,
@@ -178,13 +183,16 @@ class ExactIntentCache:
         *,
         ttl_seconds: float | None = None,
     ) -> None:
-        self._cache.put(
-            scope,
-            CacheNamespace.INTENT,
-            self._parts(text, discriminators),
-            classification,
-            ttl_seconds=ttl_seconds,
-        )
+        try:
+            self._cache.put(
+                scope,
+                CacheNamespace.INTENT,
+                self._parts(text, discriminators),
+                encode(classification),
+                ttl_seconds=ttl_seconds,
+            )
+        except Exception:  # noqa: BLE001 - a failed write must not fail classification
+            return
         with self._lock:
             self._stats.writes += 1
 
@@ -260,11 +268,10 @@ class _SignatureIndex:
 class SemanticIntentCache:
     """L1. Nearest-neighbour lookup over previously classified prompts.
 
-    Brute-force cosine over an in-memory, tenant-partitioned index. That is
-    honest about what it is: correct and bounded, but linear in the number of
-    entries per signature. A production deployment replaces the index with a
-    vector store; the surface it must satisfy is this class's `lookup`/`admit`
-    pair.
+    Brute-force cosine over a tenant-partitioned index. With `cache` unset that
+    index is process-local. With a `TenantScopedCache` (Redis when configured)
+    the same discriminator-partitioned entries are visible to every worker.
+    Exact and semantic caches stay separate namespaces.
     """
 
     def __init__(
@@ -272,9 +279,11 @@ class SemanticIntentCache:
         *,
         policy: SemanticCachePolicy | None = None,
         clock: Callable[[], float] = time.monotonic,
+        cache: TenantScopedCache | None = None,
     ) -> None:
         self._policy = policy or SemanticCachePolicy()
         self._clock = clock
+        self._cache = cache
         self._store: TenantScopedStore[_SignatureIndex] = TenantScopedStore(
             "cache:semantic_intent", max_records_per_tenant=64
         )
@@ -303,12 +312,16 @@ class SemanticIntentCache:
         enough. A confident-but-dissimilar entry and a similar-but-unconfident
         entry are both refused.
         """
-        index = self._store.get(scope, discriminators.signature)
+        try:
+            index = self._load_index(scope, discriminators.signature)
+        except Exception:  # noqa: BLE001 - semantic cache outage continues the cascade
+            self._miss()
+            return None
         if index is None:
             self._miss()
             return None
 
-        now = self._clock()
+        now = self._now()
         best: SemanticMatch | None = None
 
         with self._lock:
@@ -320,6 +333,9 @@ class SemanticIntentCache:
                 self._stats.expired += len(stale)
 
             candidates = list(index.entries.values())
+
+        if stale and self._cache is not None:
+            self._persist_index(scope, discriminators.signature, index)
 
         for entry in candidates:
             if entry.classification.confidence < self._policy.confidence_threshold:
@@ -354,14 +370,18 @@ class SemanticIntentCache:
         """
         if classification.abstain:
             return False
+        if classification.serving_state.value != "known":
+            return False
         if classification.confidence < self._policy.confidence_threshold:
             return False
 
         signature = discriminators.signature
-        index = self._store.get(scope, signature)
+        try:
+            index = self._load_index(scope, signature)
+        except Exception:  # noqa: BLE001 - a failed semantic write must not fail classification
+            return False
         if index is None:
             index = _SignatureIndex(tenant_id=scope.tenant_id)
-            self._store.put(scope, signature, index)
 
         key = hashlib.sha256(normalise_prompt(prompt).encode("utf-8")).hexdigest()[:24]
         entry = SemanticEntry(
@@ -370,7 +390,7 @@ class SemanticIntentCache:
             prompt=prompt,
             vector=vector,
             classification=classification,
-            expires_at=self._clock() + self._policy.ttl_seconds,
+            expires_at=self._now() + self._policy.ttl_seconds,
         )
 
         with self._lock:
@@ -381,10 +401,17 @@ class SemanticIntentCache:
                 evicted = index.order.pop(0)
                 index.entries.pop(evicted, None)
             self._stats.writes += 1
+        try:
+            self._persist_index(scope, signature, index)
+        except Exception:  # noqa: BLE001
+            return False
         return True
 
     def invalidate_tenant(self, scope: TenantScope) -> int:
-        return self._store.clear_tenant(scope)
+        removed = self._store.clear_tenant(scope)
+        if self._cache is not None:
+            removed += self._cache.invalidate_namespace(scope, CacheNamespace.SEMANTIC_INTENT)
+        return removed
 
     def report_false_hit(self, *, reviewed: int = 1, wrong: int = 1) -> None:
         """Record the outcome of reviewing served hits against ground truth."""
@@ -395,12 +422,97 @@ class SemanticIntentCache:
             self._stats.false_hits += wrong
 
     def size(self, scope: TenantScope, discriminators: IntentCacheDiscriminators) -> int:
-        index = self._store.get(scope, discriminators.signature)
+        index = self._load_index(scope, discriminators.signature)
         return len(index.entries) if index else 0
+
+    def _now(self) -> float:
+        return time.time() if self._cache is not None else self._clock()
+
+    def _load_index(self, scope: TenantScope, signature: str) -> _SignatureIndex | None:
+        if self._cache is None:
+            return self._store.get(scope, signature)
+        payload = self._cache.get(
+            scope, CacheNamespace.SEMANTIC_INTENT, {"signature": signature}
+        )
+        if not isinstance(payload, dict):
+            return None
+        if payload.get("tenant_id") != scope.tenant_id:
+            return None
+        return _index_from_payload(payload)
+
+    def _persist_index(self, scope: TenantScope, signature: str, index: _SignatureIndex) -> None:
+        if self._cache is None:
+            self._store.put(scope, signature, index)
+            return
+        self._cache.put(
+            scope,
+            CacheNamespace.SEMANTIC_INTENT,
+            {"signature": signature},
+            _index_to_payload(index),
+            ttl_seconds=self._policy.ttl_seconds,
+        )
 
     def _miss(self) -> None:
         with self._lock:
             self._stats.misses += 1
+
+
+def _hydrate_classification(found: Any) -> IntentClassification | None:
+    if isinstance(found, IntentClassification):
+        return found
+    if isinstance(found, dict):
+        try:
+            return decode(IntentClassification, found)
+        except (TypeError, ValueError, KeyError):
+            return None
+    return None
+
+
+def _index_to_payload(index: _SignatureIndex) -> dict[str, Any]:
+    entries = []
+    for key in index.order:
+        entry = index.entries.get(key)
+        if entry is None:
+            continue
+        entries.append(
+            {
+                "key": key,
+                "tenant_id": entry.tenant_id,
+                "signature": entry.signature,
+                "prompt": entry.prompt,
+                "vector": list(entry.vector),
+                "classification": encode(entry.classification),
+                "expires_at": entry.expires_at,
+            }
+        )
+    return {"tenant_id": index.tenant_id, "entries": entries}
+
+
+def _index_from_payload(payload: Mapping[str, Any]) -> _SignatureIndex:
+    tenant_id = str(payload.get("tenant_id") or "")
+    index = _SignatureIndex(tenant_id=tenant_id)
+    for raw in payload.get("entries") or []:
+        if not isinstance(raw, dict):
+            continue
+        if raw.get("tenant_id") != tenant_id:
+            continue
+        classification = _hydrate_classification(raw.get("classification"))
+        if classification is None:
+            continue
+        vector = raw.get("vector") or []
+        key = str(raw.get("key") or "")
+        if not key:
+            continue
+        index.entries[key] = SemanticEntry(
+            tenant_id=tenant_id,
+            signature=str(raw.get("signature") or ""),
+            prompt=str(raw.get("prompt") or ""),
+            vector=tuple(float(value) for value in vector),
+            classification=classification,
+            expires_at=float(raw.get("expires_at") or 0.0),
+        )
+        index.order.append(key)
+    return index
 
 
 def cache_report(exact: ExactIntentCache, semantic: SemanticIntentCache) -> Mapping[str, Any]:

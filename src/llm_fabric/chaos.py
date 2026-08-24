@@ -24,6 +24,7 @@ EXPECTED: dict[str, DegradedMode] = {
     "postgres_unavailable_runtime_read": DegradedMode.FAIL_CLOSED,
     "otel_collector_unavailable": DegradedMode.CONTINUE_WITHOUT_TELEMETRY,
     "provider_timeout": DegradedMode.FALLBACK,
+    "runtime_timeout": DegradedMode.FALLBACK,
     "provider_429": DegradedMode.FALLBACK,
     "provider_500": DegradedMode.FALLBACK,
     "provider_malformed": DegradedMode.FALLBACK,

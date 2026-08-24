@@ -19,20 +19,34 @@
     nav button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
     nav button.active { border-color: var(--accent); color: var(--accent); }
     main { padding: 20px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 20px 0 8px; }
     .note { color: var(--warn); background: #2a2416; border: 1px solid #5a4a1a; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; }
     .empty { color: var(--muted); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .grid.wide { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+    .card.accent { border-color: var(--accent); }
     .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
     .card .v { font-size: 20px; margin-top: 4px; }
+    .card .s { color: var(--muted); font-size: 11px; margin-top: 6px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
     th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    tr.selected td { background: #243044; }
+    tr.clickable { cursor: pointer; }
     pre { background: var(--panel); border: 1px solid var(--line); padding: 12px; overflow: auto; border-radius: 8px; font-size: 12px; }
     .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; border: 1px solid var(--line); }
     .pill.bad { color: var(--bad); border-color: var(--bad); }
     .pill.ok { color: var(--ok); border-color: var(--ok); }
+    .pill.warn { color: var(--warn); border-color: var(--warn); }
     .fields { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .dl { display: grid; grid-template-columns: 180px 1fr; gap: 6px 12px; }
+    .dl .k { color: var(--muted); }
+    .unavail { color: var(--warn); }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .filters label { color: var(--muted); font-size: 12px; }
+    .filters select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
   </style>
 </head>
 <body>
@@ -55,6 +69,7 @@
     const main = document.getElementById("main");
     const scopeEl = document.getElementById("scope");
     let current = "overview";
+    let selectedRequest = 0;
 
     VIEWS.forEach((name) => {
       const b = document.createElement("button");
@@ -64,23 +79,84 @@
       nav.appendChild(b);
     });
 
+    function isObs(v) {
+      return v && typeof v === "object" && "provenance" in v && "name" in v;
+    }
+
     function fmt(v) {
       if (v === null || v === undefined) return "—";
+      if (isObs(v)) {
+        if (v.value === null || v.value === undefined || v.health === "UNAVAILABLE" || v.provenance === "UNAVAILABLE") {
+          return "unavailable";
+        }
+        return fmt(v.value);
+      }
       if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
       return String(v);
     }
 
-    function cards(obj) {
+    function fmtExact(v) {
+      if (v === null || v === undefined) return "—";
+      if (isObs(v)) {
+        if (v.value === null || v.value === undefined || v.health === "UNAVAILABLE" || v.provenance === "UNAVAILABLE") {
+          return "unavailable";
+        }
+        const n = v.value;
+        return typeof n === "number" && !Number.isInteger(n) ? n.toFixed(3) : String(n);
+      }
+      if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
+      return String(v);
+    }
+
+    function pct(v) {
+      if (v === null || v === undefined) return "—";
+      return (Number(v) * 100).toFixed(1) + "%";
+    }
+
+    function obsNote(v) {
+      if (!isObs(v)) return "";
+      const bits = [v.note, v.provenance, v.scope].filter(Boolean);
+      return bits.join(" · ");
+    }
+
+    function card(label, value, sub, accent) {
+      const c = document.createElement("div");
+      c.className = "card" + (accent ? " accent" : "");
+      const unavail = value === "unavailable" || value === "—";
+      c.innerHTML = `<div class="k">${label}</div><div class="v${unavail ? " unavail" : ""}">${value}</div>${sub ? `<div class="s">${sub}</div>` : ""}`;
+      return c;
+    }
+
+    function cards(obj, exact) {
       const g = document.createElement("div");
       g.className = "grid";
       Object.entries(obj).forEach(([k, v]) => {
-        if (v && typeof v === "object") return;
-        const c = document.createElement("div");
-        c.className = "card";
-        c.innerHTML = `<div class="k">${k.replaceAll("_", " ")}</div><div class="v">${fmt(v)}</div>`;
-        g.appendChild(c);
+        if (v && typeof v === "object" && !isObs(v)) return;
+        g.appendChild(card(k.replaceAll("_", " "), exact ? fmtExact(v) : fmt(v), isObs(v) ? obsNote(v) : ""));
       });
       return g;
+    }
+
+    function section(title, fields) {
+      const wrap = document.createElement("div");
+      wrap.className = "section";
+      const h = document.createElement("h2");
+      h.textContent = title;
+      wrap.appendChild(h);
+      const dl = document.createElement("div");
+      dl.className = "dl";
+      Object.entries(fields).forEach(([k, v]) => {
+        const key = document.createElement("div");
+        key.className = "k";
+        key.textContent = k;
+        const val = document.createElement("div");
+        if (isObs(v) && (v.value === null || v.provenance === "UNAVAILABLE")) val.className = "unavail";
+        val.textContent = isObs(v) ? (fmtExact(v) + (v.note ? " — " + v.note : "")) : fmtExact(v);
+        dl.appendChild(key);
+        dl.appendChild(val);
+      });
+      wrap.appendChild(dl);
+      return wrap;
     }
 
     function tierChart(rows) {
@@ -103,7 +179,7 @@
       return wrap;
     }
 
-    function table(rows) {
+    function table(rows, onRow, selected) {
       if (!rows || !rows.length) {
         const p = document.createElement("p");
         p.className = "empty";
@@ -114,13 +190,229 @@
       const t = document.createElement("table");
       t.innerHTML = `<thead><tr>${keys.map((k) => `<th>${k}</th>`).join("")}</tr></thead>`;
       const body = document.createElement("tbody");
-      rows.forEach((row) => {
+      rows.forEach((row, i) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = keys.map((k) => `<td>${fmt(row[k])}</td>`).join("");
+        if (onRow) tr.className = "clickable";
+        if (selected === i) tr.classList.add("selected");
+        tr.innerHTML = keys.map((k) => `<td>${fmtExact(row[k])}</td>`).join("");
+        if (onRow) tr.onclick = () => onRow(i, row);
         body.appendChild(tr);
       });
       t.appendChild(body);
       return t;
+    }
+
+    function renderOverview(data) {
+      const cov = data.coverage || {};
+      const g = document.createElement("div");
+      g.className = "grid wide";
+      g.appendChild(card("Intent serving coverage", pct(cov.intent_serving), "IntentResult on USER_RESPONSE — not accuracy", true));
+      g.appendChild(card("Context record coverage", pct(cov.context_record), "ContextRecord on USER_RESPONSE", true));
+      g.appendChild(card("Telemetry provenance completeness", pct(cov.supported_telemetry_provenance), "supported metrics with provenance", true));
+      g.appendChild(card("Requests", fmtExact(data.requests), "this process buffer"));
+      g.appendChild(card("Reliability", pct(data.reliability), data.errors ? (data.errors + " errors") : "no errors in buffer"));
+      const lat = data.latency || {};
+      g.appendChild(card("Latency p95", lat.p95_ms == null ? "—" : Number(lat.p95_ms).toFixed(1) + " ms", "p50 " + fmtExact(lat.p50_ms) + " · p99 " + fmtExact(lat.p99_ms)));
+      g.appendChild(card("Token volume", fmtExact(data.tokens), "prompt + completion in buffer"));
+      g.appendChild(card("Cost", data.cost_usd == null ? "—" : "$" + Number(data.cost_usd).toFixed(6), data.requests_with_estimated_cost ? "includes estimated rows" : "registry price × tokens"));
+      main.appendChild(g);
+      if (cov.note) {
+        const s = document.createElement("p");
+        s.className = "fields";
+        s.textContent = cov.note;
+        main.appendChild(s);
+      }
+      const extra = document.createElement("div");
+      extra.className = "grid";
+      extra.appendChild(card("process-buffer rps", fmtExact(data.rps), "gateway requests/sec in this buffer — not inference TPS"));
+      extra.appendChild(card("failovers", fmtExact(data.failovers)));
+      main.appendChild(extra);
+    }
+
+    function renderRequestDetail(row) {
+      if (!row) return;
+      const wrap = document.createElement("div");
+      wrap.appendChild(section("Identity", {
+        request_id: (row.identity || {}).request_id,
+        trace_id: (row.identity || {}).trace_id,
+        tenant_id: (row.identity || {}).tenant_id,
+        user_id: (row.identity || {}).user_id,
+        project_id: (row.identity || {}).project_id,
+      }));
+      wrap.appendChild(section("Intent", {
+        "domain/task": (row.intent || {}).domain_task,
+        confidence: (row.intent || {}).confidence,
+        "classifier layer": (row.intent || {}).classifier_layer,
+        "taxonomy version": (row.intent || {}).taxonomy_version,
+        "classifier version": (row.intent || {}).classifier_version,
+        state: (row.intent || {}).state,
+        "cache hit": (row.intent || {}).cache_hit,
+      }));
+      wrap.appendChild(section("Context", row.context || {}));
+      wrap.appendChild(section("Route", row.route || {}));
+      wrap.appendChild(section("Tokens", row.tokens || {}));
+      wrap.appendChild(section("Performance", row.performance || {}));
+      const engine = row.engine_snapshot || {};
+      const engineFields = {
+        scope: engine.scope,
+        provider: engine.provider,
+        available: engine.available,
+        note: engine.note,
+      };
+      (engine.observations || []).forEach((obs) => {
+        engineFields[obs.name] = obs;
+      });
+      wrap.appendChild(section("Engine snapshot (DEPLOYMENT, not this request)", engineFields));
+      main.appendChild(wrap);
+    }
+
+    function renderIntents(data) {
+      const gates = data.safety_gates || {};
+      const serving = data.serving || {};
+      const g = document.createElement("div");
+      g.className = "grid wide";
+      g.appendChild(card("Serving coverage", pct(serving.coverage), "IntentResult attachment, not accuracy", true));
+      g.appendChild(card("Known", fmtExact(serving.known), serving.known_pct != null ? pct(serving.known_pct) + " of serving sample" : ""));
+      g.appendChild(card("Unknown", fmtExact(serving.unknown)));
+      g.appendChild(card("Abstain", fmtExact(serving.abstain)));
+      g.appendChild(card("Confidence", serving.confidence && serving.confidence.mean != null ? Number(serving.confidence.mean).toFixed(3) : "—", serving.confidence ? "mean of classified requests" : "no classifications"));
+      g.appendChild(card("L0 hits", fmtExact(serving.l0_hits)));
+      g.appendChild(card("L1 hits", fmtExact(serving.l1_hits)));
+      g.appendChild(card("Hard-negative", gates.hard_negative_accuracy + " / required " + gates.required, "frozen eval — gate " + (gates.routing || "OFF")));
+      g.appendChild(card("Drift", "unavailable", "labelled traffic is required"));
+      g.appendChild(card("Classifier version", serving.classifier_version || "—"));
+      g.appendChild(card("Taxonomy version", serving.taxonomy_version || "—"));
+      main.appendChild(g);
+      if (serving.layer_distribution) {
+        const h = document.createElement("h2");
+        h.textContent = "Layer distribution";
+        main.appendChild(h);
+        main.appendChild(cards(serving.layer_distribution, true));
+      }
+    }
+
+    function renderContext(data) {
+      const g = document.createElement("div");
+      g.className = "grid wide";
+      g.appendChild(card("Before optimization", fmtExact(data.before_optimization), obsNote(data.before_optimization), true));
+      g.appendChild(card("After optimization", fmtExact(data.after_optimization), obsNote(data.after_optimization), true));
+      const util = data.context_utilization || {};
+      g.appendChild(card("Context utilization", util.mean_percent == null ? "unavailable" : Number(util.mean_percent).toFixed(2) + "%", util.note || ""));
+      g.appendChild(card("Stable prefix", fmtExact(data.stable_prefix), "prompt-shape label, not a KV hit"));
+      g.appendChild(card("Compression", fmtExact(data.compression), obsNote(data.compression)));
+      g.appendChild(card("Deduplication", fmtExact(data.deduplication)));
+      g.appendChild(card("Dropped tokens", fmtExact(data.dropped_tokens)));
+      g.appendChild(card("Overflow rejection", "unavailable", "no overflow-rejection counter in this build"));
+      main.appendChild(g);
+      if (data.distribution) {
+        const h = document.createElement("h2");
+        h.textContent = "Context distribution";
+        main.appendChild(h);
+        main.appendChild(cards(data.distribution, true));
+      }
+      if (data.stable_prefix_note) {
+        const s = document.createElement("p");
+        s.className = "fields";
+        s.textContent = data.stable_prefix_note;
+        main.appendChild(s);
+      }
+    }
+
+    function renderModels(data) {
+      (data.models || []).forEach((row) => {
+        const wrap = document.createElement("div");
+        wrap.className = "section";
+        const h = document.createElement("h2");
+        h.textContent = row.deployment + " · " + row.provider;
+        wrap.appendChild(h);
+        wrap.appendChild(section("Deployment", {
+          health: row.health,
+          grade: row.grade,
+          runtime: row.runtime,
+          hardware: row.hardware,
+          transport: row.transport,
+          adapter: row.provider_adapter,
+          requests: row.requests,
+          errors: row.errors,
+          rps: row.rps,
+          "TTFT p50/p95/p99": row.ttft ? [row.ttft.p50_ms, row.ttft.p95_ms, row.ttft.p99_ms].map(fmtExact).join(" / ") : "unavailable",
+          TPOT: row.tpot_ms,
+          "prompt TPS": row.prompt_tps,
+          "decode TPS": row.decode_tps,
+          "KV utilization": row.kv_utilization,
+          "prefix-cache hit rate": row.prefix_cache_hit_rate,
+          "cached tokens": row.cached_tokens,
+          running: row.running,
+          waiting: row.waiting,
+          preemptions: row.preemptions,
+        }));
+        main.appendChild(wrap);
+      });
+    }
+
+    function renderKv(data) {
+      const filters = data.filters || {};
+      const bar = document.createElement("div");
+      bar.className = "filters";
+      const depSelect = document.createElement("select");
+      const modelSelect = document.createElement("select");
+      const podNote = document.createElement("span");
+      podNote.className = "fields";
+      podNote.textContent = "pod: unavailable — " + ((filters.pod && filters.pod.note) || "not on engine scrapes");
+      function optionList(select, values, label) {
+        const lab = document.createElement("label");
+        lab.textContent = label + " ";
+        const all = document.createElement("option");
+        all.value = "";
+        all.textContent = "all";
+        select.appendChild(all);
+        (values || []).forEach((v) => {
+          const o = document.createElement("option");
+          o.value = v;
+          o.textContent = v;
+          select.appendChild(o);
+        });
+        lab.appendChild(select);
+        bar.appendChild(lab);
+      }
+      optionList(depSelect, filters.deployment, "deployment");
+      optionList(modelSelect, filters.model, "model");
+      bar.appendChild(podNote);
+      main.appendChild(bar);
+      const host = document.createElement("div");
+      main.appendChild(host);
+      function paint() {
+        host.innerHTML = "";
+        const dep = depSelect.value;
+        (data.engines || []).forEach((engine) => {
+          if (dep && engine.provider !== dep) return;
+          host.appendChild(section(engine.provider + " · " + (engine.scope || "DEPLOYMENT"), {
+            available: engine.available,
+            note: engine.note,
+            "KV current": engine.kv_current,
+            "prefix hit ratio": engine.prefix_hit_ratio,
+            "cached prompt tokens": engine.cached_prompt_tokens,
+            running: engine.running,
+            waiting: engine.waiting,
+            preemptions: engine.preemptions,
+            TTFT: engine.ttft,
+            TPOT: engine.tpot,
+            "prefill TPS": engine.prefill_tps,
+            "decode TPS": engine.decode_tps,
+          }));
+        });
+      }
+      depSelect.onchange = paint;
+      modelSelect.onchange = paint;
+      paint();
+      if (data.capability_matrix) {
+        const h = document.createElement("h2");
+        h.textContent = "Capability matrix";
+        main.appendChild(h);
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(data.capability_matrix, null, 2);
+        main.appendChild(pre);
+      }
     }
 
     function render(payload) {
@@ -155,17 +447,57 @@
         return;
       }
       const data = payload.data || {};
-      if (current === "intents" && data.safety_gates) {
+      if (current === "overview") {
+        renderOverview(data);
+        return;
+      }
+      if (current === "intents") {
+        const gates = data.safety_gates || {};
         const n = document.createElement("div");
         n.className = "note";
-        n.textContent = "HN accuracy 0.50 · required >= 0.58 · routing OFF (frozen eval, not live traffic)";
+        n.textContent = "HN accuracy " + gates.hard_negative_accuracy + " · required >= " + gates.required + " · routing " + (gates.routing || "OFF") + " (frozen eval, not live accuracy)";
         main.appendChild(n);
+        renderIntents(data);
+        return;
       }
-      if (current === "models" && data.models) {
+      if (current === "requests") {
+        const rows = data.recent || [];
+        if (selectedRequest >= rows.length) selectedRequest = 0;
+        main.appendChild(table(rows, (i) => {
+          selectedRequest = i;
+          render(payload);
+        }, selectedRequest));
+        if (rows[selectedRequest]) {
+          const h = document.createElement("h2");
+          h.textContent = "Request detail";
+          main.appendChild(h);
+          renderRequestDetail(rows[selectedRequest]);
+        }
+        return;
+      }
+      if (current === "context") {
+        renderContext(data);
+        if (data.records && data.records.length) {
+          const h = document.createElement("h2");
+          h.textContent = "Recent context records";
+          main.appendChild(h);
+          const pre = document.createElement("pre");
+          pre.textContent = JSON.stringify(data.records.slice(-5), null, 2);
+          main.appendChild(pre);
+        }
+        return;
+      }
+      if (current === "models") {
         const n = document.createElement("div");
         n.className = "fields";
-        n.textContent = "Every capability/quality cell is labelled declared, measured, or unknown. Registry YAML is never shown as a benchmark.";
+        n.textContent = "Every capability/quality cell is labelled declared, measured, or unknown. Unsupported runtime fields say unavailable. Registry YAML is never shown as a benchmark.";
         main.appendChild(n);
+        renderModels(data);
+        return;
+      }
+      if (current === "kv_cache") {
+        renderKv(data);
+        return;
       }
       if (current === "promotion" && data.models) {
         const n = document.createElement("div");
@@ -176,8 +508,7 @@
       if (data.histogram) {
         main.appendChild(tierChart(data.histogram));
         main.appendChild(table(data.histogram));
-      } else if (data.recent) main.appendChild(table(data.recent));
-      else if (data.users) main.appendChild(table(data.users));
+      } else if (data.users) main.appendChild(table(data.users));
       else if (data.tenants) main.appendChild(table(data.tenants));
       else if (data.models) main.appendChild(table(data.models));
       else if (data.events) main.appendChild(table(data.events));
@@ -190,8 +521,8 @@
         pre.textContent = JSON.stringify(data.traces, null, 2);
         main.appendChild(pre);
       } else {
-        main.appendChild(cards(data));
-        const nested = Object.entries(data).filter(([, v]) => v && typeof v === "object");
+        main.appendChild(cards(data, true));
+        const nested = Object.entries(data).filter(([, v]) => v && typeof v === "object" && !isObs(v));
         nested.forEach(([k, v]) => {
           const h = document.createElement("h3");
           h.textContent = k.replaceAll("_", " ");

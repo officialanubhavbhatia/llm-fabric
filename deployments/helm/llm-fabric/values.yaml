@@ -113,6 +113,9 @@ config:
   port: 47317
   allowAnonymous: "true"
   authMode: disabled
+  intentClassificationEnabled: "false"
+  intentEmbedder: hashing
+  intentAllowHashingEmbedder: "false"
   extraEnv: []
 
 providers:
@@ -178,7 +181,17 @@ observability:
   otlp:
     endpoint: ""
   prometheus:
+    # Scraped by an in-cluster Prometheus. Chat requests never wait on scrape.
     serviceAnnotations: {}
+    # Optional extra Service annotations, e.g.
+    #   prometheus.io/scrape: "true"
+    #   prometheus.io/port: "47317"
+    #   prometheus.io/path: /metrics
+    scrapeLiteLLM: false
+    scrapeVLLM: false
+    # GPU telemetry is DCGM exporter, not a custom Fabric monitor.
+    scrapeDCGM: false
+    dcgmService: "dcgm-exporter:9400"
 
 affinity: {}
 topologySpreadConstraints: []
@@ -206,3 +219,30 @@ ollama:
   resources: {}
   nodeSelector: {}
   tolerations: []
+
+# LiteLLM proxy. ClusterIP only — not an ingress. Disabled by default.
+# Direct Ollama remains valid when litellm.enabled is false.
+#
+# Registry topology (set on fabricConfig.models, not one Deployment per Grade):
+#   providerAdapter: ollama  transport: direct   runtime: ollama
+#   providerAdapter: litellm transport: litellm  runtime: ollama
+#   providerAdapter: vllm    transport: direct   runtime: vllm
+#   providerAdapter: litellm transport: litellm  runtime: vllm
+litellm:
+  enabled: false
+  image:
+    repository: ghcr.io/berriai/litellm
+    tag: "v1.63.11-stable"
+    pullPolicy: IfNotPresent
+  resources: {}
+  config: |
+    model_list:
+      - model_name: smollm2-135m
+        litellm_params:
+          model: ollama/smollm2:135m
+          api_base: http://{{ include "llm-fabric.fullname" . }}-ollama:11434
+          timeout: 300
+    litellm_settings:
+      num_retries: 0
+      request_timeout: 300
+

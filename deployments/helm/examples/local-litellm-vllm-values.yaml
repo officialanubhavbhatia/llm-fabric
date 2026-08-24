@@ -1,0 +1,66 @@
+# LiteLLM transport in front of an existing vLLM Service.
+# Does not create vLLM. Does not expose LiteLLM or vLLM as Ingress.
+# A reachable Service does not approve a model.
+
+replicaCount: 1
+
+image:
+  repository: llm-fabric
+  tag: "0.1.0"
+  digest: ""
+  pullPolicy: IfNotPresent
+
+ingress:
+  enabled: false
+
+service:
+  type: ClusterIP
+
+providers:
+  baseUrls:
+    litellm: http://llm-fabric-litellm:4000/v1
+
+fabricConfig:
+  models: |
+    models:
+      - id: litellm-vllm-general
+        provider: litellm
+        provider_adapter: litellm
+        transport: litellm
+        runtime: vllm
+        provider_model: vllm-general
+        served_model_name: REPLACE_WITH_PINNED_MODEL_ID
+        grade: Grade10
+        context_window: 32768
+        capabilities: [chat, streaming]
+        placement:
+          locality: private
+        api_base: http://llm-fabric-litellm:4000/v1
+        health_endpoint: http://vllm-general.inference.svc.cluster.local:8000/health
+        metrics_endpoint: http://vllm-general.inference.svc.cluster.local:8000/metrics
+        supports_kv_metrics: true
+        supports_batch_metrics: true
+        supports_queue_metrics: true
+        enabled: true
+        lifecycle: registered
+    aliases:
+      - id: auto
+        policy: declared
+        candidates: [litellm-vllm-general]
+
+litellm:
+  enabled: true
+  config: |
+    model_list:
+      - model_name: vllm-general
+        litellm_params:
+          model: openai/REPLACE_WITH_PINNED_MODEL_ID
+          api_base: http://vllm-general.inference.svc.cluster.local:8000/v1
+          timeout: 300
+    litellm_settings:
+      num_retries: 0
+      request_timeout: 300
+
+# Approval is deliberately absent.
+promotionEvidence:
+  existingConfigMap: ""

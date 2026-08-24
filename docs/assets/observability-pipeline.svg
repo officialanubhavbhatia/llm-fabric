@@ -9,7 +9,7 @@
   </defs>
   
   <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Observability pipeline</text>
-  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Built spans: request, auth, input_guardrails, intent, route, llm, output_guardrails. Unbuilt: context, retrieval, tool, eval.</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Built spans: request, auth, input_guardrails, intent, context, route, litellm, llm, output_guardrails, usage. Unbuilt: retrieval, tool, eval.</text>
   <rect x="40" y="80" width="140" height="52" rx="8" fill="#1a222c" stroke="#2a3542"/>
   <text x="52" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">SDK request</text>
   <line x1="180" y1="106" x2="220" y2="106" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -20,10 +20,10 @@
   <text x="416" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">IntentOS span</text>
   <line x1="544" y1="106" x2="584" y2="106" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
   <rect x="586" y="80" width="140" height="52" rx="8" fill="#1a222c" stroke="#2a3542"/>
-  <text x="598" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Routing span</text>
+  <text x="598" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Context span</text>
   <line x1="726" y1="106" x2="766" y2="106" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
   <rect x="768" y="80" width="160" height="52" rx="8" fill="#1a222c" stroke="#2a3542"/>
-  <text x="780" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Provider generation</text>
+  <text x="780" y="102" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Route + provider</text>
   <line x1="500" y1="132" x2="500" y2="168" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
   <rect x="40" y="170" width="200" height="64" rx="8" fill="#1a222c" stroke="#2a3542"/>
   <text x="52" y="192" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Usage event</text>

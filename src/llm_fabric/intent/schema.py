@@ -12,6 +12,7 @@ subsystem agrees on.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Self
@@ -20,6 +21,25 @@ from typing import Any, Self
 #: Unknown is a first-class outcome, not a failure: routing a misunderstood
 #: prompt confidently is worse than admitting the prompt was not understood.
 UNKNOWN_INTENT_ID = "unknown"
+
+#: Optimized route inference is allowed only at or above this confidence, and
+#: only for a KNOWN serving state. Medium, low, unknown, abstain, and
+#: safe-fallback use a balanced capability floor.
+HIGH_CONFIDENCE = 0.90
+
+
+class ServingClassificationState(StrEnum):
+    """How the serving path treats this IntentResult.
+
+    Coverage, not accuracy: every eligible invocation carries one of these.
+    UNKNOWN is constitutionally valid. Never force a known label to advertise
+    100% coverage.
+    """
+
+    KNOWN = "known"
+    UNKNOWN = "unknown"
+    ABSTAIN = "abstain"
+    SAFE_FALLBACK = "safe_fallback"
 
 
 class ClassifierLayer(StrEnum):
@@ -32,10 +52,11 @@ class ClassifierLayer(StrEnum):
     L4_STRUCTURED_LLM = "l4_structured_llm"
     L5_ESCALATION = "l5_escalation"
     ABSTAIN = "abstain"
+    SAFE_FALLBACK = "safe_fallback"
 
     @property
     def is_cache(self) -> bool:
-        return self in (ClassifierLayer.L0_EXACT_CACHE, ClassifierLayer.L1_SEMANTIC_CACHE)
+        return self in (self.L0_EXACT_CACHE, self.L1_SEMANTIC_CACHE)
 
 
 class Complexity(StrEnum):
@@ -186,6 +207,8 @@ class IntentClassification:
     structured_output: bool = False
     alternatives: tuple[IntentAlternative, ...] = ()
     abstain: bool = False
+    serving_state: ServingClassificationState = ServingClassificationState.KNOWN
+    intent_result_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     # Provenance. Not in the constitution's field list, but the observability
     # section requires classifier layer, cache hit and confidence as metrics,
@@ -210,13 +233,27 @@ class IntentClassification:
 
     def __post_init__(self) -> None:
         _check_confidence(self.confidence, "confidence")
-        if self.abstain and self.intent_id != UNKNOWN_INTENT_ID:
+        if self.serving_state is ServingClassificationState.KNOWN:
+            if self.intent_id == UNKNOWN_INTENT_ID:
+                raise ValueError("a known serving state cannot carry the unknown intent id")
+            if self.abstain:
+                raise ValueError(
+                    "an abstaining classification must carry the unknown intent id; "
+                    "abstention and a concrete answer are mutually exclusive"
+                )
+            return
+        if self.intent_id != UNKNOWN_INTENT_ID:
             raise ValueError(
-                "an abstaining classification must carry the unknown intent id; "
-                "abstention and a concrete answer are mutually exclusive"
+                f"{self.serving_state.value} serving state must carry the unknown intent id"
             )
-        if self.intent_id == UNKNOWN_INTENT_ID and not self.abstain:
-            raise ValueError("the unknown intent id is only valid on an abstaining result")
+        if self.serving_state is ServingClassificationState.ABSTAIN:
+            if not self.abstain:
+                raise ValueError("an abstaining serving state must set abstain=True")
+            return
+        if self.abstain:
+            raise ValueError(
+                f"{self.serving_state.value} is not abstention; use serving_state=abstain"
+            )
 
     @classmethod
     def unknown(
@@ -236,6 +273,86 @@ class IntentClassification:
         because "we were nearly sure" and "we had no idea" are different signals
         for the learning loop even though both abstain.
         """
+        return cls._unclassified(
+            serving_state=ServingClassificationState.ABSTAIN,
+            abstain=True,
+            layer=layer,
+            classifier_version=classifier_version,
+            taxonomy_version=taxonomy_version,
+            confidence=confidence,
+            alternatives=alternatives,
+            latency_ms=latency_ms,
+            cost_usd=cost_usd,
+        )
+
+    @classmethod
+    def unknown_result(
+        cls,
+        *,
+        classifier_version: str,
+        taxonomy_version: str,
+        confidence: float = 0.0,
+        alternatives: tuple[IntentAlternative, ...] = (),
+        layer: ClassifierLayer = ClassifierLayer.ABSTAIN,
+        latency_ms: float = 0.0,
+        cost_usd: float = 0.0,
+    ) -> Self:
+        """Build an UNKNOWN serving result. Not abstention; not a known label."""
+        return cls._unclassified(
+            serving_state=ServingClassificationState.UNKNOWN,
+            abstain=False,
+            layer=layer,
+            classifier_version=classifier_version,
+            taxonomy_version=taxonomy_version,
+            confidence=confidence,
+            alternatives=alternatives,
+            latency_ms=latency_ms,
+            cost_usd=cost_usd,
+        )
+
+    @classmethod
+    def safe_fallback(
+        cls,
+        *,
+        classifier_version: str = "serving-unclassified",
+        taxonomy_version: str = "none",
+        confidence: float = 0.0,
+        alternatives: tuple[IntentAlternative, ...] = (),
+        layer: ClassifierLayer = ClassifierLayer.SAFE_FALLBACK,
+        latency_ms: float = 0.0,
+        cost_usd: float = 0.0,
+    ) -> Self:
+        """Build a SAFE_FALLBACK result when the cascade cannot run.
+
+        Used when classification is explicitly disabled in development/test, or
+        when the cascade itself fails. The serving path still has an IntentResult.
+        """
+        return cls._unclassified(
+            serving_state=ServingClassificationState.SAFE_FALLBACK,
+            abstain=False,
+            layer=layer,
+            classifier_version=classifier_version,
+            taxonomy_version=taxonomy_version,
+            confidence=confidence,
+            alternatives=alternatives,
+            latency_ms=latency_ms,
+            cost_usd=cost_usd,
+        )
+
+    @classmethod
+    def _unclassified(
+        cls,
+        *,
+        serving_state: ServingClassificationState,
+        abstain: bool,
+        layer: ClassifierLayer,
+        classifier_version: str,
+        taxonomy_version: str,
+        confidence: float,
+        alternatives: tuple[IntentAlternative, ...],
+        latency_ms: float,
+        cost_usd: float,
+    ) -> Self:
         return cls(
             intent_id=UNKNOWN_INTENT_ID,
             domain=UNKNOWN_INTENT_ID,
@@ -251,7 +368,8 @@ class IntentClassification:
             classifier_version=classifier_version,
             taxonomy_version=taxonomy_version,
             alternatives=alternatives,
-            abstain=True,
+            abstain=abstain,
+            serving_state=serving_state,
             layer=layer,
             latency_ms=latency_ms,
             cost_usd=cost_usd,
@@ -259,6 +377,15 @@ class IntentClassification:
             safety_class=SafetyClass.MODERATE,
             minimum_capability_grade="standard",
             recommended_quality_grade=QualityClass.STANDARD.value,
+        )
+
+    @property
+    def allows_optimized_route(self) -> bool:
+        """True only for a high-confidence known classification."""
+        return (
+            self.serving_state is ServingClassificationState.KNOWN
+            and not self.abstain
+            and self.confidence >= HIGH_CONFIDENCE
         )
 
     @property
@@ -297,6 +424,8 @@ class IntentClassification:
             ],
             "secondary_intents": list(self.secondary_intents),
             "abstain": self.abstain,
+            "serving_state": self.serving_state.value,
+            "intent_result_id": self.intent_result_id,
             "classifier_version": self.classifier_version,
             "taxonomy_version": self.taxonomy_version,
             "embedding_model_version": self.embedding_model_version,
@@ -324,6 +453,8 @@ class IntentClassification:
             "intent.domain": self.domain,
             "intent.confidence": round(self.confidence, 4),
             "intent.abstain": self.abstain,
+            "intent.serving_state": self.serving_state.value,
+            "intent.result_id": self.intent_result_id,
             "intent.layer": self.layer.value,
             "intent.cache_hit": self.cache_hit,
             "intent.cache_source": self.cache_source or "none",

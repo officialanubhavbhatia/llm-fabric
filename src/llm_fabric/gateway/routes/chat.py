@@ -14,11 +14,14 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import StreamingResponse
 
+from llm_fabric.context.compiler import CompiledContext, ContextCompiler, compile_chat
+from llm_fabric.context.record import ContextRecord
 from llm_fabric.contract.openai import (
     ChatChoice,
     ChatCompletionChunk,
@@ -49,7 +52,11 @@ from llm_fabric.guardrails import (
 )
 from llm_fabric.intent.cascade import IntentCascade
 from llm_fabric.intent.features import bound_text, conversation_state_signature
-from llm_fabric.intent.schema import ClassificationRequest, IntentClassification
+from llm_fabric.intent.schema import (
+    ClassificationRequest,
+    IntentClassification,
+    ServingClassificationState,
+)
 from llm_fabric.observability.logging import request_logger
 from llm_fabric.observability.metering import (
     AttemptRecord,
@@ -78,8 +85,10 @@ def _provenance(
     intent: IntentClassification | None = None,
     *,
     shadow: IntentClassification | None = None,
+    context: ContextRecord | None = None,
 ) -> dict[str, str]:
     headers = {
+        "x-fabric-route-id": decision.route_id,
         "x-fabric-requested-model": decision.requested_model,
         "x-fabric-policy": decision.policy,
         "x-fabric-failovers": str(decision.failover_count),
@@ -103,8 +112,26 @@ def _provenance(
             )
     if decision.fallback_depth:
         headers["x-fabric-fallback-depth"] = str(decision.fallback_depth)
+    if decision.attempts:
+        last = decision.attempts[-1]
+        if last.deployment_id:
+            headers["x-fabric-deployment-id"] = last.deployment_id
+        if last.provider_adapter:
+            headers["x-fabric-provider-adapter"] = last.provider_adapter
+        if last.transport:
+            headers["x-fabric-transport"] = last.transport
+        if last.runtime:
+            headers["x-fabric-runtime"] = last.runtime
+        if last.grade:
+            headers["x-fabric-grade"] = last.grade
+        if last.litellm_model:
+            headers["x-fabric-litellm-model"] = last.litellm_model
+        if last.actual_served_model:
+            headers["x-fabric-actual-served-model"] = last.actual_served_model
     if intent is not None:
         headers["x-fabric-intent"] = intent.intent_id
+        headers["x-fabric-intent-state"] = intent.serving_state.value
+        headers["x-fabric-intent-result-id"] = intent.intent_result_id
         headers["x-fabric-intent-confidence"] = f"{intent.confidence:.4f}"
         headers["x-fabric-intent-layer"] = intent.layer.value
         headers["x-fabric-intent-cache"] = intent.cache_source or "none"
@@ -117,23 +144,54 @@ def _provenance(
         headers["x-fabric-intent-shadow-latency-ms"] = f"{shadow.latency_ms:.3f}"
         headers["x-fabric-taxonomy-version"] = shadow.taxonomy_version
         headers["x-fabric-classifier-version"] = shadow.classifier_version
+    if context is not None:
+        headers["x-fabric-context-record-id"] = context.context_record_id
+        before = context.context_tokens_before_optimization.value
+        after = context.context_tokens_after_optimization.value
+        if before is not None:
+            headers["x-fabric-context-tokens-before"] = str(int(before))
+        if after is not None:
+            headers["x-fabric-context-tokens-after"] = str(int(after))
+        headers["x-fabric-context-token-provenance"] = context.token_provenance.value
+    return headers
+
+
+def _topology_headers(spec: ModelSpec) -> dict[str, str]:
+    headers = {
+        "x-fabric-served-model": spec.id,
+        "x-fabric-provider": spec.provider,
+        "x-fabric-deployment-id": spec.deployment_id,
+        "x-fabric-provider-adapter": spec.provider_adapter,
+        "x-fabric-transport": spec.transport.value,
+        "x-fabric-runtime": spec.runtime.value,
+    }
+    if spec.grade is not None:
+        headers["x-fabric-grade"] = spec.grade.value
+    if spec.transport.value == "litellm":
+        headers["x-fabric-litellm-model"] = spec.provider_model
     return headers
 
 
 async def _classify(
     cascade: IntentCascade | None, scope: TenantScope, body: ChatCompletionRequest
-) -> IntentClassification | None:
-    """Classify the newest user turn, or return `None` when disabled.
+) -> IntentClassification:
+    """Always produce a typed IntentResult for the serving path.
 
-    Classification never fails a request. A router that has no intent falls back
-    to its configured policy, which is a worse route than it might have had —
-    not an error the caller can do anything about.
+    Classification never fails a request. Cascade or dependency failure degrades
+    to SAFE_FALLBACK / UNKNOWN. It never continues with no IntentResult.
     """
-    if cascade is None:
-        return None
     text = next((m.content for m in reversed(body.messages) if m.role == "user"), "")
+    if cascade is None:
+        fallback = IntentClassification.safe_fallback()
+        _record_serving(fallback)
+        return fallback
     if not text:
-        return None
+        unknown = IntentClassification.unknown_result(
+            classifier_version=cascade.version,
+            taxonomy_version=cascade.taxonomy.version,
+        )
+        _record_serving(unknown)
+        return unknown
     try:
         with optional_span("intent") as span:
             decision = await cascade.classify(
@@ -146,19 +204,81 @@ async def _classify(
             if span is not None:
                 for key, value in decision.trace_attributes().items():
                     span.set_attribute(key, value)
-    except Exception:  # noqa: BLE001 - see docstring: routing degrades, never fails
+    except Exception:  # noqa: BLE001 - serving degrades to SAFE_FALLBACK, never skips
         request_logger().warning("intent classification failed", extra={"model": body.model})
-        return None
+        fallback = IntentClassification.safe_fallback(
+            classifier_version=cascade.version,
+            taxonomy_version=cascade.taxonomy.version,
+        )
+        cascade.metrics.record_error()
+        cascade.metrics.record_serving(ServingClassificationState.SAFE_FALLBACK)
+        return fallback
     return decision.classification
+
+
+def _record_serving(intent: IntentClassification) -> None:
+    from llm_fabric.observability.telemetry import current_telemetry
+
+    telemetry = current_telemetry()
+    if telemetry is not None:
+        telemetry.metrics.observe_intent_serving(intent.serving_state.value)
+
+
+def _compile_context(
+    body: ChatCompletionRequest,
+    scope: TenantScope,
+    *,
+    request_id: str,
+    ceiling: int | None,
+    telemetry: Telemetry,
+) -> CompiledContext:
+    """Always produce a ContextRecord before routing. Never bypass compilation."""
+    with telemetry.span("context") as span:
+        compiled = compile_chat(
+            body,
+            scope,
+            request_id=request_id,
+            context_window=ceiling,
+        )
+        telemetry.record_context(compiled.record)
+        before = int(compiled.record.context_tokens_before_optimization.value or 0)
+        after = int(compiled.record.context_tokens_after_optimization.value or 0)
+        telemetry.metrics.observe_context(
+            compile_s=compiled.record.compile_latency_ms / 1000.0,
+            tokens_before=before,
+            tokens_after=after,
+        )
+        if span is not None:
+            span.set_attribute("context.record_id", compiled.record.context_record_id)
+            span.set_attribute("context.tokens_before", before)
+            span.set_attribute("context.tokens_after", after)
+            span.set_attribute("context.token_provenance", compiled.record.token_provenance.value)
+    return compiled
+
+
+def _stream_tpot_ms(first_byte_at: float | None, completion_tokens: int) -> float | None:
+    if first_byte_at is None or completion_tokens < 1:
+        return None
+    decode_s = time.perf_counter() - first_byte_at
+    if decode_s <= 0:
+        return None
+    return (decode_s / max(1, completion_tokens - 1)) * 1000
 
 
 def _route_request(
     body: ChatCompletionRequest,
     fabric: Router,
     scope: TenantScope,
-    intent: IntentClassification | None,
+    intent: IntentClassification,
+    compiled: CompiledContext | None = None,
 ) -> RouteRequest:
-    return fabric.build_request(body, tenant_id=scope.tenant_id, intent=intent)
+    route = fabric.build_request(body, tenant_id=scope.tenant_id, intent=intent)
+    if compiled is None:
+        return route
+    after = compiled.record.context_tokens_after_optimization.value
+    if after is None:
+        return route
+    return replace(route, prompt_tokens=int(after))
 
 
 def _attempt_records(decision: RouteDecision) -> tuple[AttemptRecord, ...]:
@@ -199,7 +319,9 @@ def _meter(
     streamed: bool,
     error: str | None = None,
     intent: IntentClassification | None = None,
+    context: ContextRecord | None = None,
     ttft_ms: float | None = None,
+    tpot_ms: float | None = None,
     telemetry: Telemetry | None = None,
 ) -> UsageRecord:
     served_model, provider, priced = _served_identity(spec, decision)
@@ -220,11 +342,16 @@ def _meter(
         streamed=streamed,
         error=error,
         intent_id=intent.intent_id if intent is not None else None,
+        intent_result_id=intent.intent_result_id if intent is not None else None,
+        taxonomy_version=intent.taxonomy_version if intent is not None else None,
+        classifier_version=intent.classifier_version if intent is not None else None,
+        context_record_id=context.context_record_id if context is not None else None,
         trace_id=trace.trace_id if trace is not None else None,
         spec=priced,
     )
     if events:
-        meter.record_events(events)
+        with telemetry.span("usage") if telemetry is not None else optional_span("usage"):
+            meter.record_events(events)
     record = UsageRecord(
         request_id=request_id,
         requested_model=decision.requested_model,
@@ -247,7 +374,9 @@ def _meter(
         intent_confidence=intent.confidence if intent is not None else None,
         intent_cache_hit=intent.cache_hit if intent is not None else None,
         ttft_ms=round(ttft_ms, 3) if ttft_ms is not None else None,
+        tpot_ms=round(tpot_ms, 3) if tpot_ms is not None else None,
         trace_id=trace.trace_id if trace is not None else None,
+        context_record_id=context.context_record_id if context is not None else None,
         invocation_count=len(events),
         ledger_prompt_tokens=sum(event.prompt_tokens for event in events),
         ledger_completion_tokens=sum(event.completion_tokens for event in events),
@@ -331,44 +460,69 @@ async def create_chat_completion(
                 f"a remediation ceiling of {ceiling} tokens is in effect"
             )
     classified = await _classify(cascade, scope, body)
-    route_intent = classified if settings.intent_classification_enabled else None
-    shadow = (
-        classified
-        if classified is not None
-        and settings.intent_shadow
-        and not settings.intent_classification_enabled
-        else None
+    if settings.intent_classification_enabled:
+        route_intent = classified
+        shadow = None
+    else:
+        route_intent = (
+            classified
+            if classified.serving_state is ServingClassificationState.SAFE_FALLBACK
+            else IntentClassification.safe_fallback(
+                classifier_version=classified.classifier_version,
+                taxonomy_version=classified.taxonomy_version,
+            )
+        )
+        shadow = classified if settings.intent_shadow else None
+    compiled = _compile_context(
+        body,
+        scope,
+        request_id=request_id,
+        ceiling=ceiling,
+        telemetry=telemetry,
     )
-    route = _route_request(body, fabric, scope, route_intent)
+    compiled_body = compiled.request
+    route = _route_request(compiled_body, fabric, scope, route_intent, compiled)
 
     if body.stream:
         # Resolve before streaming starts: an unknown or disabled model must come
         # back as a proper HTTP error, and once the first byte ships the status
         # code is already on the wire.
-        fabric.resolve(body.model)
+        _, candidates = fabric.resolve(body.model)
+        stream_headers = {
+            "x-fabric-request-id": request_id,
+            "cache-control": "no-cache",
+            "x-accel-buffering": "no",
+        }
+        stream_headers.update(_topology_headers(candidates[0]))
+        if route_intent is not None:
+            stream_headers["x-fabric-intent"] = route_intent.intent_id
+            stream_headers["x-fabric-intent-state"] = route_intent.serving_state.value
+            stream_headers["x-fabric-intent-result-id"] = route_intent.intent_result_id
+            stream_headers["x-fabric-taxonomy-version"] = route_intent.taxonomy_version
+            stream_headers["x-fabric-classifier-version"] = route_intent.classifier_version
+        if shadow is not None:
+            stream_headers["x-fabric-intent-shadow"] = shadow.intent_id
+        stream_headers["x-fabric-context-record-id"] = compiled.record.context_record_id
         return StreamingResponse(
             _stream_completion(
-                body,
+                compiled_body,
                 fabric=fabric,
                 meter=meter,
                 request_id=request_id,
                 scope=scope,
                 quota=quota,
                 route=route,
-                intent=classified,
+                intent=route_intent,
+                context=compiled.record,
                 telemetry=telemetry,
             ),
             media_type=SSE_MEDIA_TYPE,
-            headers={
-                "x-fabric-request-id": request_id,
-                "cache-control": "no-cache",
-                "x-accel-buffering": "no",
-            },
+            headers=stream_headers,
         )
 
     started = time.perf_counter()
     try:
-        routed = await fabric.complete(body, route=route)
+        routed = await fabric.complete(compiled_body, route=route)
     except FabricError as exc:
         if isinstance(exc.decision, RouteDecision):
             _meter(
@@ -378,17 +532,24 @@ async def create_chat_completion(
                 quota=quota,
                 spec=None,
                 decision=exc.decision,
-                prompt_tokens=approximate_prompt_tokens(body.messages),
+                prompt_tokens=approximate_prompt_tokens(compiled_body.messages),
                 completion_tokens=0,
                 usage_reported=False,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 streamed=False,
                 error=exc.message,
-                intent=classified,
+                intent=route_intent,
+                context=compiled.record,
                 telemetry=telemetry,
             )
         raise
     latency_ms = (time.perf_counter() - started) * 1000
+    context_record = compiled.record
+    if routed.spec.context_window:
+        context_record = ContextCompiler().bind_model_window(
+            compiled.record, routed.spec.context_window
+        )
+        telemetry.record_context(context_record)
     record = _meter(
         meter,
         request_id=request_id,
@@ -401,7 +562,8 @@ async def create_chat_completion(
         usage_reported=routed.result.usage_reported_by_provider,
         latency_ms=latency_ms,
         streamed=False,
-        intent=classified,
+        intent=route_intent,
+        context=context_record,
         telemetry=telemetry,
     )
     if record.trace_id:
@@ -417,7 +579,9 @@ async def create_chat_completion(
 
     response.headers["x-fabric-request-id"] = request_id
     response.headers["x-fabric-invocations"] = str(record.invocation_count)
-    for key, value in _provenance(routed.decision, route_intent, shadow=shadow).items():
+    for key, value in _provenance(
+        routed.decision, route_intent, shadow=shadow, context=context_record
+    ).items():
         response.headers[key] = value
 
     return ChatCompletionResponse(
@@ -447,6 +611,7 @@ async def _stream_completion(
     quota: QuotaLedger | None = None,
     route: RouteRequest | None = None,
     intent: IntentClassification | None = None,
+    context: ContextRecord | None = None,
     telemetry: Telemetry | None = None,
 ) -> AsyncIterator[str]:
     completion_id = _completion_id()
@@ -482,7 +647,9 @@ async def _stream_completion(
             streamed=True,
             error=error,
             intent=intent,
+            context=context,
             ttft_ms=(first_byte_at - started) * 1000 if first_byte_at is not None else None,
+            tpot_ms=_stream_tpot_ms(first_byte_at, completion_tokens),
             telemetry=telemetry,
         )
         metered = True
@@ -493,6 +660,10 @@ async def _stream_completion(
     try:
         async for event, event_spec, event_decision in fabric.stream(body, route=route):
             spec, decision = event_spec, event_decision
+            if context is not None and event_spec.context_window:
+                context = ContextCompiler().bind_model_window(context, event_spec.context_window)
+                if telemetry is not None:
+                    telemetry.record_context(context)
 
             if isinstance(event, StreamDelta):
                 if first_byte_at is None:
@@ -560,12 +731,32 @@ async def _stream_completion(
                     total_tokens=event.prompt_tokens + event.completion_tokens,
                 ).model_dump()
                 payload["x_fabric"] = {
+                    "route_id": event_decision.route_id,
                     "requested_model": event_decision.requested_model,
                     "served_model": event_spec.id,
                     "provider": event_spec.provider,
                     "policy": event_decision.policy,
                     "failovers": event_decision.failover_count,
                     "invocations": len(event_decision.attempts),
+                    "deployment_id": event_spec.deployment_id,
+                    "provider_adapter": event_spec.provider_adapter,
+                    "transport": event_spec.transport.value,
+                    "runtime": event_spec.runtime.value,
+                    "grade": event_spec.grade.value if event_spec.grade else None,
+                    "litellm_model": (
+                        event_spec.provider_model
+                        if event_spec.transport.value == "litellm"
+                        else None
+                    ),
+                    "actual_served_model": next(
+                        (
+                            attempt.actual_served_model
+                            for attempt in reversed(event_decision.attempts)
+                            if attempt.actual_served_model
+                        ),
+                        None,
+                    ),
+                    "context_record_id": context.context_record_id if context else None,
                 }
                 yield _sse(payload)
                 await record(

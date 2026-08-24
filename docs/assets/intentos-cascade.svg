@@ -8,7 +8,7 @@
     </marker>
   </defs>
   <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">IntentOS cascade</text>
-  <text x="32" y="56" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Classify API exists. Serving-path IntentOS routing is OFF. Frozen eval n=98 is a regression tripwire, not production quality.</text>
+  <text x="32" y="56" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Every chat invocation carries an IntentResult (coverage). Serving-path routing is OFF. Frozen eval n=98 is a regression tripwire, not production accuracy.</text>
   <rect x="40" y="78" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
   <text x="52" y="100" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Request</text>
   <text x="52" y="118" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">POST /v1/intents/classify</text>
@@ -69,5 +69,6 @@
   <text x="442" y="373" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">taxonomy version returned by classify</text>
   <text x="442" y="388" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">tenant cache isolation</text>
   <text x="442" y="403" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">MiniLM embedder is opt-in (--extra embed)</text>
-  <text x="442" y="418" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Phase B 30-grade IntentOS planner: not started</text>
+  <text x="442" y="418" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">serving-path routing OFF until HN gate</text>
+  <text x="442" y="433" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Phase B 30-grade IntentOS planner: not started</text>
 </svg>

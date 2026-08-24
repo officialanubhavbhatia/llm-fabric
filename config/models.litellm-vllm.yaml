@@ -1,0 +1,23 @@
+# LiteLLM transport in front of an existing vLLM endpoint.
+# This registry does not start vLLM. lifecycle stays registered until evidence
+# exists. Do not fake a GPU.
+
+models:
+  - id: litellm-vllm-served
+    provider: litellm
+    provider_adapter: litellm
+    transport: litellm
+    runtime: vllm
+    provider_model: vllm-served
+    grade: Grade10
+    context_window: 32768
+    capabilities: [chat, streaming]
+    placement:
+      locality: private
+    enabled: true
+    lifecycle: registered
+
+aliases:
+  - id: auto
+    policy: declared
+    candidates: [litellm-vllm-served]

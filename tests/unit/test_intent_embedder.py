@@ -118,3 +118,40 @@ async def test_local_rerank_abstains_on_nonsense() -> None:
 async def test_embedding_classifier_survives_a_missing_centroid_prepare() -> None:
     classifier = EmbeddingClassifier(HashingEmbedder(dimensions=32))
     assert classifier.score((0.0,) * 32).has_opinion is False
+
+
+def test_production_embedder_health_is_recorded_honestly() -> None:
+    """HashingEmbedder remains the test default. A real local model is optional.
+
+    This does not tune thresholds on the frozen set. It records whether a
+    trained local backend is installed in this environment.
+    """
+    import json
+    from pathlib import Path
+
+    available = RealLocalEmbedder.available()
+    report = {
+        "hashing": {
+            "model": "hashing-512d",
+            "backend": "lexical-hash",
+            "semantic": False,
+        },
+        "local_trained": {
+            "available": available,
+            "candidates": ["BAAI/bge-small-en-v1.5", "sentence-transformers/all-MiniLM-L6-v2"],
+        },
+    }
+    if available:
+        report["local_trained"]["note"] = (
+            "backend importable in this environment; latency, throughput, "
+            "memory and quality were not measured by this unit test"
+        )
+    out = Path("artifacts/intentos")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "phase2-embedder-availability.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
+    if not available:
+        pytest.skip(
+            "no local embedding backend installed; HashingEmbedder remains the test default"
+        )
