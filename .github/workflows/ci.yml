@@ -264,7 +264,7 @@ jobs:
             --env LLM_FABRIC_ROUTING_CONFIG_PATH=/app/config/routing.yaml \
             --env LLM_FABRIC_PROMOTION_CONFIG_PATH=/app/config/promotion.yaml \
             llm-fabric:ci
-          trap 'docker stop --time 30 llm-fabric-ci || true' EXIT
+          trap 'docker stop --timeout 30 llm-fabric-ci || true' EXIT
           for attempt in {1..30}; do
             curl --fail --silent http://127.0.0.1:47317/healthz && break
             sleep 1
@@ -276,15 +276,17 @@ jobs:
             http://127.0.0.1:47317/v1/chat/completions >/dev/null
           test "$(docker image inspect llm-fabric:ci --format '{{.Config.User}}')" = "10001:10001"
       - name: Generate image SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
           image: llm-fabric:ci
           format: spdx-json
           output-file: llm-fabric.spdx.json
       # Monitor-only until a reviewed vulnerability baseline defines blocking
       # exceptions. Findings remain visible without moving a gate post-hoc.
+      # Pin a post-incident v-prefixed Trivy Action release; 0.28.0 no longer
+      # resolves and older unprefixed tags were compromised in 2026-03.
       - name: Scan image vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: llm-fabric:ci
           format: table
