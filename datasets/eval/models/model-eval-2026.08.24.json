@@ -1,0 +1,198 @@
+{
+  "eval_version": "model-eval-v1",
+  "dataset": "datasets/eval/models/workloads.jsonl",
+  "dataset_note": "Independent of datasets/eval/intentos frozen 98.",
+  "timestamp": 1787594394.304302,
+  "fabric_version": "0.1.0",
+  "commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "results": [
+    {
+      "deployment": "mock-small",
+      "provider": "mock",
+      "status": "ok",
+      "lifecycle": "approved",
+      "tiers": [
+        "L2"
+      ],
+      "error_rate": 0.0,
+      "latency": {
+        "p50_ms": 0.0031249946914613247,
+        "p95_ms": 0.028166978154331446,
+        "n": 10
+      },
+      "categories": {
+        "general_conversation": {
+          "n": 1,
+          "metrics": {},
+          "scoring": "not objectively scored"
+        },
+        "summarization": {
+          "n": 1,
+          "metrics": {
+            "token_overlap": 1.0
+          },
+          "scoring": "deterministic"
+        },
+        "reasoning": {
+          "n": 1,
+          "metrics": {},
+          "scoring": "not objectively scored"
+        },
+        "math": {
+          "n": 2,
+          "metrics": {
+            "exact_answer_accuracy": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "coding": {
+          "n": 2,
+          "metrics": {
+            "exact_expected_output": 0.0,
+            "tests_passed": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "data_analysis": {
+          "n": 1,
+          "metrics": {
+            "contains": 1.0
+          },
+          "scoring": "deterministic"
+        },
+        "structured_extraction": {
+          "n": 1,
+          "metrics": {
+            "schema_validity": 0.0,
+            "exact_match": 0.0,
+            "field_level_f1": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "long_context": {
+          "n": 1,
+          "metrics": {
+            "contains": 1.0
+          },
+          "scoring": "deterministic"
+        }
+      }
+    },
+    {
+      "deployment": "mock-large",
+      "provider": "mock",
+      "status": "ok",
+      "lifecycle": "approved",
+      "tiers": [
+        "L8"
+      ],
+      "error_rate": 0.0,
+      "latency": {
+        "p50_ms": 0.002333021257072687,
+        "p95_ms": 0.008167000487446785,
+        "n": 10
+      },
+      "categories": {
+        "general_conversation": {
+          "n": 1,
+          "metrics": {},
+          "scoring": "not objectively scored"
+        },
+        "summarization": {
+          "n": 1,
+          "metrics": {
+            "token_overlap": 1.0
+          },
+          "scoring": "deterministic"
+        },
+        "reasoning": {
+          "n": 1,
+          "metrics": {},
+          "scoring": "not objectively scored"
+        },
+        "math": {
+          "n": 2,
+          "metrics": {
+            "exact_answer_accuracy": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "coding": {
+          "n": 2,
+          "metrics": {
+            "exact_expected_output": 0.0,
+            "tests_passed": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "data_analysis": {
+          "n": 1,
+          "metrics": {
+            "contains": 1.0
+          },
+          "scoring": "deterministic"
+        },
+        "structured_extraction": {
+          "n": 1,
+          "metrics": {
+            "schema_validity": 0.0,
+            "exact_match": 0.0,
+            "field_level_f1": 0.0
+          },
+          "scoring": "deterministic"
+        },
+        "long_context": {
+          "n": 1,
+          "metrics": {
+            "contains": 1.0
+          },
+          "scoring": "deterministic"
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "deployment": "mock-small",
+      "provider": "mock",
+      "tiers": [
+        "L2"
+      ],
+      "general_score": null,
+      "reasoning_score": null,
+      "coding_score": 0.0,
+      "math_score": 0.0,
+      "summarization_score": 1.0,
+      "structured_extraction_score": 0.0,
+      "ttft_ms": null,
+      "tokens_per_sec": null,
+      "p50_ms": 0.0031249946914613247,
+      "p95_ms": 0.028166978154331446,
+      "error_rate": 0.0,
+      "context_window": 8192,
+      "cost_estimate": 0.12499999999999999,
+      "api_cost_knowledge": "known_nonzero"
+    },
+    {
+      "deployment": "mock-large",
+      "provider": "mock",
+      "tiers": [
+        "L8"
+      ],
+      "general_score": null,
+      "reasoning_score": null,
+      "coding_score": 0.0,
+      "math_score": 0.0,
+      "summarization_score": 1.0,
+      "structured_extraction_score": 0.0,
+      "ttft_ms": null,
+      "tokens_per_sec": null,
+      "p50_ms": 0.002333021257072687,
+      "p95_ms": 0.008167000487446785,
+      "error_rate": 0.0,
+      "context_window": 32768,
+      "cost_estimate": 1.25,
+      "api_cost_knowledge": "known_nonzero"
+    }
+  ]
+}

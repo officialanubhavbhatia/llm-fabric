@@ -116,11 +116,15 @@ async def get_classify_cascade(request: Request) -> IntentCascade:
     if isinstance(existing, IntentCascade):
         return existing
     from llm_fabric.intent.bootstrap import bootstrap_taxonomy
-    from llm_fabric.intent.embeddings import HashingEmbedder, resolve_embedder
+    from llm_fabric.intent.embeddings import (
+        EmbeddingProvider,
+        HashingEmbedder,
+        resolve_embedder,
+    )
     from llm_fabric.intent.factory import build_offline_cascade
 
     settings = getattr(request.app.state, "settings", None)
-    embedder = HashingEmbedder()
+    embedder: EmbeddingProvider = HashingEmbedder()
     l4_rerank = False
     if settings is not None:
         try:

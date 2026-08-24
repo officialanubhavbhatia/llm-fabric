@@ -31,9 +31,17 @@ def test_normalised_spans_the_unit_interval() -> None:
     assert Grade.GRADE00.normalised < Grade.GRADE15.normalised < Grade.GRADE29.normalised
 
 
-@pytest.mark.parametrize("text", ["Grade07", "grade07", "GRADE07", "7", "07", " Grade07 "])
+@pytest.mark.parametrize(
+    "text",
+    ["Grade07", "grade07", "GRADE07", "7", "07", " Grade07 ", "L7", "l07"],
+)
 def test_parse_accepts_the_spellings_people_actually_write(text: str) -> None:
     assert Grade.parse(text) is Grade.GRADE07
+
+
+def test_parse_l30_maps_onto_grade29() -> None:
+    assert Grade.parse("L30") is Grade.GRADE29
+    assert Grade.parse("L29") is Grade.GRADE29
 
 
 @pytest.mark.parametrize("text", ["", "Grade30", "Grade-1", "G7", "best", "Grade07x"])

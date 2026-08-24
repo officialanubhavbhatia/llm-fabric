@@ -28,7 +28,7 @@ of is not a constraint.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -51,6 +51,7 @@ from llm_fabric.router.fallback import (
 )
 from llm_fabric.router.grades import Grade
 from llm_fabric.router.health import HealthSnapshot, HealthTracker
+from llm_fabric.router.intent_routing import IntentRoutePolicy, RoutingConfig
 from llm_fabric.router.policy import (
     POLICY_WEIGHTS,
     PolicyWeights,
@@ -62,7 +63,8 @@ from llm_fabric.router.policy import (
     permitted_localities,
     score_candidates,
 )
-from llm_fabric.router.registry import Locality, ModelRegistry, ModelSpec
+from llm_fabric.router.registry import Locality, ModelRegistry, ModelSpec, PromotionState
+from llm_fabric.router.tiers import ServiceTier, parse_service_tier
 
 #: Which declared quality dimension matters for which intent domain.
 #: A judgement about the taxonomy, not a measurement: it says "a coding prompt
@@ -104,6 +106,17 @@ class ExclusionRule(StrEnum):
     TRAFFIC_SHIFTED = "traffic_shifted"
     OVER_BUDGET = "over_budget"
     LATENCY_SLO_MISSED = "latency_slo_missed"
+    GRADE_ABOVE_MAXIMUM = "grade_above_maximum"
+    TIER_NOT_PREFERRED = "tier_not_preferred"
+    MODEL_NOT_PREFERRED = "model_not_preferred"
+    LIFECYCLE_NOT_APPROVED = "lifecycle_not_approved"
+    NOT_PROBED = "not_probed"
+    NOT_EVALUATED = "not_evaluated"
+    NOT_APPROVED = "not_approved"
+    NOT_APPROVED_FOR_TIER = "not_approved_for_tier"
+    NOT_APPROVED_FOR_WORKLOAD = "not_approved_for_workload"
+    ARTIFACT_REVISION_MISMATCH = "artifact_revision_mismatch"
+    COMMERCIAL_USE_FORBIDDEN = "commercial_use_forbidden"
 
 
 class TrafficGate(Protocol):
@@ -138,6 +151,7 @@ class TenantRoutingPolicy:
     allowed_providers: frozenset[str] | None = None
     denied_models: frozenset[str] = frozenset()
     minimum_grade: Grade | None = None
+    maximum_grade: Grade | None = None
     max_cost_per_request_usd: float | None = None
     require_in_house: bool = False
     fallback_budget: FallbackBudget | None = None
@@ -163,6 +177,7 @@ class TenantRoutingPolicy:
             ),
             "denied_models": sorted(self.denied_models),
             "minimum_grade": self.minimum_grade.value if self.minimum_grade else None,
+            "maximum_grade": self.maximum_grade.value if self.maximum_grade else None,
             "max_cost_per_request_usd": self.max_cost_per_request_usd,
             "require_in_house": self.require_in_house,
         }
@@ -204,6 +219,8 @@ class RouteRequest:
     policy: RoutePolicy | None = None
     required_capabilities: frozenset[str] = frozenset()
     minimum_grade: Grade | None = None
+    maximum_grade: Grade | None = None
+    intent_id: str | None = None
     prompt_tokens: int = 0
     max_output_tokens: int | None = None
     latency_slo_ms: float | None = None
@@ -259,10 +276,21 @@ class RoutePlan:
     inputs: tuple[InputAvailability, ...]
     tenant_policy: TenantRoutingPolicy | None = None
     notes: tuple[str, ...] = ()
+    routing_policy_version: str = "unversioned"
+    routing_policy_hash: str = ""
+    quality_shadow: dict[str, Any] | None = None
+    preferred_tiers: tuple[str, ...] = ()
+    policy_maximum_tier: str | None = None
 
     @property
     def selected_model(self) -> str | None:
         return self.selected.id if self.selected else None
+
+    @property
+    def selected_tier(self) -> str | None:
+        if self.selected is None or self.selected.public_tier is None:
+            return None
+        return self.selected.public_tier.value
 
     @property
     def chain(self) -> tuple[str, ...]:
@@ -323,6 +351,28 @@ class RoutePlan:
         lines.extend(self.notes)
         return tuple(lines)
 
+    def reason_codes(self) -> list[str]:
+        """Closed-ish labels for telemetry. Not a substitute for `explain()`."""
+        codes: list[str] = []
+        if self.selected is None:
+            codes.append("no_eligible_model")
+            return codes
+        codes.append("model_selected")
+        codes.append("policy_allowed")
+        if self.selected.public_tier is not None:
+            codes.append("tier_assigned")
+        if self.selected.capabilities.declared:
+            codes.append("capability_match")
+        if any(item.rule is ExclusionRule.CONTEXT_TOO_SMALL for item in self.excluded):
+            codes.append("context_fits")
+        if any(item.rule is ExclusionRule.CIRCUIT_OPEN for item in self.excluded):
+            codes.append("unhealthy_backends_excluded")
+        if any(item.rule is ExclusionRule.GRADE_ABOVE_MAXIMUM for item in self.excluded):
+            codes.append("max_tier_enforced")
+        if any(item.rule is ExclusionRule.TIER_NOT_PREFERRED for item in self.excluded):
+            codes.append("preferred_tier_narrowed")
+        return codes
+
     def describe(self) -> dict[str, Any]:
         """The whole decision as JSON, for `/v1/routes/preview`."""
         return {
@@ -330,6 +380,7 @@ class RoutePlan:
             "requested_policy": self.requested_policy,
             "policy": self.policy.value,
             "selected": self.selected.describe() if self.selected else None,
+            "selected_tier": self.selected_tier,
             "routing_score": (
                 round(self.routing_score, 6) if self.routing_score is not None else None
             ),
@@ -342,6 +393,17 @@ class RoutePlan:
                 ),
             },
             "chain": list(self.chain),
+            "eligible": [
+                {
+                    "deployment": candidate.spec.id,
+                    "provider": candidate.spec.provider,
+                    "tiers": [tier.value for tier in candidate.spec.tiers],
+                    "lifecycle": candidate.spec.lifecycle.value,
+                    "score": round(candidate.score, 6),
+                }
+                for candidate in self.ranked
+            ],
+            "rejected": [exclusion.as_dict() for exclusion in self.excluded],
             "scoring": self.scoring.as_dict(),
             "excluded": [exclusion.as_dict() for exclusion in self.excluded],
             "fallback": {
@@ -350,6 +412,14 @@ class RoutePlan:
             },
             "inputs": [item.as_dict() for item in self.inputs],
             "tenant_policy": self.tenant_policy.as_dict() if self.tenant_policy else None,
+            "tier_policy": {
+                "preferred": list(self.preferred_tiers),
+                "maximum": self.policy_maximum_tier,
+            },
+            "routing_policy_version": self.routing_policy_version,
+            "routing_policy_hash": self.routing_policy_hash or None,
+            "quality_shadow": self.quality_shadow,
+            "reason_codes": self.reason_codes(),
             "explanation": list(self.explain()),
         }
 
@@ -367,14 +437,25 @@ class RoutePlanner:
         fallback_budget: FallbackBudget | None = None,
         graph: FallbackGraph | None = None,
         traffic: TrafficGate | None = None,
+        routing: RoutingConfig | None = None,
+        quality_shadow: bool = False,
+        require_approved: bool = False,
+        pin_requires_approved: bool = False,
+        commercial_use_required: bool = False,
     ) -> None:
         self._registry = registry
         self._health = health or HealthTracker()
         self._tenants = tenant_policies or TenantRoutingPolicies()
         self._default_policy = parse_policy(default_policy)
-        self._budget = fallback_budget or FallbackBudget()
+        self._routing = routing or RoutingConfig.empty()
+        budget = fallback_budget or FallbackBudget()
+        self._budget = _apply_escalation(budget, self._routing)
         self._declared_graph = graph or self._graph_from_registry(registry)
         self._traffic = traffic
+        self._quality_shadow = quality_shadow
+        self._require_approved = require_approved
+        self._pin_requires_approved = pin_requires_approved
+        self._commercial_use_required = commercial_use_required
 
     @property
     def registry(self) -> ModelRegistry:
@@ -385,8 +466,8 @@ class RoutePlanner:
         return self._health
 
     @property
-    def tenant_policies(self) -> TenantRoutingPolicies:
-        return self._tenants
+    def quality_shadow_enabled(self) -> bool:
+        return self._quality_shadow
 
     @staticmethod
     def _graph_from_registry(registry: ModelRegistry) -> FallbackGraph:
@@ -488,21 +569,28 @@ class RoutePlanner:
     def _candidates(
         self, request: RouteRequest
     ) -> tuple[list[ModelSpec], str | None, Grade | None]:
-        """The starting set: an alias's candidates, or a pinned model and its fallbacks."""
+        """The starting set: an alias, a service tier, or a pinned model and its fallbacks."""
         requested = request.requested_model
         if alias := self._registry.alias(requested):
             candidates = [self._registry.get(candidate) for candidate in alias.candidates]
             return candidates, alias.policy, alias.minimum_grade
 
-        if not self._registry.known(requested):
-            raise ModelNotFoundError(f"unknown model '{requested}'")
+        if self._registry.is_model(requested):
+            primary = self._registry.get(requested)
+            chain = [primary]
+            chain.extend(self._registry.get(target) for target in primary.fallbacks)
+            # A pinned model is honoured as pinned: the caller named it, so ranking
+            # would override the choice they made.
+            return chain, RoutePolicy.DECLARED.value, None
 
-        primary = self._registry.get(requested)
-        chain = [primary]
-        chain.extend(self._registry.get(target) for target in primary.fallbacks)
-        # A pinned model is honoured as pinned: the caller named it, so ranking
-        # would override the choice they made.
-        return chain, RoutePolicy.DECLARED.value, None
+        tier = parse_service_tier(requested)
+        if tier is not None:
+            serving = self._registry.models_serving_tier(tier)
+            if not serving:
+                raise ModelNotFoundError(f"no enabled deployment serves tier '{tier.value}'")
+            return serving, None, None
+
+        raise ModelNotFoundError(f"unknown model '{requested}'")
 
     def plan(self, request: RouteRequest) -> RoutePlan:
         tenant = self._tenants.get(request.tenant_id)
@@ -513,12 +601,23 @@ class RoutePlanner:
         hard_required = set(request.required_capabilities)
         if alias is not None:
             hard_required |= alias.requires
+        intent_policy = self._routing.policy_for_request(
+            intent=request.intent, intent_id=request.intent_id
+        )
         intent_required = set(self._capabilities_for(request))
+        if intent_policy is not None:
+            intent_required |= set(intent_policy.required_capabilities)
         extras = intent_required - hard_required
         required = frozenset(hard_required | extras)
 
         minimum_grade = _strictest_grade(
             request.minimum_grade, alias_grade, tenant.minimum_grade if tenant else None
+        )
+        maximum_grade = _strictest_ceiling(
+            request.maximum_grade,
+            tenant.maximum_grade if tenant else None,
+            intent_policy.maximum_grade if intent_policy else None,
+            self._routing.maximum_grade,
         )
         localities = _intersect_localities(
             permitted_localities(policy), tenant.localities() if tenant else None
@@ -529,6 +628,7 @@ class RoutePlanner:
             request=request,
             required=required,
             minimum_grade=minimum_grade,
+            maximum_grade=maximum_grade,
             localities=localities,
             tenant=tenant,
         )
@@ -543,9 +643,14 @@ class RoutePlanner:
                 request=request,
                 required=required,
                 minimum_grade=minimum_grade,
+                maximum_grade=maximum_grade,
                 localities=localities,
                 tenant=tenant,
             )
+
+        eligible, excluded = self._narrow_to_intent_policy(eligible, excluded, notes, intent_policy)
+        shadow_pool = list(eligible)
+        eligible, excluded = self._narrow_to_approved(eligible, excluded, notes, policy, request)
 
         health = {
             spec.deployment_id: self._health.snapshot(spec.deployment_id) for spec in eligible
@@ -565,7 +670,36 @@ class RoutePlanner:
         chain = [candidate.spec.id for candidate in scoring.candidates]
         graph = self._graph_for(chain)
         budget = tenant.fallback_budget if tenant and tenant.fallback_budget else self._budget
+        budget = _apply_escalation(budget, self._routing)
 
+        shadow = None
+        if self._quality_shadow:
+            shadow_health = {
+                spec.deployment_id: self._health.snapshot(spec.deployment_id)
+                for spec in shadow_pool
+            }
+            shadow = self._quality_shadow_record(
+                shadow_pool,
+                selected,
+                shadow_health,
+                request,
+                policy,
+            )
+
+        preferred = (
+            tuple(tier.value for tier in intent_policy.preferred_tiers)
+            if intent_policy is not None
+            else ()
+        )
+        policy_ceiling = None
+        if maximum_grade is not None:
+            if (
+                self._routing.max_tier is not None
+                and maximum_grade == self._routing.max_tier.to_grade()
+            ):
+                policy_ceiling = self._routing.max_tier.value
+            else:
+                policy_ceiling = ServiceTier.from_grade(maximum_grade).value
         return RoutePlan(
             requested_model=request.requested_model,
             policy=policy,
@@ -576,9 +710,16 @@ class RoutePlanner:
             scoring=scoring,
             graph=graph,
             budget=budget,
-            inputs=self._inputs_report(request, tenant, health, required, minimum_grade),
+            inputs=self._inputs_report(
+                request, tenant, health, required, minimum_grade, maximum_grade
+            ),
             tenant_policy=tenant,
             notes=tuple(notes),
+            routing_policy_version=self._routing.version,
+            routing_policy_hash=self._routing.content_hash,
+            quality_shadow=shadow,
+            preferred_tiers=preferred,
+            policy_maximum_tier=policy_ceiling,
         )
 
     def require_plan(self, request: RouteRequest) -> RoutePlan:
@@ -590,6 +731,299 @@ class RoutePlanner:
                 + ("; ".join(f"{e.model_id} {e.rule}" for e in plan.excluded) or "no candidates")
             )
         return plan
+
+    def _narrow_to_intent_policy(
+        self,
+        eligible: list[ModelSpec],
+        excluded: list[Exclusion],
+        notes: list[str],
+        intent_policy: IntentRoutePolicy | None,
+    ) -> tuple[list[ModelSpec], list[Exclusion]]:
+        """Prefer configured tiers/models when that would not empty the set.
+
+        Preferred lists never widen tenant or capability filters. They also
+        never fail a request: if no remaining candidate occupies a preferred
+        tier, the filtered set is kept.
+        """
+        if intent_policy is None or not eligible:
+            return eligible, excluded
+
+        if intent_policy.preferred_tiers:
+            matching = [
+                spec
+                for spec in eligible
+                if any(spec.serves_tier(tier) for tier in intent_policy.preferred_tiers)
+            ]
+            if matching:
+                kept = {spec.id for spec in matching}
+                for spec in eligible:
+                    if spec.id not in kept:
+                        excluded.append(
+                            Exclusion(
+                                spec.id,
+                                ExclusionRule.TIER_NOT_PREFERRED,
+                                "outside the intent policy's preferred tiers "
+                                + ",".join(tier.value for tier in intent_policy.preferred_tiers),
+                            )
+                        )
+                notes.append(
+                    "Intent policy "
+                    f"'{intent_policy.intent_id}' narrowed to preferred tiers "
+                    f"{[tier.value for tier in intent_policy.preferred_tiers]}."
+                )
+                eligible = matching
+            else:
+                notes.append(
+                    "Intent policy "
+                    f"'{intent_policy.intent_id}' named preferred tiers that none of "
+                    "the eligible deployments occupy; keeping the filtered set."
+                )
+
+        if intent_policy.preferred_models:
+            named = [spec for spec in eligible if spec.id in intent_policy.preferred_models]
+            if named:
+                kept = {spec.id for spec in named}
+                for spec in eligible:
+                    if spec.id not in kept:
+                        excluded.append(
+                            Exclusion(
+                                spec.id,
+                                ExclusionRule.MODEL_NOT_PREFERRED,
+                                "not in the intent policy's preferred_models",
+                            )
+                        )
+                eligible = named
+        return eligible, excluded
+
+    def _narrow_to_approved(
+        self,
+        eligible: list[ModelSpec],
+        excluded: list[Exclusion],
+        notes: list[str],
+        policy: RoutePolicy,
+        request: RouteRequest,
+    ) -> tuple[list[ModelSpec], list[Exclusion]]:
+        """Keep unapproved models from winning production auto-routes.
+
+        A pinned request honours the named deployment unless
+        `pin_requires_approved` is set (production). If nothing is approved and
+        `require_approved` is false, registered/probed/evaluated candidates stay
+        so `make dev` mock fleets still route. Production sets require_approved
+        and does not silently promote evaluated models.
+        """
+        if not eligible:
+            return eligible, excluded
+        pin = policy is RoutePolicy.DECLARED
+        if pin and not self._pin_requires_approved:
+            return eligible, excluded
+
+        strict = self._require_approved or (pin and self._pin_requires_approved)
+        approved = [
+            spec
+            for spec in eligible
+            if spec.lifecycle is PromotionState.APPROVED
+            and spec.promotion_identity_match
+            and (spec.promotion_evidence_bound or not strict)
+        ]
+        if not approved and not strict:
+            return eligible, excluded
+        kept = {spec.id for spec in approved}
+        requested_tier = parse_service_tier(request.requested_model)
+        remaining: list[ModelSpec] = []
+        for spec in eligible:
+            if spec.id not in kept:
+                if not spec.promotion_identity_match:
+                    rule = ExclusionRule.ARTIFACT_REVISION_MISMATCH
+                    detail = "approved artifact identity does not match registry revision/digest"
+                elif spec.lifecycle is PromotionState.REGISTERED:
+                    rule = ExclusionRule.NOT_PROBED
+                    detail = "state = registered; production requires approved"
+                elif spec.lifecycle is PromotionState.PROBED:
+                    rule = ExclusionRule.NOT_EVALUATED
+                    detail = "state = probed; production requires approved"
+                elif spec.lifecycle is PromotionState.EVALUATED:
+                    rule = ExclusionRule.NOT_APPROVED
+                    detail = "state = evaluated; production requires approved"
+                elif spec.lifecycle is PromotionState.SHADOW:
+                    rule = ExclusionRule.NOT_APPROVED
+                    detail = "state = shadow; production requires approved"
+                elif (
+                    spec.lifecycle is PromotionState.APPROVED and not spec.promotion_evidence_bound
+                ):
+                    rule = ExclusionRule.NOT_APPROVED
+                    detail = (
+                        "registry lifecycle declaration is not evidence-bound; "
+                        "production requires promotion artifacts"
+                    )
+                else:
+                    rule = ExclusionRule.LIFECYCLE_NOT_APPROVED
+                    detail = f"lifecycle is {spec.lifecycle.value}; approved deployments exist"
+                excluded.append(Exclusion(spec.id, rule, detail))
+                continue
+            if (
+                requested_tier is not None
+                and spec.approved_tiers
+                and not spec.serves_approved_tier(requested_tier)
+            ):
+                excluded.append(
+                    Exclusion(
+                        spec.id,
+                        ExclusionRule.NOT_APPROVED_FOR_TIER,
+                        f"approved_tiers={[t.value for t in spec.approved_tiers]} "
+                        f"do not include {requested_tier.value}",
+                    )
+                )
+                continue
+            if request.intent_id and spec.approved_workloads:
+                workload_tiers = spec.approved_workloads.get(request.intent_id)
+                selected_tier = requested_tier or spec.public_tier
+                if workload_tiers is None or (
+                    selected_tier is not None and selected_tier not in workload_tiers
+                ):
+                    excluded.append(
+                        Exclusion(
+                            spec.id,
+                            ExclusionRule.NOT_APPROVED_FOR_WORKLOAD,
+                            f"not approved for workload '{request.intent_id}' "
+                            f"at {selected_tier.value if selected_tier else 'ungraded'}",
+                        )
+                    )
+                    continue
+            remaining.append(spec)
+        if remaining or strict:
+            notes.append(
+                "Auto-selection restricted to approved deployments; "
+                "a newly registered model cannot win on a declared tier alone."
+            )
+            return remaining, excluded
+        return eligible, excluded
+
+    def _quality_shadow_record(
+        self,
+        eligible: Sequence[ModelSpec],
+        selected: ModelSpec | None,
+        health: Mapping[str, HealthSnapshot],
+        request: RouteRequest,
+        live_policy: RoutePolicy,
+    ) -> dict[str, Any]:
+        """Rank the same eligible set under quality_first without serving it."""
+        shadow = score_candidates(
+            list(eligible),
+            policy=RoutePolicy.QUALITY_FIRST,
+            inputs=ScoringInputs(
+                health=health,
+                quality_dimension=self._quality_dimension(request.intent),
+                expected_output_tokens=request.max_output_tokens or 0,
+            ),
+        )
+        shadow_spec = shadow.candidates[0].spec if shadow.candidates else None
+        same = (
+            selected is not None
+            and shadow_spec is not None
+            and selected.id == shadow_spec.id
+            and live_policy is RoutePolicy.QUALITY_FIRST
+        ) or (selected is not None and shadow_spec is not None and selected.id == shadow_spec.id)
+        reason = "same_selection" if same else "quality_first_differs"
+        predicted_cost = None
+        if shadow_spec is not None and shadow_spec.is_priced:
+            predicted_cost = shadow_spec.cost_usd(
+                request.prompt_tokens, request.max_output_tokens or 0
+            )
+        predicted_quality = None
+        predicted_latency = None
+        if shadow.candidates:
+            q = shadow.candidates[0].feature("quality")
+            predicted_quality = q.raw if q and q.usable else None
+            lat = shadow.candidates[0].feature("latency")
+            predicted_latency = lat.raw if lat and lat.usable else None
+        return {
+            "mode": "quality_first",
+            "live_policy": live_policy.value,
+            "live_selected": selected.id if selected else None,
+            "shadow_selected": shadow_spec.id if shadow_spec else None,
+            "same": same,
+            "reason": reason,
+            "predicted_quality": predicted_quality,
+            "predicted_latency_ms": predicted_latency,
+            "predicted_cost_usd": predicted_cost,
+            "changed_served_route": False,
+            "inference": False,
+            "candidate_selection_rate": None,
+            "route_disagreement_rate": 0.0 if same else 1.0,
+            "tier_disagreement_rate": (
+                0.0
+                if (selected is None and shadow_spec is None)
+                or (
+                    selected is not None
+                    and shadow_spec is not None
+                    and selected.public_tier == shadow_spec.public_tier
+                )
+                else 1.0
+            ),
+            "note": "Simulation only. Candidate was not invoked.",
+        }
+
+    def compare_policies(self, request: RouteRequest, candidate: RoutingConfig) -> dict[str, Any]:
+        """Actual vs candidate routing policy. No provider call."""
+        actual = self.plan(request)
+        other = RoutePlanner(
+            self._registry,
+            health=self._health,
+            tenant_policies=self._tenants,
+            default_policy=self._default_policy.value,
+            fallback_budget=self._budget,
+            graph=self._declared_graph,
+            traffic=self._traffic,
+            routing=candidate,
+            quality_shadow=False,
+            require_approved=self._require_approved,
+            pin_requires_approved=self._pin_requires_approved,
+            commercial_use_required=self._commercial_use_required,
+        )
+        shadow = other.plan(request)
+        live = actual.selected
+        alt = shadow.selected
+        cost_diff = None
+        if live is not None and alt is not None and live.is_priced and alt.is_priced:
+            left = live.cost_usd(request.prompt_tokens, request.max_output_tokens or 0)
+            right = alt.cost_usd(request.prompt_tokens, request.max_output_tokens or 0)
+            if left is not None and right is not None:
+                cost_diff = right - left
+        quality_diff = None
+        if live is not None and alt is not None:
+            lq, rq = live.quality.mean, alt.quality.mean
+            if lq is not None and rq is not None:
+                quality_diff = rq - lq
+        latency_diff = None
+        if live is not None and alt is not None:
+            ll, rl = live.performance.p50_ttft_ms, alt.performance.p50_ttft_ms
+            if ll is not None and rl is not None:
+                latency_diff = rl - ll
+        return {
+            "executed": False,
+            "actual": {
+                "model": actual.selected_model,
+                "tier": actual.selected_tier,
+                "provider": live.provider if live else None,
+                "policy_version": actual.routing_policy_version,
+                "policy_hash": actual.routing_policy_hash or None,
+            },
+            "candidate": {
+                "model": shadow.selected_model,
+                "tier": shadow.selected_tier,
+                "provider": alt.provider if alt else None,
+                "policy_version": shadow.routing_policy_version,
+                "policy_hash": shadow.routing_policy_hash or None,
+            },
+            "diff": {
+                "selected_model_diff": actual.selected_model != shadow.selected_model,
+                "selected_tier_diff": actual.selected_tier != shadow.selected_tier,
+                "estimated_quality_diff": quality_diff,
+                "latency_diff_ms": latency_diff,
+                "cost_diff_usd": cost_diff,
+                "policy_rejection_diff": len(shadow.excluded) - len(actual.excluded),
+            },
+        }
 
     @staticmethod
     def _weights_for(
@@ -640,6 +1074,7 @@ class RoutePlanner:
         request: RouteRequest,
         required: frozenset[str],
         minimum_grade: Grade | None,
+        maximum_grade: Grade | None,
         localities: frozenset[Locality] | None,
         tenant: TenantRoutingPolicy | None,
     ) -> tuple[list[ModelSpec], list[Exclusion]]:
@@ -649,6 +1084,18 @@ class RoutePlanner:
         for spec in candidates:
             if not spec.enabled:
                 excluded.append(Exclusion(spec.id, ExclusionRule.DISABLED))
+                continue
+            if spec.lifecycle is PromotionState.DISABLED:
+                excluded.append(Exclusion(spec.id, ExclusionRule.DISABLED, "lifecycle is disabled"))
+                continue
+            if self._commercial_use_required and spec.commercial_use is False:
+                excluded.append(
+                    Exclusion(
+                        spec.id,
+                        ExclusionRule.COMMERCIAL_USE_FORBIDDEN,
+                        "commercial_use is false under a commercial-use promotion policy",
+                    )
+                )
                 continue
 
             if self._traffic is not None and self._traffic.excludes(spec.id):
@@ -709,6 +1156,20 @@ class RoutePlanner:
                 )
                 continue
 
+            if (
+                maximum_grade is not None
+                and spec.grade is not None
+                and (spec.grade.ordinal > maximum_grade.ordinal)
+            ):
+                excluded.append(
+                    Exclusion(
+                        spec.id,
+                        ExclusionRule.GRADE_ABOVE_MAXIMUM,
+                        f"grade {spec.grade.value} is above {maximum_grade.value}",
+                    )
+                )
+                continue
+
             if missing := spec.capabilities.missing(required):
                 excluded.append(
                     Exclusion(spec.id, ExclusionRule.MISSING_CAPABILITY, f"lacks {sorted(missing)}")
@@ -763,6 +1224,8 @@ class RoutePlanner:
         if ceiling is None or not spec.is_priced:
             return None
         estimate = spec.cost_usd(request.prompt_tokens, request.max_output_tokens or 0)
+        if estimate is None:
+            return None
         if estimate > ceiling:
             return f"estimated ${estimate:.6f} exceeds the ${ceiling:.6f} budget"
         return None
@@ -792,6 +1255,7 @@ class RoutePlanner:
         health: Mapping[str, HealthSnapshot],
         required: frozenset[str],
         minimum_grade: Grade | None,
+        maximum_grade: Grade | None = None,
     ) -> tuple[InputAvailability, ...]:
         """Each planner input the constitution names, and whether it was available."""
         observed = [snapshot for snapshot in health.values() if snapshot.has_signal]
@@ -861,6 +1325,11 @@ class RoutePlanner:
                 minimum_grade is not None,
                 minimum_grade.value if minimum_grade else None,
             ),
+            InputAvailability(
+                "maximum_grade",
+                maximum_grade is not None,
+                maximum_grade.value if maximum_grade else None,
+            ),
         )
 
 
@@ -868,6 +1337,21 @@ def _strictest_grade(*grades: Grade | None) -> Grade | None:
     """The highest floor among those given. A tighter constraint always wins."""
     present = [grade for grade in grades if grade is not None]
     return max(present, key=lambda grade: grade.ordinal) if present else None
+
+
+def _strictest_ceiling(*grades: Grade | None) -> Grade | None:
+    """The lowest ceiling among those given. A caller cannot raise a tenant cap."""
+    present = [grade for grade in grades if grade is not None]
+    return min(present, key=lambda grade: grade.ordinal) if present else None
+
+
+def _apply_escalation(budget: FallbackBudget, routing: RoutingConfig) -> FallbackBudget:
+    """Cap fallback depth. Unversioned empty config does not change attempt limits."""
+    if routing.version == "unversioned" and routing.escalation.enabled:
+        return budget
+    if not routing.escalation.enabled:
+        return replace(budget, max_depth=0)
+    return replace(budget, max_depth=min(budget.max_depth, routing.escalation.max_steps))
 
 
 def _tightest(*values: float | None) -> float | None:

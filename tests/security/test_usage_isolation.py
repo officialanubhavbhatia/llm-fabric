@@ -86,12 +86,18 @@ def test_tenant_cannot_read_another_tenants_usage(app_ledger: UsageLedger) -> No
 
 def test_fleet_observe_can_read_all_tenants(app_ledger: UsageLedger) -> None:
     suffix = uuid.uuid4().hex[:8]
-    app_ledger.insert(_event(f"tenant-a-{suffix}", f"oa-{suffix}"))
-    app_ledger.insert(_event(f"tenant-b-{suffix}", f"ob-{suffix}"))
-    fleet = app_ledger.list_events(tenant_id=None, observe=True, limit=10_000)
-    tenants = {event.tenant_id for event in fleet}
-    assert f"tenant-a-{suffix}" in tenants
-    assert f"tenant-b-{suffix}" in tenants
+    acme = f"tenant-a-{suffix}"
+    mallory = f"tenant-b-{suffix}"
+    app_ledger.insert(_event(acme, f"oa-{suffix}"))
+    app_ledger.insert(_event(mallory, f"ob-{suffix}"))
+    # Look up by request id so a large pre-existing ledger cannot hide the rows
+    # behind list_events' newest-first limit.
+    found_acme = app_ledger.list_events(tenant_id=None, observe=True, request_id=f"req-oa-{suffix}")
+    found_mallory = app_ledger.list_events(
+        tenant_id=None, observe=True, request_id=f"req-ob-{suffix}"
+    )
+    assert [event.tenant_id for event in found_acme] == [acme]
+    assert [event.tenant_id for event in found_mallory] == [mallory]
 
 
 def test_observe_cannot_write_another_tenants_row(app_ledger: UsageLedger) -> None:

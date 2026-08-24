@@ -43,6 +43,17 @@ def test_helm_chart_includes_required_objects() -> None:
     assert "OTEL_EXPORTER_OTLP_HEADERS" not in configmap
 
 
+def test_vllm_pool_example_values_exist() -> None:
+    example = Path("examples/helm/vllm-pools-values.yaml")
+    assert example.is_file()
+    text = example.read_text(encoding="utf-8")
+    assert "LLM_FABRIC_PROVIDER_BASE_URLS" in text
+    assert "vllm-coding" in text
+    assert "vllm-reasoning" in text
+    assert "path: /readyz" in text
+    assert "path: /healthz" in text
+
+
 def test_helm_liveness_is_healthz_and_readiness_is_readyz() -> None:
     """A database outage must not become a liveness restart storm."""
     values = (CHART / "values.yaml").read_text(encoding="utf-8")

@@ -55,7 +55,17 @@ class RoutePreviewRequest(BaseModel):
     latency_slo_ms: float | None = Field(default=None, ge=0)
     budget_usd: float | None = Field(default=None, ge=0)
     required_capabilities: list[str] = Field(default_factory=list)
-    minimum_grade: str | None = Field(default=None, description="For example `Grade12`.")
+    minimum_grade: str | None = Field(default=None, description="Floor such as `Grade12` or `L12`.")
+    maximum_grade: str | None = Field(
+        default=None, description="Ceiling such as `Grade18` or `L18`. Cannot raise a tenant cap."
+    )
+    intent_id: str | None = Field(
+        default=None,
+        description=(
+            "Explicit intent id for dry-run policy lookup. Does not run IntentOS "
+            "and does not enable serving-path classification."
+        ),
+    )
 
 
 @router.post("/preview", summary="Explain where a request would be routed")
@@ -77,6 +87,8 @@ async def preview_route(
             policy=parse_policy(body.policy) if body.policy else None,
             required_capabilities=normalise(body.required_capabilities),
             minimum_grade=Grade.parse(body.minimum_grade) if body.minimum_grade else None,
+            maximum_grade=Grade.parse(body.maximum_grade) if body.maximum_grade else None,
+            intent_id=body.intent_id,
             prompt_tokens=prompt_tokens,
             max_output_tokens=body.max_tokens,
             latency_slo_ms=body.latency_slo_ms,

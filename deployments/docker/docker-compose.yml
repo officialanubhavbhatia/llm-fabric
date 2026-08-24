@@ -53,9 +53,27 @@ services:
 
   ollama:
     image: ollama/ollama:0.3.14
-    profiles: ["inference"]
+    profiles: ["inference", "local"]
     ports:
       - "11434:11434"
+
+  gateway-local:
+    profiles: ["local"]
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    depends_on:
+      ollama:
+        condition: service_started
+    environment:
+      LLM_FABRIC_ENVIRONMENT: development
+      LLM_FABRIC_HOST: 0.0.0.0
+      LLM_FABRIC_PORT: 47317
+      LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_REGISTRY_PATH: config/models.local.yaml
+      LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+    ports:
+      - "47317:47317"
 
   migrate:
     build:

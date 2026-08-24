@@ -88,6 +88,19 @@ def _provenance(
         headers["x-fabric-served-model"] = decision.selected_model
     if decision.selected_provider:
         headers["x-fabric-provider"] = decision.selected_provider
+    if decision.plan is not None and decision.plan.selected_tier:
+        headers["x-fabric-selected-tier"] = decision.plan.selected_tier
+    if decision.plan is not None and decision.plan.routing_policy_version:
+        headers["x-fabric-routing-policy-version"] = decision.plan.routing_policy_version
+    if decision.plan is not None and decision.plan.routing_policy_hash:
+        headers["x-fabric-routing-policy-hash"] = decision.plan.routing_policy_hash
+    if decision.plan is not None and decision.plan.quality_shadow:
+        shadow_sel = decision.plan.quality_shadow.get("shadow_selected")
+        if shadow_sel:
+            headers["x-fabric-quality-shadow-model"] = str(shadow_sel)
+            headers["x-fabric-quality-shadow-same"] = (
+                "true" if decision.plan.quality_shadow.get("same") else "false"
+            )
     if decision.fallback_depth:
         headers["x-fabric-fallback-depth"] = str(decision.fallback_depth)
     if intent is not None:
@@ -190,7 +203,8 @@ def _meter(
     telemetry: Telemetry | None = None,
 ) -> UsageRecord:
     served_model, provider, priced = _served_identity(spec, decision)
-    cost = priced.cost_usd(prompt_tokens, completion_tokens) if priced else 0.0
+    raw_cost = priced.cost_usd(prompt_tokens, completion_tokens) if priced else None
+    cost = raw_cost if raw_cost is not None else 0.0
     trace = current_trace()
     token_source = token_source_for_provider(
         reported=usage_reported,
@@ -237,6 +251,7 @@ def _meter(
         invocation_count=len(events),
         ledger_prompt_tokens=sum(event.prompt_tokens for event in events),
         ledger_completion_tokens=sum(event.completion_tokens for event in events),
+        selected_tier=decision.plan.selected_tier if decision.plan is not None else None,
     )
     meter.record(record)
     if telemetry is not None:

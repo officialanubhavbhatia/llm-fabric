@@ -214,11 +214,13 @@ async def _run_all(*, iterations: int, warmup: int) -> list[StageResult]:
         await _router(iterations, warmup),
         _unavailable(
             "ollama_inference",
-            "The Ollama adapter is not built. No inference figure is synthesized.",
+            "No live Ollama process is measured in this isolated bench. "
+            "The OpenAI-compatible adapter exists; this stage does not start Ollama.",
         ),
         _unavailable(
             "vllm_inference",
-            "The vLLM adapter is not built. No inference figure is synthesized.",
+            "No live vLLM process is measured in this isolated bench. "
+            "The OpenAI-compatible adapter exists; this stage does not start vLLM.",
         ),
         await _streaming(iterations, warmup),
         await _full_system(iterations, warmup),
@@ -563,27 +565,30 @@ OPTIMIZATION_FLAGS: tuple[dict[str, Any], ...] = (
     {
         "name": "prefix_caching",
         "enabled": False,
-        "note": "A vLLM/Ollama property. Those adapters are not built.",
+        "note": (
+            "A vLLM/Ollama engine property. Chat adapters exist; "
+            "prefix-cache metrics are not scraped."
+        ),
     },
     {
         "name": "quantized_kv_cache",
         "enabled": False,
-        "note": "A vLLM property. The adapter is not built.",
+        "note": "A vLLM engine property. Chat can use vLLM over HTTP; /metrics is not scraped.",
     },
     {
         "name": "continuous_batching",
         "enabled": False,
-        "note": "A vLLM property. The adapter is not built.",
+        "note": "A vLLM engine property. Chat can use vLLM over HTTP; /metrics is not scraped.",
     },
     {
         "name": "chunked_prefill",
         "enabled": False,
-        "note": "A vLLM property. The adapter is not built.",
+        "note": "A vLLM engine property. Chat can use vLLM over HTTP; /metrics is not scraped.",
     },
     {
         "name": "speculative_decoding",
         "enabled": False,
-        "note": "A vLLM property. The adapter is not built.",
+        "note": "A vLLM engine property. Chat can use vLLM over HTTP; /metrics is not scraped.",
     },
     {
         "name": "model_residency",

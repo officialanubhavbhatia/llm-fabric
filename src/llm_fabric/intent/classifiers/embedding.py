@@ -323,9 +323,7 @@ class EmbeddingClassifier:
             intent_id=top_id,
             confidence=confidence,
             alternatives=alternatives,
-            rationale=(
-                f"cosine {top_similarity:.3f}, share {top_weight:.3f}, margin {margin:.3f}"
-            ),
+            rationale=(f"cosine {top_similarity:.3f}, share {top_weight:.3f}, margin {margin:.3f}"),
         )
 
 

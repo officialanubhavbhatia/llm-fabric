@@ -48,7 +48,7 @@
   <script>
     const VIEWS = [
       "overview","users","tenants","requests","traces","threads","intents",
-      "models","kv_cache","batching","routing","fallbacks","tokens","context",
+      "models","promotion","tiers","kv_cache","batching","routing","fallbacks","tokens","context",
       "economics","evals","drift","reliability"
     ];
     const nav = document.getElementById("nav");
@@ -81,6 +81,26 @@
         g.appendChild(c);
       });
       return g;
+    }
+
+    function tierChart(rows) {
+      const wrap = document.createElement("div");
+      wrap.style.display = "flex";
+      wrap.style.alignItems = "flex-end";
+      wrap.style.gap = "2px";
+      wrap.style.height = "80px";
+      wrap.style.marginBottom = "16px";
+      const max = Math.max(1, ...rows.map((r) => r.requests || 0));
+      rows.forEach((row) => {
+        const bar = document.createElement("div");
+        const h = Math.round(((row.requests || 0) / max) * 76);
+        bar.title = row.tier + " " + (row.requests || 0);
+        bar.style.width = "8px";
+        bar.style.height = h + "px";
+        bar.style.background = row.requests ? "var(--accent)" : "var(--line)";
+        wrap.appendChild(bar);
+      });
+      return wrap;
     }
 
     function table(rows) {
@@ -135,7 +155,28 @@
         return;
       }
       const data = payload.data || {};
-      if (data.recent) main.appendChild(table(data.recent));
+      if (current === "intents" && data.safety_gates) {
+        const n = document.createElement("div");
+        n.className = "note";
+        n.textContent = "HN accuracy 0.50 · required >= 0.58 · routing OFF (frozen eval, not live traffic)";
+        main.appendChild(n);
+      }
+      if (current === "models" && data.models) {
+        const n = document.createElement("div");
+        n.className = "fields";
+        n.textContent = "Every capability/quality cell is labelled declared, measured, or unknown. Registry YAML is never shown as a benchmark.";
+        main.appendChild(n);
+      }
+      if (current === "promotion" && data.models) {
+        const n = document.createElement("div");
+        n.className = "note";
+        n.textContent = "Evaluated ≠ approved. Registered high-tier models are NOT PRODUCTION ELIGIBLE.";
+        main.appendChild(n);
+      }
+      if (data.histogram) {
+        main.appendChild(tierChart(data.histogram));
+        main.appendChild(table(data.histogram));
+      } else if (data.recent) main.appendChild(table(data.recent));
       else if (data.users) main.appendChild(table(data.users));
       else if (data.tenants) main.appendChild(table(data.tenants));
       else if (data.models) main.appendChild(table(data.models));

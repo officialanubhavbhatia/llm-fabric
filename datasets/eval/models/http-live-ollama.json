@@ -1,0 +1,24 @@
+{
+  "status": "pass",
+  "measured_at": "2026-08-24",
+  "note": "Live Ollama OpenAI-compatible path. llama3.2 was not pulled; tests used the first available tag (llama2 / mistral).",
+  "endpoint": "http://127.0.0.1:11434/v1",
+  "pulled_models": ["mistral:latest", "llama2:latest"],
+  "llama3.2_pulled": false,
+  "fabric_chat_headers": {
+    "x-fabric-served-model": "local-small",
+    "x-fabric-provider": "ollama",
+    "x-fabric-selected-tier": "L3"
+  },
+  "unreachable_fallback": {
+    "from": "local-small",
+    "to": "mock-small",
+    "typed": true
+  },
+  "tests": {
+    "command": "LLM_FABRIC_LIVE_OLLAMA=1 pytest tests/integration/live_ollama",
+    "passed": 4,
+    "skipped": 0
+  },
+  "probe_artifact": "datasets/eval/models/ollama-llama2-2026.08.24.json"
+}

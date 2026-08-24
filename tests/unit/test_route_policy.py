@@ -39,8 +39,8 @@ def _spec(
     quality: QualityScores | None = None,
     ttft: float | None = None,
     tpot: float | None = None,
-    in_cost: float = 0.0,
-    out_cost: float = 0.0,
+    in_cost: float | None = None,
+    out_cost: float | None = None,
     locality: Locality = Locality.EXTERNAL,
 ) -> ModelSpec:
     return ModelSpec(
@@ -186,12 +186,31 @@ def test_an_unpriced_model_is_not_treated_as_free() -> None:
     assert by_id["unpriced"].feature("cost").source is FeatureSource.ABSENT  # type: ignore[union-attr]
     assert by_id["priced"].feature("cost").source is FeatureSource.DECLARED  # type: ignore[union-attr]
 
-    # Cost cannot rank a fleet where one price is unknown, so it is dropped for
-    # the whole decision and the explanation names the culprit.
-    assert "cost" not in result.used_features
-    assert "unpriced" in dict(result.dropped_features)["cost"]
-    # And crucially, the unpriced model did not win by looking free.
+    # Cost is still used for the priced deployment. The unknown price does not
+    # drop ranking for the whole fleet, and the unpriced model does not win by
+    # looking free.
+    assert "cost" in result.used_features
+    assert "cost_partial" in dict(result.dropped_features)
     assert result.candidates[0].model_id == "priced"
+
+
+def test_known_zero_is_not_unknown() -> None:
+    free = _spec("local", in_cost=0.0, out_cost=0.0)
+    dear = _spec("api", in_cost=10.0, out_cost=30.0)
+    result = score_candidates([dear, free], policy=RoutePolicy.COST_FIRST)
+    assert result.candidates[0].model_id == "local"
+    assert "cost" in result.used_features
+    cost = result.candidates[0].feature("cost")
+    assert cost is not None
+    assert cost.raw == 0.0
+
+
+def test_one_unknown_price_does_not_erase_known_prices() -> None:
+    cheap = _spec("cheap", in_cost=0.1, out_cost=0.2)
+    dear = _spec("dear", in_cost=10.0, out_cost=30.0)
+    unknown = _spec("unknown")
+    result = score_candidates([dear, unknown, cheap], policy=RoutePolicy.COST_FIRST)
+    assert [c.model_id for c in result.candidates] == ["cheap", "dear", "unknown"]
 
 
 def test_a_feature_missing_for_one_candidate_is_dropped_for_all() -> None:

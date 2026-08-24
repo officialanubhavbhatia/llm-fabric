@@ -1,0 +1,114 @@
+{
+  "eval_version": "routing-shadow-v1",
+  "commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "routing_policy_version": "2026.08.24",
+  "routing_policy_hash": "10e6040615022f63",
+  "note": "Quality-shadow records only. The served route is unchanged. LLM_FABRIC_ROUTING_QUALITY_SHADOW default remains false.",
+  "cases": [
+    {
+      "id": "auto-hello",
+      "selected": "mock-small",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": "mock-small",
+        "shadow_selected": "mock-large",
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 1.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "coding-capability",
+      "selected": null,
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": null,
+        "shadow_selected": null,
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": null,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": null,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "reasoning-alias",
+      "selected": "mock-large",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": "mock-large",
+        "shadow_selected": "mock-large",
+        "same": true,
+        "reason": "same_selection",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 0.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "pinned-mock-small",
+      "selected": "mock-small",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "declared",
+        "live_selected": "mock-small",
+        "shadow_selected": "mock-large",
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 1.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "context-large",
+      "selected": null,
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": null,
+        "shadow_selected": null,
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": null,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": null,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    }
+  ]
+}

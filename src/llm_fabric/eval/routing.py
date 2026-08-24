@@ -154,7 +154,11 @@ def _declared_regret(case: dict[str, Any], plan: RoutePlan, feature: str) -> flo
         if not plan.selected.is_priced or not expected_spec.is_priced:
             return None
         tokens = int(case.get("prompt_tokens") or 100)
-        return plan.selected.cost_usd(tokens, tokens) - expected_spec.cost_usd(tokens, tokens)
+        selected_cost = plan.selected.cost_usd(tokens, tokens)
+        expected_cost = expected_spec.cost_usd(tokens, tokens)
+        if selected_cost is None or expected_cost is None:
+            return None
+        return selected_cost - expected_cost
     if feature == "latency":
         left = plan.selected.performance.p50_ttft_ms
         right = expected_spec.performance.p50_ttft_ms

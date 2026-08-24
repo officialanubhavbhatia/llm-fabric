@@ -1,0 +1,18 @@
+# Example provider pool map for multiple vLLM services.
+#
+# Not hard-coded into the fabric. Copy and point at your own URLs.
+# Verify `vllm serve` flags against the installed vLLM version before treating
+# any CLI example as authoritative.
+#
+#   export LLM_FABRIC_VLLM_BASE_URL=http://127.0.0.1:8000/v1
+#   export LLM_FABRIC_PROVIDER_BASE_URLS='{"vllm-general":"http://vllm-general:8000/v1","vllm-coding":"http://vllm-coding:8000/v1"}'
+
+providers:
+  vllm-general:
+    base_url: http://vllm-general:8000/v1
+  vllm-coding:
+    base_url: http://vllm-coding:8000/v1
+  vllm-reasoning:
+    base_url: http://vllm-reasoning:8000/v1
+  vllm-long-context:
+    base_url: http://vllm-long-context:8000/v1

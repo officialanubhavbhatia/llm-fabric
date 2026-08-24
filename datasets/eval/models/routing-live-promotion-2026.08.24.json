@@ -1,0 +1,402 @@
+{
+  "eval_version": "routing-eval-v1",
+  "note": "Offline planner metrics. No provider call. Overrouting/underrouting are defined in docs/ROUTING-QUALITY.md. Higher tier is not treated as higher quality.",
+  "metrics": {
+    "route_success_rate": 0.6,
+    "overrouting_rate": 0.0,
+    "underrouting_rate": 0.0,
+    "fallback_rate": null,
+    "escalation_rate": 0.0,
+    "capability_mismatch_rate": 0.2,
+    "policy_rejection_rate": 0.0,
+    "context_rejection_rate": 0.2,
+    "provider_unavailable_rate": 0.0
+  },
+  "cases": [
+    {
+      "id": "auto-hello",
+      "requested_model": "auto",
+      "selected": "mock-small",
+      "selected_tier": "L2",
+      "provider": "mock",
+      "overrouting": false,
+      "underrouting": false,
+      "excluded": [
+        {
+          "model_id": "gpt-4o-mini",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "gpt-4o",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "claude-sonnet",
+          "rule": "disabled",
+          "detail": null
+        }
+      ],
+      "routing_policy_hash": "10e6040615022f63",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": "mock-small",
+        "shadow_selected": "mock-large",
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 1.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "coding-capability",
+      "requested_model": "auto",
+      "selected": null,
+      "selected_tier": null,
+      "provider": null,
+      "overrouting": null,
+      "underrouting": null,
+      "excluded": [
+        {
+          "model_id": "mock-small",
+          "rule": "missing_capability",
+          "detail": "lacks ['code']"
+        },
+        {
+          "model_id": "mock-large",
+          "rule": "missing_capability",
+          "detail": "lacks ['code']"
+        },
+        {
+          "model_id": "gpt-4o-mini",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "gpt-4o",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "claude-sonnet",
+          "rule": "disabled",
+          "detail": null
+        }
+      ],
+      "routing_policy_hash": "10e6040615022f63",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": null,
+        "shadow_selected": null,
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": null,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": null,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "reasoning-alias",
+      "requested_model": "auto-reasoning",
+      "selected": "mock-large",
+      "selected_tier": "L8",
+      "provider": "mock",
+      "overrouting": null,
+      "underrouting": false,
+      "excluded": [
+        {
+          "model_id": "gpt-4o",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "claude-sonnet",
+          "rule": "disabled",
+          "detail": null
+        }
+      ],
+      "routing_policy_hash": "10e6040615022f63",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": "mock-large",
+        "shadow_selected": "mock-large",
+        "same": true,
+        "reason": "same_selection",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 0.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "pinned-mock-small",
+      "requested_model": "mock-small",
+      "selected": "mock-small",
+      "selected_tier": "L2",
+      "provider": "mock",
+      "overrouting": false,
+      "underrouting": false,
+      "excluded": [],
+      "routing_policy_hash": "10e6040615022f63",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "declared",
+        "live_selected": "mock-small",
+        "shadow_selected": "mock-large",
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": 0.27586206896551724,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": 0.0,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 1.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    },
+    {
+      "id": "context-large",
+      "requested_model": "auto",
+      "selected": null,
+      "selected_tier": null,
+      "provider": null,
+      "overrouting": null,
+      "underrouting": null,
+      "excluded": [
+        {
+          "model_id": "mock-small",
+          "rule": "context_too_small",
+          "detail": "needs 50000 tokens, holds 8192"
+        },
+        {
+          "model_id": "mock-large",
+          "rule": "context_too_small",
+          "detail": "needs 50000 tokens, holds 32768"
+        },
+        {
+          "model_id": "gpt-4o-mini",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "gpt-4o",
+          "rule": "disabled",
+          "detail": null
+        },
+        {
+          "model_id": "claude-sonnet",
+          "rule": "disabled",
+          "detail": null
+        }
+      ],
+      "routing_policy_hash": "10e6040615022f63",
+      "quality_shadow": {
+        "mode": "quality_first",
+        "live_policy": "cost_first",
+        "live_selected": null,
+        "shadow_selected": null,
+        "same": false,
+        "reason": "quality_first_differs",
+        "predicted_quality": null,
+        "predicted_latency_ms": null,
+        "predicted_cost_usd": null,
+        "changed_served_route": false,
+        "inference": false,
+        "candidate_selection_rate": null,
+        "route_disagreement_rate": 1.0,
+        "tier_disagreement_rate": 0.0,
+        "note": "Simulation only. Candidate was not invoked."
+      }
+    }
+  ],
+  "by_tier": [
+    {
+      "tier": "L0",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L0'"
+    },
+    {
+      "tier": "L1",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L1'"
+    },
+    {
+      "tier": "L2",
+      "selected": "mock-small",
+      "provider": "mock",
+      "eligible": [
+        "mock-small"
+      ]
+    },
+    {
+      "tier": "L3",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L3'"
+    },
+    {
+      "tier": "L4",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L4'"
+    },
+    {
+      "tier": "L5",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L5'"
+    },
+    {
+      "tier": "L6",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L6'"
+    },
+    {
+      "tier": "L7",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L7'"
+    },
+    {
+      "tier": "L8",
+      "selected": "mock-large",
+      "provider": "mock",
+      "eligible": [
+        "mock-large"
+      ]
+    },
+    {
+      "tier": "L9",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L9'"
+    },
+    {
+      "tier": "L10",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L10'"
+    },
+    {
+      "tier": "L11",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L11'"
+    },
+    {
+      "tier": "L12",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L12'"
+    },
+    {
+      "tier": "L13",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L13'"
+    },
+    {
+      "tier": "L14",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L14'"
+    },
+    {
+      "tier": "L15",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L15'"
+    },
+    {
+      "tier": "L16",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L16'"
+    },
+    {
+      "tier": "L17",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L17'"
+    },
+    {
+      "tier": "L18",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L18'"
+    },
+    {
+      "tier": "L19",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L19'"
+    },
+    {
+      "tier": "L20",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L20'"
+    },
+    {
+      "tier": "L21",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L21'"
+    },
+    {
+      "tier": "L22",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L22'"
+    },
+    {
+      "tier": "L23",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L23'"
+    },
+    {
+      "tier": "L24",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L24'"
+    },
+    {
+      "tier": "L25",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L25'"
+    },
+    {
+      "tier": "L26",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L26'"
+    },
+    {
+      "tier": "L27",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L27'"
+    },
+    {
+      "tier": "L28",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L28'"
+    },
+    {
+      "tier": "L29",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L29'"
+    },
+    {
+      "tier": "L30",
+      "selected": null,
+      "detail": "no enabled deployment serves tier 'L30'"
+    }
+  ],
+  "commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "routing_policy_version": "2026.08.24",
+  "routing_policy_hash": "10e6040615022f63"
+}

@@ -248,11 +248,13 @@ three labels are kept apart everywhere:
 and failure counts, in-flight depth, and circuit state. A deployment nobody has
 called reports absent rather than healthy.
 
-The rule that follows is the one that keeps the scores honest: **if a feature is
-missing for any eligible candidate, it is dropped for the whole decision**, and
-the explanation says so. Scoring an unpriced model as free, or an unmeasured one
-as instant, would let missing data win a route. If every feature drops, the
-planner falls back to registry order and states that too.
+The rule that follows is the one that keeps the scores honest: **if quality or
+latency is missing for any eligible candidate, that feature is dropped for the
+whole decision**, and the explanation says so. **Cost is different:** omitted
+prices are unknown; `0.0` is known-zero. Unknown prices are excluded from the
+cost comparison but do not erase ranking among deployments whose prices are
+known, and they are not treated as free. If every feature drops, the planner
+falls back to registry order and states that too. See `docs/COST-MODEL.md`.
 
 ### Policies
 
@@ -761,7 +763,7 @@ These exist and work, but are materially narrower than what is mandated.
 
 | Area | Current | Constitution requires |
 | --- | --- | --- |
-| **Model registry** | Typed `ModelSpec` with grades, capabilities, quality, performance and placement, in a YAML file | The same registry in Postgres, with live health, latency and queue signals fed from the fleet rather than one process |
+| **Model registry** | Typed `ModelSpec` with grades, capabilities, quality, performance and placement in YAML, plus an evidence-bound `registered → probed → evaluated → shadow → approved` overlay. Production pin/auto routing requires artifact-bound approval; revision/digest mismatch fail-closes. | The same registry in Postgres, with live health, latency and queue signals fed from the fleet rather than one process |
 | **Routing features** | Four: quality, latency, cost, health | Also historical quality, cache-hit probability, and queue depth sourced fleet-wide. The plan reports these as unavailable rather than defaulting them. |
 | **Route health** | EWMA and breaker state measured by each process | Fleet-wide health, so a breaker tripped on one replica is known to the others |
 | **Routing evals** | Labelled planner match against the mock registry (`route_match`, `policy_match`). Declared regret stays unavailable without quality/latency numbers. | A routing eval proving decision *quality*, not just that the planner hit a fixture label |
@@ -787,9 +789,8 @@ control plane / data plane split · context compiler · guardrail engine (five
 stages) · structured-output validation and bounded repair · economics subsystem
 (the Command Center economics view is registry prices × tokens, not this) ·
 agent and safety eval suites · DeepEval / lm-eval mapped runners (adapters exist,
-packages are not installed) · chaos suite · Postgres, Redis, ClickHouse,
-object storage · Ollama and vLLM adapters · `docker compose` · Terraform ·
-`CONTRIBUTING.md`.
+packages are not installed) · chaos suite · ClickHouse,
+object storage · native vLLM Python engine and engine `/metrics` scrape · Terraform.
 
 IntentOS moved out of this list in Phase 3; §8 describes what was built and §9.2
 records where it falls short of the specification. The load harness and

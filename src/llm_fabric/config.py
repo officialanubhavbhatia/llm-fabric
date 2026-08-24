@@ -246,6 +246,10 @@ class Settings(BaseSettings):
     #: Attach the local description reranker as L4. Off by default. L5 stays off.
     intent_l4_rerank: bool = False
 
+    #: Compare the live route against a quality_first ranking without changing
+    #: the served deployment. Off by default.
+    routing_quality_shadow: bool = False
+
     # -- observability -------------------------------------------------------
 
     #: OTLP HTTP traces endpoint. Unset means spans stay in-process for the
@@ -282,6 +286,26 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LLM_FABRIC_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"),
     )
     anthropic_base_url: str = "https://api.anthropic.com/v1"
+
+    #: Local Ollama OpenAI-compatible endpoint. No OpenAI key is required.
+    ollama_base_url: str = "http://127.0.0.1:11434/v1"
+    ollama_api_key: str | None = None
+
+    #: Production vLLM OpenAI-compatible endpoint. No OpenAI key is required.
+    vllm_base_url: str = "http://127.0.0.1:8000/v1"
+    vllm_api_key: str | None = None
+
+    #: Intent → capability → preferred-tier policy. Missing file loads empty.
+    routing_config_path: Path = Path("config/routing.yaml")
+
+    #: Promotion policy. Missing file loads empty (no extra gates).
+    promotion_config_path: Path = Path("config/promotion.yaml")
+    #: Overlay of evidence-bound lifecycle. Does not rewrite models.yaml comments.
+    promotion_state_path: Path = Path("datasets/eval/models/promotion-state.json")
+
+    #: Per-provider OpenAI-compatible base URLs, JSON object.
+    #: Example: `{"vllm-coding":"http://vllm-coding:8000/v1"}`.
+    provider_base_urls: Annotated[dict[str, str], NoDecode] = Field(default_factory=dict)
 
     @field_validator(
         "api_keys", "required_scopes", "cors_origins", "trusted_proxies", mode="before"
@@ -326,6 +350,24 @@ class Settings(BaseSettings):
                 raise ValueError("LLM_FABRIC_API_CREDENTIALS must be valid JSON") from exc
         return value
 
+    @field_validator("provider_base_urls", mode="before")
+    @classmethod
+    def _parse_provider_base_urls(cls, value: object) -> object:
+        if value is None or value == "":
+            return {}
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return {}
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError("LLM_FABRIC_PROVIDER_BASE_URLS must be a JSON object") from exc
+            if not isinstance(parsed, dict):
+                raise ValueError("LLM_FABRIC_PROVIDER_BASE_URLS must be a JSON object")
+            return {str(key): str(item) for key, item in parsed.items()}
+        return value
+
     @field_validator(
         "auth_mode",
         "oidc_issuer",
@@ -358,6 +400,8 @@ class Settings(BaseSettings):
         "max_requests_per_worker",
         "openai_api_key",
         "anthropic_api_key",
+        "ollama_api_key",
+        "vllm_api_key",
         "otel_exporter_otlp_endpoint",
         "otel_exporter_otlp_headers",
         "otel_exporter_otlp_certificate",

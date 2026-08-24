@@ -10,6 +10,7 @@ from llm_fabric.router.fallback import (
 )
 from llm_fabric.router.grades import Grade
 from llm_fabric.router.health import BreakerPolicy, BreakerState, HealthTracker
+from llm_fabric.router.intent_routing import IntentRoutePolicy, RoutingConfig
 from llm_fabric.router.plan import (
     RoutePlan,
     RoutePlanner,
@@ -19,6 +20,7 @@ from llm_fabric.router.plan import (
 )
 from llm_fabric.router.policy import RoutePolicy
 from llm_fabric.router.registry import Alias, Locality, ModelRegistry, ModelSpec
+from llm_fabric.router.tiers import ServiceTier
 
 __all__ = [
     "Alias",
@@ -33,6 +35,7 @@ __all__ = [
     "FallbackReason",
     "Grade",
     "HealthTracker",
+    "IntentRoutePolicy",
     "Locality",
     "ModelRegistry",
     "ModelSpec",
@@ -43,6 +46,8 @@ __all__ = [
     "RouteRequest",
     "RoutedResult",
     "Router",
+    "RoutingConfig",
+    "ServiceTier",
     "TenantRoutingPolicies",
     "TenantRoutingPolicy",
 ]

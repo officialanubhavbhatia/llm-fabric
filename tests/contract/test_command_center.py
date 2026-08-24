@@ -55,5 +55,37 @@ def test_chat_writes_a_request_trace(client: TestClient) -> None:
     assert "eval" not in names
 
 
+def test_intents_view_leads_with_frozen_safety_gates(client: TestClient) -> None:
+    payload = client.get("/v1/observability/dashboards/intents").json()
+    assert payload["available"] is True
+    gates = payload["data"]["safety_gates"]
+    assert gates["hard_negative_accuracy"] == 0.50
+    assert gates["required"] == 0.58
+    assert gates["routing"] == "OFF"
+    assert gates["serving_path_classification"] is False
+
+
+def test_tiers_view_has_l0_to_l30_histogram(client: TestClient) -> None:
+    payload = client.get("/v1/observability/dashboards/tiers").json()
+    assert payload["available"] is True
+    histogram = payload["data"]["histogram"]
+    assert len(histogram) == 31
+    assert histogram[0]["tier"] == "L0"
+    assert histogram[-1]["tier"] == "L30"
+
+
+def test_promotion_view_does_not_equate_evaluated_with_approved(
+    client: TestClient,
+) -> None:
+    payload = client.get("/v1/observability/dashboards/promotion").json()
+    assert payload["available"] is True
+    assert "Evaluated is not approved" in payload["note"]
+    for row in payload["data"]["models"]:
+        assert "state" in row
+        assert "production_eligible" in row
+        assert "declared_tiers" in row
+        assert "approved_tiers" in row
+
+
 def test_unknown_dashboard_is_a_client_error(client: TestClient) -> None:
     assert client.get("/v1/observability/dashboards/made_up").status_code == 400

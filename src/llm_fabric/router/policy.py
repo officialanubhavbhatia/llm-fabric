@@ -8,16 +8,20 @@ the decision can be explained rather than asserted.
 Three rules keep the scoring honest.
 
 **A feature nobody can supply is dropped, not imputed.** If any eligible
-candidate lacks a declared quality score, quality is dropped for the whole
-decision and the remaining weights are renormalised. Scoring the others on it
-would rank a measured deployment against an unmeasured one and call the result a
-comparison. The explanation names the feature and the candidate that caused it to
-be dropped.
+candidate lacks a declared quality or latency score, that feature is dropped for
+the whole decision and the remaining weights are renormalised. Scoring the
+others on it would rank a measured deployment against an unmeasured one and call
+the result a comparison. The explanation names the feature and the candidate
+that caused it to be dropped.
 
-**An unpriced model is not a free model.** `input_cost_per_mtok: 0.0` in a
-registry means "nobody filled this in", and treating it as zero would make the
-most expensive model in the fleet win a cost-first route. Unpriced deployments
-report cost as absent.
+**Cost is the exception.** API prices have three states: unknown (omitted),
+known-zero (`0.0`, typical for self-hosted), and known-nonzero. An unknown price
+is not treated as free, and it does **not** erase cost ranking for candidates
+whose prices *are* known. Cost is scored only among deployments with comparable
+known API prices. Unknown-cost candidates receive no cost contribution and their
+remaining weights are not renormalised to fill that slot, so they cannot win a
+`cost_first` decision by looking free. A known-zero price *is* a real value and
+ranks as the cheapest API cost.
 
 **When no feature survives, ordering falls back to registry order** and says so.
 That is the honest end state of a decision with nothing to decide on.
@@ -263,9 +267,10 @@ def _latency_of(
 
 
 def _cost_of(spec: ModelSpec) -> tuple[float | None, str]:
-    if not spec.is_priced:
+    blended = spec.blended_cost_per_mtok
+    if blended is None:
         return None, ""
-    return spec.blended_cost_per_mtok, "registry.blended_cost_per_mtok"
+    return blended, f"registry.blended_cost_per_mtok.{spec.api_cost_knowledge.value}"
 
 
 def _health_of(snapshot: HealthSnapshot | None) -> tuple[float | None, str]:
@@ -391,7 +396,8 @@ def score_candidates(
         if resolved_weights.get(feature) <= 0:
             continue
         missing = [spec.id for spec in candidates if raw[spec.id][feature][0] is None]
-        if missing:
+        present = [spec.id for spec in candidates if raw[spec.id][feature][0] is not None]
+        if not present:
             dropped.append(
                 (
                     feature,
@@ -400,26 +406,49 @@ def score_candidates(
                 )
             )
             continue
+        if missing and feature != "cost":
+            dropped.append(
+                (
+                    feature,
+                    f"not available for {', '.join(sorted(missing))}; "
+                    "comparing the others on it would rank measured against unmeasured",
+                )
+            )
+            continue
+        if missing and feature == "cost":
+            dropped.append(
+                (
+                    "cost_partial",
+                    "API price unknown for "
+                    + ", ".join(sorted(missing))
+                    + "; cost ranked only among deployments with known API prices "
+                    "(known-zero included; unknown is not treated as free)",
+                )
+            )
         usable.append(feature)
 
     effective = resolved_weights.over(usable)
 
-    normalised: dict[str, list[float]] = {}
+    normalised: dict[str, dict[str, float]] = {}
     for feature in usable:
-        values = [raw[spec.id][feature][0] for spec in candidates]
-        normalised[feature] = _normalise(
+        priced_or_present = [spec for spec in candidates if raw[spec.id][feature][0] is not None]
+        values = [raw[spec.id][feature][0] for spec in priced_or_present]
+        norms = _normalise(
             [value for value in values if value is not None],
             lower_is_better=feature in _LOWER_IS_BETTER,
         )
+        normalised[feature] = {
+            spec.id: norm for spec, norm in zip(priced_or_present, norms, strict=True)
+        }
 
     scored: list[ScoredCandidate] = []
-    for index, spec in enumerate(candidates):
+    for spec in candidates:
         features: list[FeatureValue] = []
         total = 0.0
         for feature in FEATURES:
             value, source, basis = raw[spec.id][feature]
-            if feature in usable:
-                norm = normalised[feature][index]
+            if feature in usable and spec.id in normalised.get(feature, {}):
+                norm = normalised[feature][spec.id]
                 weight = effective[feature]
                 contribution = norm * weight
                 total += contribution
@@ -477,8 +506,15 @@ Policy = Callable[[list[ModelSpec]], list[ModelSpec]]
 
 
 def cheapest(candidates: list[ModelSpec]) -> list[ModelSpec]:
-    """Cheapest blended registry price first; ties broken by id for determinism."""
-    return sorted(candidates, key=lambda spec: (spec.blended_cost_per_mtok, spec.id))
+    """Cheapest known blended API price first; unknown prices sort last."""
+
+    def key(spec: ModelSpec) -> tuple[int, float, str]:
+        blended = spec.blended_cost_per_mtok
+        if blended is None:
+            return (1, 0.0, spec.id)
+        return (0, blended, spec.id)
+
+    return sorted(candidates, key=key)
 
 
 def declared(candidates: list[ModelSpec]) -> list[ModelSpec]:

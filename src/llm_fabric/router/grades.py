@@ -92,18 +92,28 @@ class Grade(StrEnum):
 
     @classmethod
     def parse(cls, value: str) -> Self:
-        """Accept `Grade07`, `grade07`, `7` or `07`, all meaning the same band."""
+        """Accept `Grade07`, `grade07`, `7`, `07`, or the public tier spelling `L7`.
+
+        `L30` maps onto `Grade29`. Tiers are documented in `router.tiers`; the
+        constitution still has thirty grades.
+        """
         text = str(value).strip()
         if not text:
             raise ConfigurationError("a grade cannot be empty")
         if text.isdigit():
             return cls.from_index(int(text))
+        if len(text) >= 2 and text[0] in "Ll" and text[1:].isdigit():
+            ordinal = int(text[1:])
+            if ordinal == GRADE_COUNT:
+                return cls.from_index(GRADE_COUNT - 1)
+            return cls.from_index(ordinal)
         normalised = text[:5].capitalize() + text[5:]
         try:
             return cls(normalised)
         except ValueError:
             raise ConfigurationError(
-                f"unknown grade '{value}'; expected Grade00 through Grade{GRADE_COUNT - 1:02d}"
+                f"unknown grade '{value}'; expected Grade00 through Grade{GRADE_COUNT - 1:02d} "
+                f"or L0 through L{GRADE_COUNT}"
             ) from None
 
 

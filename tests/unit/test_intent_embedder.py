@@ -93,9 +93,7 @@ async def test_parent_hard_negative_repels_children() -> None:
     )
     prompt = "give me a prose overview of this repository"
     propagating = EmbeddingClassifier(HashingEmbedder(), hn_lambda=0.35)
-    isolated = EmbeddingClassifier(
-        HashingEmbedder(), hn_lambda=0.35, propagate_ancestor_hn=False
-    )
+    isolated = EmbeddingClassifier(HashingEmbedder(), hn_lambda=0.35, propagate_ancestor_hn=False)
     await propagating.prepare(taxonomy)
     await isolated.prepare(taxonomy)
     vector = await propagating.embed_prompt(prompt)

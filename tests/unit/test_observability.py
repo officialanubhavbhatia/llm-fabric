@@ -109,7 +109,7 @@ def test_engine_snapshots_are_unavailable_until_an_adapter_exists() -> None:
         )
     )
     assert all(value is None for value in vllm.measurements.values())
-    assert "adapter is not built" in ollama.note
+    assert "not scraped" in ollama.note
     for name in OLLAMA_MEASUREMENTS:
         assert name in ollama.measurements
 
@@ -197,7 +197,7 @@ def test_every_named_dashboard_exists_and_unbuilt_ones_stay_empty() -> None:
     for view in VIEWS:
         payload = assembler.render(view, tenant_id="acme", fleet=False, scope_note="test")
         assert payload["view"] == view
-        if view in {"kv_cache", "batching", "context", "threads", "intents"}:
+        if view in {"kv_cache", "batching", "context", "threads"}:
             assert payload["available"] is False
             assert payload["data"] is None
             assert payload["note"]

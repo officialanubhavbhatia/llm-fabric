@@ -1,0 +1,33 @@
+{
+  "artifact_version": "vllm-live-v1",
+  "timestamp": "2026-08-24T18:24:00Z",
+  "status": "unavailable",
+  "fabric_commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "provider": "vllm",
+  "provider_endpoint_class": "openai-compatible",
+  "model": null,
+  "model_revision": null,
+  "vllm_version": null,
+  "hardware": {
+    "os": "darwin 25.6.0",
+    "architecture": "arm64",
+    "gpu": "Apple M2 Pro",
+    "gpu_cores": 19,
+    "nvidia_gpu": null
+  },
+  "reason": "vLLM CLI/package is not installed and no NVIDIA GPU is available. Port 8000 is an LLM Fabric mock gateway, not vLLM.",
+  "request_count": 0,
+  "success_count": 0,
+  "failure_count": 0,
+  "ttft_ms": null,
+  "total_latency_ms": null,
+  "output_tokens_per_second": null,
+  "fallback_behavior": "not measured",
+  "context_behavior": "not measured",
+  "probe_outcome": "not run",
+  "errors": [
+    "vllm executable unavailable",
+    "vllm Python package unavailable",
+    "real vLLM endpoint unavailable"
+  ]
+}

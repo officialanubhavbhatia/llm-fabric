@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
+from llm_fabric.config import Settings
 from llm_fabric.errors import InvalidRequestError, ResourceNotFoundError
 from llm_fabric.gateway.dependencies import (
     get_intent_cascade,
@@ -19,6 +20,7 @@ from llm_fabric.gateway.dependencies import (
     get_optional_principal,
     get_registry,
     get_router,
+    get_settings,
     get_stores,
     get_telemetry,
     get_tenant_scope,
@@ -79,6 +81,7 @@ async def get_dashboard(
     principal: Principal | None = Depends(get_optional_principal),
     cascade: IntentCascade | None = Depends(get_intent_cascade),
     stores: TenantStores = Depends(get_stores),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     if view not in VIEWS:
         raise InvalidRequestError(f"unknown dashboard '{view}'")
@@ -95,6 +98,7 @@ async def get_dashboard(
         eval_runs=stores.eval_runs.list(scope, limit=50),
         incidents=stores.incidents.list(scope, limit=50),
         remediations=stores.remediations.list(scope, limit=50),
+        promotion_state_path=settings.promotion_state_path,
     )
     return assembler.render(
         view,

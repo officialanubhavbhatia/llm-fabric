@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
-.PHONY: help install dev serve doctor migrate test test-isolation lint format typecheck check clean \
-	bench-intent bench-intent-cache bench-load bench-load-target bench-load-all \
-	profile-request eval-gate eval-run heal-analyze bench-stages
+.PHONY: help install dev dev-ollama serve doctor migrate test test-isolation lint format typecheck check clean \
+	dashboard benchmark bench-intent bench-intent-cache bench-load bench-load-target bench-load-all \
+	profile-request eval-gate eval-run heal-analyze bench-stages model-probe eval-models eval-routing \
+	test-vllm-live
 
 PYTHON_VERSION := 3.12
 UV := uv
@@ -15,6 +16,18 @@ install: ## Create the virtualenv and install the project with dev extras
 
 dev: install ## Run the gateway locally with reload
 	LLM_FABRIC_ENVIRONMENT=development $(UV) run uvicorn llm_fabric.gateway.app:create_app --factory --reload
+
+# Uses config/models.local.yaml. Requires a running Ollama daemon and a pulled
+# tag (default llama3.2 — replace it in that YAML). Mock remains a fallback.
+dev-ollama: install ## Run the gateway against local Ollama
+	LLM_FABRIC_ENVIRONMENT=development \
+	LLM_FABRIC_REGISTRY_PATH=config/models.local.yaml \
+	$(UV) run uvicorn llm_fabric.gateway.app:create_app --factory --reload
+
+dashboard: ## Print the local Command Center URL (gateway must already be running)
+	@echo "Command Center: http://127.0.0.1:47317/command-center"
+
+benchmark: bench-stages ## Alias for isolated in-process stage benches
 
 # `dev` reloads on every edit, which costs throughput and makes a benchmark
 # meaningless. This is the configuration docs/BENCHMARKS.md measured.
@@ -32,6 +45,10 @@ test: ## Run the whole test suite
 
 test-isolation: ## Run only the adversarial cross-tenant suite
 	$(UV) run pytest -m isolation -v --strict-markers
+
+test-vllm-live: ## Optional live vLLM OpenAI-compatible integration profile
+	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_LIVE_VLLM=1 \
+	$(UV) run pytest --strict-markers tests/integration/live_vllm -v
 
 lint: ## Check formatting and lint rules
 	$(UV) run ruff check .
@@ -55,6 +72,25 @@ bench-intent: ## Measure the intent classifier (offline layers only, no cost)
 eval-run: ## Execute the CI evaluation suite and write the JSON run
 	$(UV) run llm-fabric-eval run --suite datasets/eval/ci-suite.yaml \
 		--output artifacts/eval-run.json
+
+model-probe: ## Probe mock-small (in-process; no live GPU)
+	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_REGISTRY_PATH=config/models.yaml \
+		$(UV) run python -m llm_fabric model probe mock-small \
+		--registry config/models.yaml \
+		--output datasets/eval/models/model-probes.json
+
+eval-models: ## Deterministic model workloads (not IntentOS frozen 98)
+	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_REGISTRY_PATH=config/models.yaml \
+		$(UV) run python -m llm_fabric eval models \
+		--registry config/models.yaml \
+		--output datasets/eval/models/model-eval.json \
+		--leaderboard datasets/eval/models/leaderboard.json
+	cp datasets/eval/models/leaderboard.json datasets/eval/models/model-leaderboard.json
+
+eval-routing: ## Offline L0–L30 routing-quality metrics (no provider call)
+	LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_REGISTRY_PATH=config/models.yaml \
+		LLM_FABRIC_ROUTING_CONFIG_PATH=config/routing.yaml \
+		$(UV) run python -m llm_fabric eval routing
 
 eval-gate: ## Fail if a critical metric drops versus the committed baseline
 	$(UV) run llm-fabric-eval gate --suite datasets/eval/ci-suite.yaml \

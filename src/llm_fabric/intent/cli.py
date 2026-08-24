@@ -271,11 +271,15 @@ def _pricing_for(registry: ModelRegistry, model: str | None) -> ClassifierPricin
         spec = registry.get(model)
     except ModelNotFoundError:
         return None
-    if spec.input_cost_per_mtok == 0.0 and spec.output_cost_per_mtok == 0.0:
+    input_cost = spec.input_cost_per_mtok
+    output_cost = spec.output_cost_per_mtok
+    if input_cost is None or output_cost is None:
+        return None
+    if input_cost == 0.0 and output_cost == 0.0:
         return None
     return ClassifierPricing(
-        input_cost_per_mtok=spec.input_cost_per_mtok,
-        output_cost_per_mtok=spec.output_cost_per_mtok,
+        input_cost_per_mtok=input_cost,
+        output_cost_per_mtok=output_cost,
     )
 
 

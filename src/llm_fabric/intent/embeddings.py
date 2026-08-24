@@ -19,7 +19,7 @@ import hashlib
 import math
 import re
 from collections.abc import Sequence
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from llm_fabric.tenancy.cache import CacheNamespace, TenantScopedCache
 from llm_fabric.tenancy.scope import TenantScope
@@ -154,10 +154,11 @@ class RealLocalEmbedder:
     async def embed(self, texts: Sequence[str]) -> list[Vector]:
         if not texts:
             return []
+        model = cast(Any, self._model)
         if self._backend == "fastembed":
-            raw = list(self._model.embed(list(texts)))
+            raw = list(model.embed(list(texts)))
             return [tuple(float(value) for value in row) for row in raw]
-        encoded = self._model.encode(list(texts), normalize_embeddings=True)
+        encoded = model.encode(list(texts), normalize_embeddings=True)
         return [tuple(float(value) for value in row) for row in encoded]
 
 
@@ -183,7 +184,7 @@ def _fastembed_available() -> bool:
 
 def _sentence_transformers_available() -> bool:
     try:
-        import sentence_transformers  # noqa: F401
+        import sentence_transformers  # type: ignore[import-not-found]  # noqa: F401
     except ImportError:
         return False
     return True

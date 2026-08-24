@@ -45,6 +45,7 @@ from llm_fabric.intent.bootstrap import bootstrap_taxonomy
 from llm_fabric.intent.cascade import IntentCascade
 from llm_fabric.intent.embeddings import HashingEmbedder, resolve_embedder
 from llm_fabric.intent.factory import build_offline_cascade
+from llm_fabric.models.promotion import PromotionConfig, load_configured_registry
 from llm_fabric.observability.asgi import RequestTelemetryMiddleware
 from llm_fabric.observability.langfuse import build_langfuse
 from llm_fabric.observability.logging import configure_logging, request_logger
@@ -54,6 +55,7 @@ from llm_fabric.observability.telemetry import Telemetry
 from llm_fabric.router.engine import Router
 from llm_fabric.router.fallback import FallbackBudget
 from llm_fabric.router.health import BreakerPolicy, HealthTracker
+from llm_fabric.router.intent_routing import RoutingConfig
 from llm_fabric.router.plan import TenantRoutingPolicies
 from llm_fabric.router.registry import ModelRegistry
 from llm_fabric.runtime import initialize_runtime
@@ -205,7 +207,11 @@ def create_app(
     runtime = initialize_runtime(settings)
     logger = configure_logging(settings.log_level)
 
-    registry = registry or ModelRegistry.from_yaml(settings.registry_path)
+    registry = registry or load_configured_registry(
+        settings.registry_path,
+        promotion_state_path=settings.promotion_state_path,
+        promotion_config_path=settings.promotion_config_path,
+    )
     providers = ProviderFactory(settings, overrides=provider_overrides)
     telemetry = telemetry or Telemetry(
         tracer=FabricTracer(
@@ -376,6 +382,10 @@ def create_app(
     app.state.dependency_health = dependency_health
     app.state.tenant_routing = tenant_routing or TenantRoutingPolicies()
     app.state.controls = OperationalControls()
+    routing_config = RoutingConfig.from_yaml(settings.routing_config_path, registry=registry)
+    promotion = PromotionConfig.from_yaml(settings.promotion_config_path)
+    app.state.routing = routing_config
+    app.state.promotion = promotion
     app.state.router = Router(
         registry,
         providers,
@@ -385,6 +395,11 @@ def create_app(
         tenant_policies=app.state.tenant_routing,
         fallback_budget=build_fallback_budget(settings),
         controls=app.state.controls,
+        routing=routing_config,
+        quality_shadow=settings.routing_quality_shadow,
+        require_approved=promotion.auto_requires(settings.environment),
+        pin_requires_approved=promotion.pin_requires(settings.environment),
+        commercial_use_required=promotion.commercial_use_required,
     )
     # Built only when enabled: an unused cascade would still hold a taxonomy and
     # an embedder, and would appear in health output as if it were serving.

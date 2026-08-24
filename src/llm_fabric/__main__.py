@@ -96,6 +96,33 @@ def main() -> None:
             sys.stderr.write(exc.message + "\n")
             raise SystemExit(1) from exc
 
+    if len(sys.argv) >= 2 and sys.argv[1] == "route":
+        from llm_fabric.router.cli import main as route_main
+
+        raise SystemExit(route_main(sys.argv[2:]))
+
+    if len(sys.argv) >= 2 and sys.argv[1] == "model":
+        from llm_fabric.models.cli import main as model_main
+
+        raise SystemExit(model_main(sys.argv[2:]))
+
+    if len(sys.argv) >= 2 and sys.argv[1] == "eval":
+        rest = sys.argv[2:]
+        if rest and rest[0] == "models":
+            from llm_fabric.models.cli import main as model_main
+
+            raise SystemExit(model_main(["eval", *rest[1:]]))
+        if rest and rest[0] == "routing":
+            from llm_fabric.eval.routing_quality import write_routing_artifacts
+
+            paths = write_routing_artifacts()
+            for label, path in paths.items():
+                sys.stderr.write(f"wrote {label}: {path}\n")
+            raise SystemExit(0)
+        from llm_fabric.eval.cli import main as eval_main
+
+        raise SystemExit(eval_main(rest))
+
     try:
         settings = get_settings()
         # Parent process: configuration + dependency probes. create_app repeats

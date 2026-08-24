@@ -4,6 +4,7 @@ import pytest
 
 from llm_fabric.errors import ConfigurationError, ModelNotFoundError
 from llm_fabric.router.registry import ModelRegistry, ModelSpec
+from llm_fabric.router.tiers import ServiceTier
 
 
 def test_cost_is_computed_from_registry_prices() -> None:
@@ -18,9 +19,23 @@ def test_cost_is_computed_from_registry_prices() -> None:
     assert spec.cost_usd(1000, 500) == pytest.approx((1000 * 1.0 + 500 * 2.0) / 1_000_000)
 
 
-def test_unpriced_model_costs_nothing() -> None:
+def test_unpriced_model_cost_is_unknown() -> None:
     spec = ModelSpec(id="m", provider="mock", provider_model="m")
+    assert spec.cost_usd(10_000, 10_000) is None
+    assert spec.api_cost_knowledge.value == "unknown"
+
+
+def test_known_zero_api_price_costs_zero() -> None:
+    spec = ModelSpec(
+        id="m",
+        provider="mock",
+        provider_model="m",
+        input_cost_per_mtok=0.0,
+        output_cost_per_mtok=0.0,
+    )
     assert spec.cost_usd(10_000, 10_000) == 0.0
+    assert spec.is_priced
+    assert spec.api_cost_knowledge.value == "known_zero"
 
 
 def test_provider_model_defaults_to_id() -> None:
@@ -90,3 +105,50 @@ def test_shipped_registry_is_valid() -> None:
     registry = ModelRegistry.from_yaml(Path("config/models.yaml"))
     assert registry.enabled_models(), "shipped registry should enable at least one model"
     assert registry.is_alias("auto")
+
+
+def test_local_registry_is_valid() -> None:
+    from pathlib import Path
+
+    registry = ModelRegistry.from_yaml(Path("config/models.local.yaml"))
+    assert {spec.id for spec in registry.enabled_models()} >= {
+        "mock-small",
+        "local-small",
+        "local-reasoning",
+    }
+    assert registry.get("local-small").provider == "ollama"
+    assert registry.get("local-small").provider_model == "llama3.2"
+
+
+def test_identity_metadata_round_trips() -> None:
+    registry = ModelRegistry.from_mapping(
+        {
+            "models": [
+                {
+                    "id": "qwen",
+                    "provider": "vllm",
+                    "huggingface_id": "Qwen/Qwen2.5-7B-Instruct",
+                    "revision": "abc123",
+                    "digest": "sha256:deadbeef",
+                    "license": "apache-2.0",
+                    "commercial_use": True,
+                    "pool": "general",
+                    "grade": "L12",
+                    "tiers": ["L12", "L13"],
+                }
+            ]
+        }
+    )
+    spec = registry.get("qwen")
+    assert spec.huggingface_id == "Qwen/Qwen2.5-7B-Instruct"
+    assert spec.revision == "abc123"
+    assert spec.license == "apache-2.0"
+    assert spec.commercial_use is True
+    assert spec.pool == "general"
+    assert spec.serves_tier(ServiceTier.L13)
+    assert spec.public_tier is ServiceTier.L13
+
+
+def test_trust_remote_code_is_refused() -> None:
+    with pytest.raises(ConfigurationError, match="trust_remote_code"):
+        ModelSpec(id="unsafe", provider="vllm", trust_remote_code=True)

@@ -1,0 +1,14 @@
+{
+  "artifact_version": "promotion-v1",
+  "timestamp": "2026-08-24T18:24:00Z",
+  "fabric_commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "promotion_policy_version": "2026.08.24",
+  "promotion_policy_hash": "0527f88b6c11b247",
+  "result": {
+    "deployment": null,
+    "from_state": null,
+    "to_state": null,
+    "approved": false
+  },
+  "reason": "No real vLLM deployment was available, so no model was advanced or approved in this phase. Existing mock lifecycle declarations were not converted into evidence-bound production approvals."
+}

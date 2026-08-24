@@ -14,7 +14,7 @@ a request the fabric could serve is worse than ignoring a field. See
 
 | Field | Status | Notes |
 | --- | --- | --- |
-| `model` | Honoured | A model id or an alias such as `auto`. |
+| `model` | Honoured | A model id, an alias such as `auto`, or a public tier such as `L12`. |
 | `messages` | Honoured | At least one required. `system`, `user`, `assistant`, `tool` roles. |
 | `stream` | Honoured | SSE when true. |
 | `temperature` | Honoured | 0–2. Passed to the backend. |
@@ -46,7 +46,7 @@ Present on every buffered response:
 | `x-fabric-request-id` | Correlation id. Echoes a caller-supplied `x-request-id`. |
 | `x-fabric-requested-model` | What the caller asked for. |
 | `x-fabric-served-model` | What actually served it. |
-| `x-fabric-provider` | The backend behind that model. |
+| `x-fabric-selected-tier` | Public service tier of the served deployment (`L12`), when declared. |
 | `x-fabric-policy` | The policy that chose it. |
 | `x-fabric-failovers` | How many candidates failed first. |
 | `x-fabric-invocations` | Provider attempts recorded for this request (includes fallbacks). |

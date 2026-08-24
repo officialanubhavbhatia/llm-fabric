@@ -85,8 +85,8 @@ def audit_dataset(
     other_texts: Iterable[str] = (),
 ) -> DatasetAudit:
     cases = load_dataset(path)
-    labels = Counter(case.expected_intent_id for case in cases)
-    languages = Counter(case.language for case in cases)
+    labels: Counter[str] = Counter(case.expected_intent_id for case in cases)
+    languages: Counter[str] = Counter(case.language for case in cases)
     texts = [case.text.strip().lower() for case in cases]
     exact_dupes = sum(count - 1 for count in Counter(texts).values() if count > 1)
 
@@ -94,8 +94,9 @@ def audit_dataset(
     other = {normalise_for_overlap(text) for text in other_texts if text.strip()}
     overlap = sum(1 for text in texts if normalise_for_overlap(text) in other)
 
-    counts = list(labels.values())
-    balance = (max(counts) / min(counts)) if counts and min(counts) else None
+    counts: list[int] = list(labels.values())
+    minimum = min(counts) if counts else 0
+    balance = (max(counts) / minimum) if minimum else None
 
     notes: list[str] = []
     if balance is not None and balance >= 4:

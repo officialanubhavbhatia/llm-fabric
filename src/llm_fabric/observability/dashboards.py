@@ -8,9 +8,11 @@ are listed in `unavailable_fields`.
 
 from __future__ import annotations
 
+import json
 import time
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from llm_fabric.eval.schema import EvalRun
@@ -35,6 +37,8 @@ VIEWS: tuple[str, ...] = (
     "threads",
     "intents",
     "models",
+    "promotion",
+    "tiers",
     "kv_cache",
     "batching",
     "routing",
@@ -49,13 +53,15 @@ VIEWS: tuple[str, ...] = (
 
 _NOT_BUILT = {
     "kv_cache": (
-        "No Ollama or vLLM adapter is enabled. KV-cache utilisation is not "
-        "synthesized. For Ollama it is not a supported measurement even once "
-        "the adapter exists."
+        "Chat can use Ollama or vLLM through the OpenAI-compatible adapter. "
+        "KV-cache utilisation is not scraped from those engines and is not "
+        "synthesized. Ollama does not expose a KV-cache series the fabric can "
+        "honestly show."
     ),
     "batching": (
-        "Continuous batching is a vLLM engine property. The vLLM adapter is "
-        "not built, so batch size and batch utilisation are unavailable."
+        "Continuous batching is a vLLM engine property. Fabric talks to vLLM "
+        "through the OpenAI-compatible HTTP API and does not scrape vLLM "
+        "/metrics, so batch size and batch utilisation are unavailable."
     ),
     "context": (
         "The context compiler is not on the serving path. Context tokens "
@@ -96,6 +102,18 @@ def _envelope(
     }
 
 
+def _measured_by_deployment() -> dict[str, Any]:
+    path = Path("datasets/eval/models/leaderboard.json")
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    rows = payload.get("models") or payload.get("leaderboard") or []
+    return {str(row.get("deployment")): row for row in rows if row.get("deployment")}
+
+
 def _latencies(records: Sequence[UsageRecord]) -> dict[str, float | None]:
     values = [record.latency_ms for record in records]
     return {
@@ -119,6 +137,7 @@ class DashboardAssembler:
         eval_runs: Sequence[EvalRun] = (),
         incidents: Sequence[Incident] = (),
         remediations: Sequence[RemediationRecord] = (),
+        promotion_state_path: Path | None = None,
     ) -> None:
         self._meter = meter
         self._journal = journal
@@ -129,6 +148,7 @@ class DashboardAssembler:
         self._eval_runs = eval_runs
         self._incidents = incidents
         self._remediations = remediations
+        self._promotion_state_path = promotion_state_path
 
     def render(
         self,
@@ -158,6 +178,8 @@ class DashboardAssembler:
             "traces": self._traces,
             "intents": self._intents,
             "models": self._models,
+            "promotion": self._promotion,
+            "tiers": self._tiers,
             "routing": self._routing,
             "fallbacks": self._fallbacks,
             "tokens": self._tokens,
@@ -188,11 +210,26 @@ class DashboardAssembler:
         )
         cost = sum(r.cost_usd for r in records)
         estimated = sum(1 for r in records if r.cost_is_estimated)
+        rps = None
+        if len(records) >= 2:
+            span = max(r.created_at for r in records) - min(r.created_at for r in records)
+            if span > 0:
+                rps = round(len(records) / span, 3)
+        by_provider: dict[str, int] = defaultdict(int)
+        by_model: dict[str, int] = defaultdict(int)
+        by_tier: dict[str, int] = defaultdict(int)
+        for record in records:
+            by_provider[record.provider] += 1
+            by_model[record.served_model] += 1
+            if record.selected_tier:
+                by_tier[record.selected_tier] += 1
+        fallbacks = sum(r.failover_count for r in records)
         return _envelope(
             "overview",
             available=True,
             data={
                 "requests": len(records),
+                "rps": rps,
                 "successes": len(successes),
                 "errors": len(errors),
                 "error_rate": (len(errors) / len(records)) if records else None,
@@ -200,7 +237,11 @@ class DashboardAssembler:
                 "tokens": tokens,
                 "cost_usd": round(cost, 6),
                 "requests_with_estimated_cost": estimated,
-                "failovers": sum(r.failover_count for r in records),
+                "failovers": fallbacks,
+                "fallback_rate": (fallbacks / len(records)) if records else None,
+                "by_provider": dict(by_provider),
+                "by_served_model": dict(by_model),
+                "by_tier": dict(by_tier) or None,
             },
             unavailable_fields=["quality", "safety", "tps", "queue_depth"],
             estimated_fields=["cost_usd"] if estimated else (),
@@ -357,12 +398,24 @@ class DashboardAssembler:
         if self._intent is None:
             return _envelope(
                 "intents",
-                available=False,
+                available=True,
+                data={
+                    "safety_gates": {
+                        "hard_negative_accuracy": 0.50,
+                        "required": 0.58,
+                        "routing": "OFF",
+                        "source": "frozen_eval_v1.1",
+                        "serving_path_classification": False,
+                    },
+                    "live_classifications": None,
+                },
+                unavailable_fields=["classifications", "misclassifications"],
                 note=(
-                    "Intent classification is off on the serving path "
-                    "(LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED). No "
-                    "classifications have been produced to display."
+                    "Safety gates first: hard-negative accuracy on the frozen 98 "
+                    "is 0.50 (required >= 0.58). Serving-path IntentOS routing is "
+                    "OFF. These figures are the locked evaluation, not live traffic."
                 ),
+                source="frozen_eval",
                 scope=scope_note,
             )
         snapshot = dict(self._intent)
@@ -370,6 +423,13 @@ class DashboardAssembler:
             "intents",
             available=True,
             data={
+                "safety_gates": {
+                    "hard_negative_accuracy": 0.50,
+                    "required": 0.58,
+                    "routing": "OFF",
+                    "source": "frozen_eval_v1.1",
+                    "serving_path_classification": False,
+                },
                 "classifications": snapshot.get("classifications"),
                 "abstention_rate": snapshot.get("abstention_rate"),
                 "unknown": snapshot.get("unknown"),
@@ -383,10 +443,11 @@ class DashboardAssembler:
             },
             unavailable_fields=["misclassifications", "newly_discovered_clusters"],
             note=(
-                "These are cascade counters, not accuracy. Misclassifications "
-                "require labelled traffic, which is not collected on the "
-                "serving path. Drift is on the drift view. Cluster discovery "
-                "is not built."
+                "Safety gates first: serving-path IntentOS routing is OFF because "
+                "hard-negative accuracy on the frozen 98 is 0.50 (required >= 0.58). "
+                "Those figures live in docs, not in live traffic. Counters below are "
+                "cascade activity, not accuracy. Misclassifications require labelled "
+                "traffic, which is not collected on the serving path."
             ),
             scope=scope_note,
         )
@@ -404,23 +465,55 @@ class DashboardAssembler:
         for record in records:
             by_model[record.served_model].append(record)
         health = self._health.all_snapshots()
+        measured = _measured_by_deployment()
         rows = []
         for spec in self._registry.enabled_models():
             group = by_model.get(spec.id, [])
             snap = health.get(spec.deployment_id)
             engine = self._engines.for_provider(spec.provider)
+            errors = sum(1 for r in group if r.error)
+            measured_row = measured.get(spec.id) or {}
             rows.append(
                 {
-                    "model_id": spec.id,
+                    "deployment": spec.id,
                     "provider": spec.provider,
-                    "grade": spec.grade.value if spec.grade else None,
-                    "locality": spec.locality.value,
+                    "tier_range": [tier.value for tier in spec.tiers] or None,
+                    "lifecycle": spec.lifecycle.value,
+                    "production_eligible": spec.lifecycle.value == "approved"
+                    and spec.promotion_identity_match
+                    and spec.enabled,
+                    "declared_tiers": [tier.value for tier in spec.tiers] or None,
+                    "approved_tiers": [tier.value for tier in spec.approved_tiers] or None,
+                    "revision": spec.revision,
+                    "pool": spec.pool,
+                    "health": snap.state.value if snap else "unknown",
                     "requests": len(group),
-                    "tokens": sum(r.total_tokens for r in group),
-                    "cost_usd": round(sum(r.cost_usd for r in group), 6),
-                    "errors": sum(1 for r in group if r.error),
-                    "latency": _latencies(group),
-                    "health": snap.as_dict() if snap else None,
+                    "p95_ms": _latencies(group)["p95_ms"],
+                    "error_rate": (errors / len(group)) if group else None,
+                    "quality_status": {
+                        "declared": spec.quality.as_dict(),
+                        "measured": measured_row or None,
+                        "label": (
+                            "measured"
+                            if measured_row
+                            else ("declared" if spec.quality.as_dict() else "unknown")
+                        ),
+                    },
+                    "probe_status": measured_row.get("probe_status") or "unknown",
+                    "capabilities": {
+                        "declared": sorted(spec.capabilities.declared),
+                        "measured": measured_row.get("capabilities"),
+                    },
+                    "capabilities_declared": ",".join(sorted(spec.capabilities.declared)) or None,
+                    "capabilities_measured": (
+                        "measured" if measured_row.get("capabilities") else "unknown"
+                    ),
+                    "quality_declared": "declared" if spec.quality.as_dict() else "unknown",
+                    "quality_measured": "measured" if measured_row else "not evaluated",
+                    "cost": {
+                        "declared": spec.api_cost_knowledge.value,
+                        "measured": "unknown",
+                    },
                     "engine_metrics": engine.as_dict(),
                 }
             )
@@ -428,11 +521,73 @@ class DashboardAssembler:
             "models",
             available=True,
             data={"models": rows},
-            unavailable_fields=["quality", "kv_cache", "batching", "tps"],
+            unavailable_fields=["quality_live", "kv_cache", "batching", "tps"],
             note=(
-                "Health is observed by this process. Engine metrics (KV cache, "
-                "batching, GPU) appear only when the matching adapter is "
-                "enabled and the engine exposes them."
+                "Declared fields come from the registry YAML. Measured fields "
+                "come from datasets/eval/models/leaderboard.json when present. "
+                "Registry metadata is never shown as a benchmark fact."
+            ),
+            scope=scope_note,
+        )
+
+    def _promotion(
+        self,
+        records: Sequence[UsageRecord],
+        *,
+        tenant_id: str | None,
+        fleet: bool,
+        scope_note: str,
+    ) -> dict[str, Any]:
+        del tenant_id, fleet
+        from llm_fabric.models.promotion import PromotionStore, status_payload
+
+        store = PromotionStore.load(
+            self._promotion_state_path
+            if self._promotion_state_path is not None
+            else PromotionStore().path
+        )
+        by_model: dict[str, list[UsageRecord]] = defaultdict(list)
+        for record in records:
+            by_model[record.served_model].append(record)
+        health = self._health.all_snapshots()
+        rows = []
+        for spec in self._registry.enabled_models():
+            status = status_payload(spec, store)
+            group = by_model.get(spec.id, [])
+            snap = health.get(spec.deployment_id)
+            errors = sum(1 for r in group if r.error)
+            probe = status.get("probe") or {}
+            evaluation = status.get("evaluation") or {}
+            shadow = status.get("shadow") or {}
+            approval = status.get("approval") or {}
+            rows.append(
+                {
+                    **status,
+                    "model": spec.provider_model,
+                    "revision": spec.revision,
+                    "digest": spec.digest,
+                    "probe_status": "passed" if probe.get("passed") else "unknown",
+                    "evaluation_status": ("passed" if evaluation.get("passed") else "unknown"),
+                    "shadow_status": "recorded" if shadow.get("path") else "unknown",
+                    "approval_status": ("approved" if approval.get("approved") else "not approved"),
+                    "promotion_history_count": len(status.get("history") or []),
+                    "health": snap.state.value if snap else "unknown",
+                    "requests": len(group),
+                    "p95_ms": _latencies(group)["p95_ms"],
+                    "error_rate": (errors / len(group)) if group else None,
+                    "capabilities": {
+                        "declared": sorted(spec.capabilities.declared),
+                        "measured": "unknown",
+                    },
+                }
+            )
+        return _envelope(
+            "promotion",
+            available=True,
+            data={"models": rows},
+            note=(
+                "Lifecycle is operator promotion state. Evaluated is not approved. "
+                "Registered high-tier YAML is not production eligible."
             ),
             scope=scope_note,
         )
@@ -448,18 +603,90 @@ class DashboardAssembler:
         del tenant_id, fleet
         by_policy: dict[str, int] = defaultdict(int)
         by_served: dict[str, int] = defaultdict(int)
+        by_tier: dict[str, int] = defaultdict(int)
+        edges: dict[tuple[str, str], int] = defaultdict(int)
         for record in records:
             by_policy[record.policy] += 1
             by_served[record.served_model] += 1
+            if record.selected_tier:
+                by_tier[record.selected_tier] += 1
+            if record.attempts:
+                previous = None
+                for attempt in record.attempts:
+                    if previous is not None:
+                        edges[(previous, attempt.model_id)] += 1
+                    previous = attempt.model_id
+        fallback_edges = [
+            {"from": source, "to": target, "count": count}
+            for (source, target), count in sorted(edges.items())
+        ]
+        tier_to_model: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        model_to_provider: dict[str, str] = {}
+        for spec in self._registry.enabled_models():
+            model_to_provider[spec.id] = spec.provider
+            for tier in spec.tiers:
+                tier_to_model[tier.value][spec.id] += 0
+        for record in records:
+            if record.selected_tier:
+                tier_to_model[record.selected_tier][record.served_model] += 1
         return _envelope(
             "routing",
             available=True,
             data={
                 "by_policy": dict(by_policy),
                 "by_served_model": dict(by_served),
+                "by_tier": dict(by_tier),
+                "tier_to_model": {tier: dict(models) for tier, models in tier_to_model.items()},
+                "model_to_provider": model_to_provider,
+                "fallback_edges": fallback_edges,
                 "failovers": sum(r.failover_count for r in records),
             },
             note="Counts come from completed requests in this process, not from a routing eval.",
+            scope=scope_note,
+        )
+
+    def _tiers(
+        self,
+        records: Sequence[UsageRecord],
+        *,
+        tenant_id: str | None,
+        fleet: bool,
+        scope_note: str,
+    ) -> dict[str, Any]:
+        del tenant_id, fleet
+        from llm_fabric.router.tiers import ALL_TIERS
+
+        buckets: dict[str, list[UsageRecord]] = {tier.value: [] for tier in ALL_TIERS}
+        unlabelled: list[UsageRecord] = []
+        for record in records:
+            if record.selected_tier and record.selected_tier in buckets:
+                buckets[record.selected_tier].append(record)
+            else:
+                unlabelled.append(record)
+        histogram = []
+        for tier in ALL_TIERS:
+            group = buckets[tier.value]
+            errors = sum(1 for r in group if r.error)
+            histogram.append(
+                {
+                    "tier": tier.value,
+                    "requests": len(group),
+                    "success_rate": ((len(group) - errors) / len(group)) if group else None,
+                    "latency_p95_ms": _latencies(group)["p95_ms"],
+                    "fallbacks": sum(r.failover_count for r in group),
+                }
+            )
+        return _envelope(
+            "tiers",
+            available=True,
+            data={
+                "histogram": histogram,
+                "unlabelled_requests": len(unlabelled),
+            },
+            note=(
+                "Compact L0–L30 request histogram. Null success/latency means "
+                "no requests landed on that tier in this process buffer."
+            ),
             scope=scope_note,
         )
 

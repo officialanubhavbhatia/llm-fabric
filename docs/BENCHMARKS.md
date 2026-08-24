@@ -384,10 +384,10 @@ as `enabled: false`.
 | async batching | No batching engine. |
 | semantic caching | The L1 intent cache exists and is off on the serving path. A response semantic cache is not built. |
 | prefix caching | A vLLM/Ollama property. Those adapters are not built. |
-| quantized KV cache | A vLLM property. The adapter is not built. |
-| continuous batching | A vLLM property. The adapter is not built. |
-| chunked prefill | A vLLM property. The adapter is not built. |
-| speculative decoding | A vLLM property. The adapter is not built. |
+| quantized KV cache | A vLLM engine property. Chat adapter exists; `/metrics` is not scraped. |
+| continuous batching | A vLLM engine property. Chat adapter exists; `/metrics` is not scraped. |
+| chunked prefill | A vLLM engine property. Chat adapter exists; `/metrics` is not scraped. |
+| speculative decoding | A vLLM engine property. Chat adapter exists; `/metrics` is not scraped. |
 | model residency | No model loader. |
 | request coalescing | Not implemented. |
 

@@ -39,20 +39,25 @@ class OpenAIProvider(Provider):
         base_url: str = "https://api.openai.com/v1",
         timeout_s: float = 60.0,
         client: httpx.AsyncClient | None = None,
+        *,
+        name: str = "openai",
+        require_api_key: bool = True,
     ) -> None:
+        self.name = name
         if client is not None:
             self._client = client
             return
-        if not api_key:
+        if require_api_key and not api_key:
             raise ConfigurationError(
                 "OpenAI provider requires an API key "
                 "(set LLM_FABRIC_OPENAI_API_KEY or OPENAI_API_KEY)"
             )
-        self._client = build_client(
-            base_url,
-            {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout_s,
-        )
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        elif not require_api_key:
+            headers["Authorization"] = f"Bearer {name}"
+        self._client = build_client(base_url, headers, timeout_s)
 
     async def aclose(self) -> None:
         await self._client.aclose()

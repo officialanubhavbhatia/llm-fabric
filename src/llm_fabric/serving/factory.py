@@ -4,6 +4,10 @@ Providers are built lazily and then reused, because each one holds an HTTP clien
 with its own connection pool and building them per request would discard those
 connections. Tests inject providers by name through `overrides`, which is how the
 router is exercised without network access.
+
+Ollama and vLLM are reached through the OpenAI-compatible chat-completions
+contract. They are not embedded engines: the fabric does not scrape their
+native `/metrics` endpoints and does not load model weights itself.
 """
 
 from __future__ import annotations
@@ -15,7 +19,15 @@ from llm_fabric.errors import ConfigurationError, ProviderUnavailableError
 from llm_fabric.serving.adapters import AnthropicProvider, MockProvider, OpenAIProvider
 from llm_fabric.serving.base import Provider
 
-_KNOWN_PROVIDERS = ("mock", "openai", "anthropic")
+_KNOWN_PROVIDERS = ("mock", "openai", "anthropic", "ollama", "vllm", "openai-compatible")
+
+
+def _is_openai_compatible(name: str) -> bool:
+    return (
+        name in {"ollama", "vllm", "openai-compatible"}
+        or name.startswith("ollama-")
+        or name.startswith("vllm-")
+    )
 
 
 class ProviderFactory:
@@ -54,6 +66,24 @@ class ProviderFactory:
             return False
         return True
 
+    def _compatible_base_url(self, name: str) -> str:
+        settings = self._settings
+        if name in settings.provider_base_urls:
+            return settings.provider_base_urls[name]
+        if name == "ollama" or name.startswith("ollama-"):
+            return settings.ollama_base_url
+        if name == "vllm" or name.startswith("vllm-"):
+            return settings.vllm_base_url
+        return settings.openai_base_url
+
+    def _compatible_api_key(self, name: str) -> str:
+        settings = self._settings
+        if name == "ollama" or name.startswith("ollama-"):
+            return settings.ollama_api_key or "ollama"
+        if name == "vllm" or name.startswith("vllm-"):
+            return settings.vllm_api_key or "vllm"
+        return settings.openai_api_key or name
+
     def _build(self, name: str) -> Provider:
         settings = self._settings
         if name == "mock":
@@ -70,7 +100,18 @@ class ProviderFactory:
                 base_url=settings.anthropic_base_url,
                 timeout_s=settings.request_timeout_s,
             )
-        raise ConfigurationError(f"unknown provider '{name}' (available: {list(_KNOWN_PROVIDERS)})")
+        if _is_openai_compatible(name):
+            return OpenAIProvider(
+                api_key=self._compatible_api_key(name),
+                base_url=self._compatible_base_url(name),
+                timeout_s=settings.request_timeout_s,
+                name=name,
+                require_api_key=False,
+            )
+        raise ConfigurationError(
+            f"unknown provider '{name}' (available: {list(_KNOWN_PROVIDERS)} "
+            "plus ollama-* / vllm-* pool names)"
+        )
 
     async def aclose(self) -> None:
         """Close only the providers this factory created, never injected ones."""

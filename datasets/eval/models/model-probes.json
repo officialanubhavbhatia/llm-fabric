@@ -1,0 +1,57 @@
+{
+  "status": "ok",
+  "deployment": "mock-small",
+  "provider": "mock",
+  "provider_endpoint_class": "in-process",
+  "model": "mock-small",
+  "model_id": "mock-small",
+  "model_revision": null,
+  "model_digest": null,
+  "huggingface_id": null,
+  "probe_version": "model-probe-v1",
+  "timestamp": 1787594393.328382,
+  "reachable": true,
+  "capabilities": {
+    "chat": {
+      "supported": true
+    },
+    "connectivity": {
+      "supported": true
+    },
+    "streaming": {
+      "supported": true
+    },
+    "json": {
+      "supported": false,
+      "reason": "model_capability"
+    },
+    "tools": {
+      "supported": false,
+      "reason": "model_capability"
+    },
+    "reasoning": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    },
+    "coding": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    },
+    "summarization": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    }
+  },
+  "performance": {
+    "ttft_ms": 0.01087499549612403,
+    "total_latency_ms": 0.025,
+    "stream_total_ms": 0.019,
+    "output_tokens_per_second": 276319.188
+  },
+  "environment": {
+    "environment": "test",
+    "fabric_version": "0.1.0",
+    "commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+    "python": "3.12"
+  }
+}

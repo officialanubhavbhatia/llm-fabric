@@ -87,6 +87,7 @@ class UsageRecord:
     invocation_count: int = 1
     ledger_prompt_tokens: int | None = None
     ledger_completion_tokens: int | None = None
+    selected_tier: str | None = None
 
     @property
     def total_tokens(self) -> int:

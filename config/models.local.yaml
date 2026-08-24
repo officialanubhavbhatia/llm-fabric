@@ -1,0 +1,83 @@
+# Local-development registry. Mock stays available so the gateway can answer
+# without Ollama; Ollama entries are the preferred local inference path.
+#
+# Tags are configuration, not code. Replace `llama3.2` with any model you have
+# pulled (`ollama pull <tag>`). The fabric does not download weights.
+
+models:
+  - id: mock-small
+    provider: mock
+    provider_model: mock-small
+    grade: Grade02
+    context_window: 8192
+    input_cost_per_mtok: 0.05
+    output_cost_per_mtok: 0.15
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    enabled: true
+    lifecycle: approved
+    fallbacks: [mock-large]
+
+  - id: mock-large
+    provider: mock
+    provider_model: mock-large
+    grade: Grade08
+    context_window: 32768
+    input_cost_per_mtok: 0.50
+    output_cost_per_mtok: 1.50
+    capabilities: [chat, streaming, reasoning]
+    placement:
+      locality: local
+    enabled: true
+    lifecycle: approved
+
+  - id: local-small
+    provider: ollama
+    provider_model: llama3.2
+    grade: Grade03
+    tiers: [L3]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [mock-small]
+
+  - id: local-reasoning
+    provider: ollama
+    provider_model: llama3.2
+    grade: Grade12
+    tiers: [L12]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, reasoning]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [local-small, mock-large]
+
+aliases:
+  - id: auto
+    policy: cost_first
+    candidates: [local-small, mock-small, mock-large, local-reasoning]
+
+  - id: auto-local
+    policy: local_only
+    candidates: [local-small, mock-small, mock-large, local-reasoning]
+
+  - id: auto-reasoning
+    policy: cost_first
+    requires: [reasoning]
+    candidates: [local-reasoning, mock-large]

@@ -51,6 +51,7 @@ from llm_fabric.router.fallback import (
     reason_for_error,
 )
 from llm_fabric.router.health import HealthTracker
+from llm_fabric.router.intent_routing import RoutingConfig
 from llm_fabric.router.plan import (
     RoutePlan,
     RoutePlanner,
@@ -239,6 +240,11 @@ class Router:
         fallback_budget: FallbackBudget | None = None,
         planner: RoutePlanner | None = None,
         controls: OperationalControls | None = None,
+        routing: RoutingConfig | None = None,
+        quality_shadow: bool = False,
+        require_approved: bool = False,
+        pin_requires_approved: bool = False,
+        commercial_use_required: bool = False,
     ) -> None:
         self._registry = registry
         self._providers = providers
@@ -257,6 +263,11 @@ class Router:
             default_policy=self._default_policy.value,
             fallback_budget=self._budget,
             traffic=self.controls.traffic,
+            routing=routing,
+            quality_shadow=quality_shadow,
+            require_approved=require_approved,
+            pin_requires_approved=pin_requires_approved,
+            commercial_use_required=commercial_use_required,
         )
 
     @property
@@ -581,7 +592,8 @@ class _Walk:
             return None
 
         spec = next(c.spec for c in self.plan.ranked if c.spec.id == target)
-        estimate = spec.blended_cost_per_mtok / 1_000_000 if spec.is_priced else 0.0
+        blended = spec.blended_cost_per_mtok
+        estimate = blended / 1_000_000 if blended is not None else 0.0
         if refusal := self.ledger.refuse_reason(next_cost_usd=estimate):
             self.decision.fallback.refuse(refusal)
             return None

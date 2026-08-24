@@ -91,7 +91,11 @@ def _cost_regret(chosen: ModelSpec | None, expected: ModelSpec | None, tokens: i
         return None
     if not chosen.is_priced or not expected.is_priced:
         return None
-    return chosen.cost_usd(tokens, tokens) - expected.cost_usd(tokens, tokens)
+    chosen_cost = chosen.cost_usd(tokens, tokens)
+    expected_cost = expected.cost_usd(tokens, tokens)
+    if chosen_cost is None or expected_cost is None:
+        return None
+    return chosen_cost - expected_cost
 
 
 def _latency_regret(chosen: ModelSpec | None, expected: ModelSpec | None) -> float | None:

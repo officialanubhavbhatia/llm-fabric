@@ -1,0 +1,16 @@
+{
+  "artifact_version": "http-vllm-v1",
+  "timestamp": "2026-08-24T18:24:00Z",
+  "status": "unavailable",
+  "fabric_commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+  "endpoint_class": "openai-compatible",
+  "endpoint": null,
+  "tests": {
+    "profile": "tests/integration/live_vllm",
+    "collected": 6,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 6
+  },
+  "reason": "No real vLLM OpenAI-compatible endpoint was reachable. The service on 127.0.0.1:8000 identified itself as LLM Fabric mock."
+}

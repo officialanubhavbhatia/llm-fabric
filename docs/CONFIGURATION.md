@@ -21,6 +21,9 @@ all of them.
 | `LLM_FABRIC_PORT` | int | `47317` | no | `47317` | Listen port. |
 | `LLM_FABRIC_LOG_LEVEL` | str | `INFO` | no | `INFO` or `WARNING` | Process log level. |
 | `LLM_FABRIC_REGISTRY_PATH` | path | `config/models.yaml` | no | versioned registry | Model and alias registry. |
+| `LLM_FABRIC_ROUTING_CONFIG_PATH` | path | `config/routing.yaml` | no | versioned policy | Intent → tier policy. Missing file loads empty. |
+| `LLM_FABRIC_PROMOTION_CONFIG_PATH` | path | `config/promotion.yaml` | no | versioned policy | Evidence requirements and production lifecycle gates. |
+| `LLM_FABRIC_PROMOTION_STATE_PATH` | path | `datasets/eval/models/promotion-state.json` | no | controlled artifact | Evidence-bound lifecycle overlay and audit history. Public requests cannot write it. |
 | `LLM_FABRIC_WORKERS` | int \| unset | unset (one worker) | no | one worker, or replicas of one-worker pods | OS processes. See [multi-worker](#multi-worker). |
 | `LLM_FABRIC_ALLOW_UNSAFE_MULTIWORKER` | bool | `false` | no | `false` | Required to start with `workers > 1`. Production refuses this flag. |
 | `LLM_FABRIC_BACKLOG` | int | `2048` | no | leave default unless measured | Kernel accept queue. |
@@ -103,8 +106,13 @@ These are operator ceilings, not billing-grade metering. See
 | `LLM_FABRIC_MAX_ATTEMPTS` | int | `3` | no | measured | Total attempts including the first, across the fallback graph. |
 | `LLM_FABRIC_FALLBACK_MAX_COST_USD` | float \| unset | unset | no | set if spend during failover must be bounded | Extra bound beyond attempt count. |
 | `LLM_FABRIC_FALLBACK_MAX_LATENCY_MS` | float \| unset | unset | no | set if failover latency must be bounded | Extra bound beyond attempt count. |
-| `LLM_FABRIC_OPENAI_API_KEY` / `OPENAI_API_KEY` | secret | unset | when openai models enabled | secret store | OpenAI-compatible adapter. |
-| `LLM_FABRIC_OPENAI_BASE_URL` | URL | `https://api.openai.com/v1` | no | provider or local OpenAI-compatible server | Also how Ollama is reached (`http://ollama:11434/v1`). |
+| `LLM_FABRIC_OPENAI_API_KEY` / `OPENAI_API_KEY` | secret | unset | when openai models enabled | secret store | OpenAI adapter only. |
+| `LLM_FABRIC_OPENAI_BASE_URL` | URL | `https://api.openai.com/v1` | no | OpenAI or a generic compatible proxy | Not required for Ollama/vLLM named providers. |
+| `LLM_FABRIC_OLLAMA_BASE_URL` | URL | `http://127.0.0.1:11434/v1` | no | local daemon or Compose service | Ollama OpenAI-compatible root. No OpenAI key required. |
+| `LLM_FABRIC_OLLAMA_API_KEY` | secret | unset | no | only if the daemon is locked | Optional bearer for Ollama. |
+| `LLM_FABRIC_VLLM_BASE_URL` | URL | `http://127.0.0.1:8000/v1` | no | the vLLM pool URL | vLLM OpenAI-compatible root. No OpenAI key required. |
+| `LLM_FABRIC_VLLM_API_KEY` | secret | unset | no | if vLLM `--api-key` is set | Optional bearer for vLLM. |
+| `LLM_FABRIC_PROVIDER_BASE_URLS` | JSON object | `{}` | no | per-pool URLs | e.g. `{"vllm-coding":"http://vllm-coding:8000/v1"}`. |
 | `LLM_FABRIC_ANTHROPIC_API_KEY` / `ANTHROPIC_API_KEY` | secret | unset | when anthropic models enabled | secret store | Anthropic adapter. |
 | `LLM_FABRIC_ANTHROPIC_BASE_URL` | URL | `https://api.anthropic.com/v1` | no | leave unless proxying | Anthropic API root. |
 | `LLM_FABRIC_MAX_INPUT_TOKENS` | int \| unset | unset (prod 32,000) | no | finite | Prompt token ceiling. |
@@ -133,6 +141,7 @@ method. See [`docs/INTENTOS.md`](INTENTOS.md).
 | `LLM_FABRIC_INTENT_SHADOW` | bool | `false` | optional observation | Classify on the serving path but **do not change the route**. Headers `x-fabric-intent-shadow-*`. Ignored when classification is on. |
 | `LLM_FABRIC_INTENT_EMBEDDER` | `hashing` \| `minilm` \| `local` / `bge-small` | `hashing` | `hashing` | L3 embedder. MiniLM needs `uv sync --extra embed`. |
 | `LLM_FABRIC_INTENT_L4_RERANK` | bool | `false` | `false` | Local description reranker as L4. L5 stays off in code. |
+| `LLM_FABRIC_ROUTING_QUALITY_SHADOW` | bool | `false` | `false` until measured | Rank the same eligible set under `quality_first` and record the comparison. Does **not** change the served route. |
 
 ## Observability
 

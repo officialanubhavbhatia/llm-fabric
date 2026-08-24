@@ -164,9 +164,8 @@ def rescore(classification: IntentClassification, **changes: object) -> IntentCl
 
 
 def _cache_source(layer: ClassifierLayer, cache_hit: bool) -> str | None:
-    if layer is ClassifierLayer.L0_EXACT_CACHE or (
-        cache_hit and layer is ClassifierLayer.L0_EXACT_CACHE
-    ):
+    del cache_hit
+    if layer is ClassifierLayer.L0_EXACT_CACHE:
         return "l0_exact"
     if layer is ClassifierLayer.L1_SEMANTIC_CACHE:
         return "l1_semantic"

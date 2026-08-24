@@ -1,0 +1,25 @@
+{
+  "vllm-live": {
+    "state": "registered",
+    "probe": null,
+    "evaluation": null,
+    "shadow": null,
+    "approval": "datasets/eval/models/model-promotion-2026.08.24.json",
+    "live_validation": "datasets/eval/models/vllm-live-promotion-2026.08.24.json",
+    "http_validation": "datasets/eval/models/http-vllm-promotion-2026.08.24.json",
+    "routing_validation": "datasets/eval/models/routing-live-promotion-2026.08.24.json",
+    "note": "Unavailable; not approved."
+  },
+  "mock-small": {
+    "state": "declared approved for deterministic development",
+    "probe": "datasets/eval/models/mock-small-2026.08.24.json",
+    "evaluation": "datasets/eval/models/model-eval-2026.08.24.json",
+    "shadow": "datasets/eval/models/routing-shadow-2026.08.24.json",
+    "approval": null,
+    "note": "No evidence-bound production approval record."
+  },
+  "_phase_artifacts": {
+    "shadow_simulation": "datasets/eval/models/model-shadow-promotion-2026.08.24.json",
+    "routing_simulation": "datasets/eval/models/routing-live-promotion-2026.08.24.json"
+  }
+}

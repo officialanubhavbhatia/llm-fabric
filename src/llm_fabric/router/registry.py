@@ -29,7 +29,7 @@ Two kinds of entry exist:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
@@ -41,6 +41,7 @@ from llm_fabric.contract.openai import ModelCard
 from llm_fabric.errors import ConfigurationError, ModelNotFoundError
 from llm_fabric.router.capabilities import CapabilityVector
 from llm_fabric.router.grades import Grade
+from llm_fabric.router.tiers import ServiceTier, parse_service_tier
 
 
 class Locality(StrEnum):
@@ -60,6 +61,52 @@ class Locality(StrEnum):
     def keeps_data_in_house(self) -> bool:
         """True when no third party sees the prompt."""
         return self in (Locality.LOCAL, Locality.PRIVATE)
+
+
+class ApiCostKnowledge(StrEnum):
+    """Whether API token prices are known. `0.0` is not the same as omitted.
+
+    `unknown` — the operator did not fill prices in. Missing features are not
+    imputed, so this deployment is excluded from cost ranking rather than treated
+    as free.
+    `known_zero` — the operator declared a $0 API price (typical for self-hosted
+    Ollama/vLLM). That is a real value and *is* used for cost ranking.
+    `known_nonzero` — at least one side of the API price is positive.
+    """
+
+    UNKNOWN = "unknown"
+    KNOWN_ZERO = "known_zero"
+    KNOWN_NONZERO = "known_nonzero"
+
+
+class ResourceCostClass(StrEnum):
+    """How to interpret a deployment's cost, when the operator has said so.
+
+    A local model can have API token price `0` and still consume GPU/CPU. This
+    field records that distinction; it is never invented from the provider name.
+    """
+
+    UNKNOWN = "unknown"
+    RESOURCE_COST_KNOWN = "resource_cost_known"
+    RESOURCE_COST_UNKNOWN = "resource_cost_unknown"
+    MARGINAL_API_PRICE = "marginal_api_price"
+    ESTIMATED_GPU_COST = "estimated_gpu_cost"
+
+
+class PromotionState(StrEnum):
+    """Operator-controlled lifecycle. A high declared tier is not an approval."""
+
+    REGISTERED = "registered"
+    PROBED = "probed"
+    EVALUATED = "evaluated"
+    SHADOW = "shadow"
+    APPROVED = "approved"
+    DISABLED = "disabled"
+
+
+#: Provider names the factory can construct. Pool ids `ollama-*` / `vllm-*` are
+#: accepted in addition to this closed set.
+_KNOWN_PROVIDERS = frozenset({"mock", "openai", "anthropic", "ollama", "vllm", "openai-compatible"})
 
 
 #: Quality dimensions the constitution names. Each is optional on a deployment:
@@ -223,9 +270,14 @@ class ModelSpec:
     context_window: int | None = None
     recommended_context_tokens: int | None = None
 
-    input_cost_per_mtok: float = 0.0
-    output_cost_per_mtok: float = 0.0
+    #: USD per million tokens. `None` means unknown (not filled in). `0.0` means
+    #: the operator declared a known-zero API price. Both sides must be known
+    #: before the deployment participates in cost ranking — a missing side is
+    #: not imputed as zero.
+    input_cost_per_mtok: float | None = None
+    output_cost_per_mtok: float | None = None
     estimated_compute_cost_per_hour_usd: float | None = None
+    cost_class: ResourceCostClass | None = None
 
     capabilities: CapabilityVector = field(default_factory=CapabilityVector)
     quality: QualityScores = field(default_factory=QualityScores)
@@ -234,6 +286,20 @@ class ModelSpec:
 
     enabled: bool = True
     fallbacks: tuple[str, ...] = ()
+
+    huggingface_id: str | None = None
+    revision: str | None = None
+    digest: str | None = None
+    license: str | None = None
+    commercial_use: bool | None = None
+    pool: str | None = None
+    trust_remote_code: bool = False
+    tiers: tuple[ServiceTier, ...] = ()
+    lifecycle: PromotionState = PromotionState.REGISTERED
+    approved_tiers: tuple[ServiceTier, ...] = ()
+    approved_workloads: Mapping[str, tuple[ServiceTier, ...]] = field(default_factory=dict)
+    promotion_identity_match: bool = True
+    promotion_evidence_bound: bool = False
 
     def __post_init__(self) -> None:
         if not self.provider_model:
@@ -252,6 +318,18 @@ class ModelSpec:
             )
         if self.context_window is not None and self.context_window <= 0:
             raise ConfigurationError(f"model '{self.id}' declares a non-positive context window")
+        if self.trust_remote_code:
+            raise ConfigurationError(
+                f"model '{self.id}' sets trust_remote_code: the fabric refuses arbitrary "
+                "remote code execution. Pin a revision and serve through Ollama or vLLM "
+                "without enabling untrusted remote code."
+            )
+        if self.input_cost_per_mtok is not None and self.input_cost_per_mtok < 0:
+            raise ConfigurationError(f"model '{self.id}' has a negative input_cost_per_mtok")
+        if self.output_cost_per_mtok is not None and self.output_cost_per_mtok < 0:
+            raise ConfigurationError(f"model '{self.id}' has a negative output_cost_per_mtok")
+        if not self.tiers and self.grade is not None:
+            object.__setattr__(self, "tiers", (ServiceTier.from_grade(self.grade),))
         if (
             self.recommended_context_tokens is not None
             and self.context_window is not None
@@ -281,25 +359,52 @@ class ModelSpec:
 
     # -- cost ----------------------------------------------------------------
 
-    def cost_usd(self, prompt_tokens: int, completion_tokens: int) -> float:
-        """Cost of a call at registry prices. Zero when the model is unpriced."""
+    @property
+    def has_known_api_price(self) -> bool:
+        """True when both token prices were declared, including known-zero."""
+        return self.input_cost_per_mtok is not None and self.output_cost_per_mtok is not None
+
+    @property
+    def api_cost_knowledge(self) -> ApiCostKnowledge:
+        if not self.has_known_api_price:
+            return ApiCostKnowledge.UNKNOWN
+        if (self.input_cost_per_mtok or 0.0) == 0.0 and (self.output_cost_per_mtok or 0.0) == 0.0:
+            return ApiCostKnowledge.KNOWN_ZERO
+        return ApiCostKnowledge.KNOWN_NONZERO
+
+    def cost_usd(self, prompt_tokens: int, completion_tokens: int) -> float | None:
+        """Cost of a call at registry API prices.
+
+        Returns `None` when either price is unknown. Returns `0.0` for a
+        known-zero API price. Absence is never coerced into a dollar figure.
+        """
+        if not self.has_known_api_price:
+            return None
+        assert self.input_cost_per_mtok is not None
+        assert self.output_cost_per_mtok is not None
         return (
             prompt_tokens * self.input_cost_per_mtok + completion_tokens * self.output_cost_per_mtok
         ) / 1_000_000
 
     @property
-    def blended_cost_per_mtok(self) -> float:
-        """A single comparable price, weighting output more heavily than input.
+    def blended_cost_per_mtok(self) -> float | None:
+        """A single comparable API price, weighting output more heavily than input.
 
-        Used to order candidates by cost. The 1:3 weighting reflects that
-        generation is the priced-heavier side for most providers; it is a
-        heuristic for ranking, not a prediction of spend.
+        Used to order candidates that have comparable known cost semantics. The
+        1:3 weighting reflects that generation is the priced-heavier side for
+        most providers; it is a heuristic for ranking, not a prediction of spend.
+        `None` when either side is unknown.
         """
+        if not self.has_known_api_price:
+            return None
+        assert self.input_cost_per_mtok is not None
+        assert self.output_cost_per_mtok is not None
         return (self.input_cost_per_mtok + 3 * self.output_cost_per_mtok) / 4
 
     @property
     def is_priced(self) -> bool:
-        return self.input_cost_per_mtok > 0 or self.output_cost_per_mtok > 0
+        """True when API prices are known, including a declared $0."""
+        return self.has_known_api_price
 
     # -- placement -----------------------------------------------------------
 
@@ -310,6 +415,33 @@ class ModelSpec:
     @property
     def keeps_data_in_house(self) -> bool:
         return self.placement.locality.keeps_data_in_house
+
+    @property
+    def public_tier(self) -> ServiceTier | None:
+        """The operator-facing tier label for this deployment, if any."""
+        if self.tiers:
+            return max(self.tiers, key=lambda tier: tier.ordinal)
+        if self.grade is not None:
+            return ServiceTier.from_grade(self.grade)
+        return None
+
+    def serves_tier(self, tier: ServiceTier) -> bool:
+        """True when this deployment is declared eligible for the public tier."""
+        if self.tiers and tier in self.tiers:
+            return True
+        if self.grade is None:
+            return False
+        return ServiceTier.from_grade(self.grade) is tier or (
+            tier is ServiceTier.L30 and self.grade.ordinal == 29
+        )
+
+    def serves_approved_tier(self, tier: ServiceTier) -> bool:
+        """Measured approval, not declared eligibility."""
+        if not self.approved_tiers:
+            return False
+        if tier is ServiceTier.L30:
+            return ServiceTier.L29 in self.approved_tiers or ServiceTier.L30 in self.approved_tiers
+        return tier in self.approved_tiers
 
     def to_card(self) -> ModelCard:
         return ModelCard(id=self.id, owned_by=self.provider, context_window=self.context_window)
@@ -329,6 +461,8 @@ class ModelSpec:
             "cost": {
                 "input_cost_per_mtok": self.input_cost_per_mtok,
                 "output_cost_per_mtok": self.output_cost_per_mtok,
+                "api_cost_knowledge": self.api_cost_knowledge.value,
+                "cost_class": self.cost_class.value if self.cost_class else None,
                 "estimated_compute_cost_per_hour_usd": (self.estimated_compute_cost_per_hour_usd),
             },
             "capabilities": self.capabilities.as_dict(),
@@ -336,6 +470,24 @@ class ModelSpec:
             "performance": self.performance.as_dict(),
             "placement": self.placement.as_dict(),
             "fallbacks": list(self.fallbacks),
+            "identity": {
+                "huggingface_id": self.huggingface_id,
+                "revision": self.revision,
+                "digest": self.digest,
+                "license": self.license,
+                "commercial_use": self.commercial_use,
+                "pool": self.pool,
+            },
+            "tiers": [tier.value for tier in self.tiers],
+            "approved_tiers": [tier.value for tier in self.approved_tiers],
+            "approved_workloads": {
+                name: [tier.value for tier in tiers]
+                for name, tiers in self.approved_workloads.items()
+            },
+            "lifecycle": self.lifecycle.value,
+            "promotion_identity_match": self.promotion_identity_match,
+            "promotion_evidence_bound": self.promotion_evidence_bound,
+            "trust_remote_code": self.trust_remote_code,
         }
 
 
@@ -348,12 +500,56 @@ class Alias:
     minimum_grade: Grade | None = None
 
 
+def _valid_provider(name: str) -> bool:
+    """True when `provider` can name an adapter or a factory override.
+
+    Known adapters plus `ollama-*` / `vllm-*` pools are always accepted. Other
+    lowercase identifiers are accepted so tests can inject a provider (for
+    example `failing`) and so a new pool name is not a code change. URLs and
+    empty strings are refused here; they are not provider names.
+    """
+    if not name or "://" in name or "/" in name or " " in name:
+        return False
+    if name in _KNOWN_PROVIDERS or name.startswith("ollama-") or name.startswith("vllm-"):
+        return True
+    token = name.replace("_", "").replace("-", "").replace(".", "")
+    return bool(token) and token.isalnum() and name[0].isalpha()
+
+
 def _as_tuple(value: Any) -> tuple[str, ...]:
     if not value:
         return ()
     if isinstance(value, str):
         return (value,)
     return tuple(str(item) for item in value)
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    return str(value)
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes"}:
+        return True
+    if text in {"false", "0", "no"}:
+        return False
+    raise ConfigurationError(f"expected a boolean, got {value!r}")
+
+
+def _tiers_from(entry: dict[str, Any]) -> tuple[ServiceTier, ...]:
+    raw = entry.get("tiers")
+    if not raw:
+        return ()
+    if isinstance(raw, str):
+        raw = [raw]
+    return tuple(ServiceTier.parse(str(item)) for item in raw)
 
 
 def _as_float(value: Any, label: str) -> float | None:
@@ -431,15 +627,62 @@ def _placement_from(entry: dict[str, Any]) -> Placement:
     )
 
 
+def _cost_class_from(entry: dict[str, Any]) -> ResourceCostClass | None:
+    raw = entry.get("cost_class")
+    if raw is None or raw == "":
+        return None
+    try:
+        return ResourceCostClass(str(raw).strip().lower())
+    except ValueError:
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' declares unknown cost_class {raw!r} "
+            f"(available: {[member.value for member in ResourceCostClass]})"
+        ) from None
+
+
+def _lifecycle_from(entry: dict[str, Any]) -> PromotionState:
+    raw = entry.get("lifecycle") or entry.get("promotion_state")
+    if raw is None or raw == "":
+        return PromotionState.REGISTERED
+    try:
+        return PromotionState(str(raw).strip().lower())
+    except ValueError:
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' declares unknown lifecycle {raw!r} "
+            f"(available: {[member.value for member in PromotionState]})"
+        ) from None
+
+
+def _capabilities_from(entry: dict[str, Any]) -> CapabilityVector:
+    raw = entry.get("capabilities")
+    if raw is None:
+        return CapabilityVector()
+    if isinstance(raw, dict):
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' capabilities must be a list or string, not a mapping"
+        )
+    if isinstance(raw, (int, float, bool)):
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' capabilities must be a list or string, got {raw!r}"
+        )
+    return CapabilityVector.from_config(raw)
+
+
 def _spec_from(entry: dict[str, Any]) -> ModelSpec:
     missing = {"id", "provider"} - entry.keys()
     if missing:
         raise ConfigurationError(f"registry model missing required field(s): {sorted(missing)}")
 
     context_window = entry.get("context_window", entry.get("max_context_tokens"))
+    provider = str(entry["provider"])
+    if not _valid_provider(provider):
+        raise ConfigurationError(
+            f"model '{entry.get('id')}' names unknown provider '{provider}' "
+            f"(available: {sorted(_KNOWN_PROVIDERS)} plus ollama-* / vllm-* pools)"
+        )
     return ModelSpec(
         id=str(entry["id"]),
-        provider=str(entry["provider"]),
+        provider=provider,
         provider_model=str(entry.get("provider_model", entry["id"])),
         deployment_id=str(entry.get("deployment_id", "") or ""),
         grade=Grade.parse(str(entry["grade"])) if entry.get("grade") else None,
@@ -449,22 +692,28 @@ def _spec_from(entry: dict[str, Any]) -> ModelSpec:
             if entry.get("recommended_context_tokens")
             else None
         ),
-        input_cost_per_mtok=_as_float(entry.get("input_cost_per_mtok", 0.0), "input_cost_per_mtok")
-        or 0.0,
-        output_cost_per_mtok=_as_float(
-            entry.get("output_cost_per_mtok", 0.0), "output_cost_per_mtok"
-        )
-        or 0.0,
+        input_cost_per_mtok=_as_float(entry.get("input_cost_per_mtok"), "input_cost_per_mtok"),
+        output_cost_per_mtok=_as_float(entry.get("output_cost_per_mtok"), "output_cost_per_mtok"),
         estimated_compute_cost_per_hour_usd=_as_float(
             entry.get("estimated_compute_cost_per_hour_usd"),
             "estimated_compute_cost_per_hour_usd",
         ),
-        capabilities=CapabilityVector.from_config(entry.get("capabilities")),
+        cost_class=_cost_class_from(entry),
+        capabilities=_capabilities_from(entry),
         quality=_quality_from(entry),
         performance=_performance_from(entry),
         placement=_placement_from(entry),
         enabled=bool(entry.get("enabled", True)),
         fallbacks=_as_tuple(entry.get("fallbacks")),
+        huggingface_id=_optional_str(entry.get("huggingface_id") or entry.get("hf_id")),
+        revision=_optional_str(entry.get("revision")),
+        digest=_optional_str(entry.get("digest")),
+        license=_optional_str(entry.get("license")),
+        commercial_use=_optional_bool(entry.get("commercial_use")),
+        pool=_optional_str(entry.get("pool")),
+        trust_remote_code=bool(entry.get("trust_remote_code", False)),
+        tiers=_tiers_from(entry),
+        lifecycle=_lifecycle_from(entry),
     )
 
 
@@ -567,8 +816,17 @@ class ModelRegistry:
     def is_alias(self, model_id: str) -> bool:
         return model_id in self._aliases
 
+    def is_model(self, model_id: str) -> bool:
+        return model_id in self._models
+
     def known(self, model_id: str) -> bool:
-        return model_id in self._models or model_id in self._aliases
+        if model_id in self._models or model_id in self._aliases:
+            return True
+        tier = parse_service_tier(model_id)
+        return tier is not None and bool(self.models_serving_tier(tier))
+
+    def models_serving_tier(self, tier: ServiceTier) -> list[ModelSpec]:
+        return [spec for spec in self.enabled_models() if spec.serves_tier(tier)]
 
     def enabled_models(self) -> list[ModelSpec]:
         return [spec for spec in self._models.values() if spec.enabled]

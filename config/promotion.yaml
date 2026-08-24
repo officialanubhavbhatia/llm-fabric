@@ -1,0 +1,30 @@
+# Model promotion policy. Configuration, not code.
+#
+# Declared tiers in config/models.yaml are eligibility intent.
+# Measured artifacts earn probed / evaluated / shadow / approved.
+# This file does not invent universal quality thresholds.
+#
+# YAML `lifecycle: approved` on mock fixtures is an operator attestation for
+# `make dev`. CLI promotion to approved still requires probe (and evaluation
+# when require_evaluation is true). No post-hoc gate moving.
+
+promotion:
+  version: "2026.08.24"
+  auto_requires_approved:
+    production: true
+    development: false
+    test: false
+  pin_requires_approved:
+    production: true
+    development: false
+    test: false
+  commercial_use_required: false
+  bind_identity: true
+  require_probe: true
+  require_evaluation: true
+  require_shadow_artifact: true
+  policies:
+    default:
+      required_probe_capabilities: [chat]
+    coding:
+      required_probe_capabilities: [chat, streaming]

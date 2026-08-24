@@ -18,9 +18,21 @@ from llm_fabric.config import Settings
 from llm_fabric.gateway.app import create_app
 from llm_fabric.identity.dev import DevIdentityProvider
 from llm_fabric.observability.metering import InMemoryMeter
-from llm_fabric.router.plan import TenantRoutingPolicies, TenantRoutingPolicy
+from llm_fabric.router.grades import Grade
+from llm_fabric.router.plan import (
+    ExclusionRule,
+    RoutePlanner,
+    RouteRequest,
+    TenantRoutingPolicies,
+    TenantRoutingPolicy,
+)
 from llm_fabric.router.policy import RoutePolicy
-from llm_fabric.router.registry import Locality, ModelRegistry
+from llm_fabric.router.registry import (
+    Locality,
+    ModelRegistry,
+    ModelSpec,
+    PromotionState,
+)
 from llm_fabric.serving.adapters.mock import MockProvider
 
 pytestmark = pytest.mark.isolation
@@ -161,6 +173,92 @@ def test_a_denied_model_cannot_be_requested_directly(
     denials = [item for item in body["excluded"] if item["rule"] == "denied_by_tenant_policy"]
     assert [item["model_id"] for item in denials] == ["premium"]
     assert denials[0]["detail"] == "on this tenant's deny list"
+
+
+def test_requesting_l30_cannot_raise_a_tenant_ceiling(
+    issuer: DevIdentityProvider,
+) -> None:
+    registry = ModelRegistry.from_mapping(
+        {
+            "models": [
+                {
+                    "id": "mid",
+                    "provider": "mock",
+                    "grade": "L8",
+                    "capabilities": ["chat"],
+                    "lifecycle": "approved",
+                },
+                {
+                    "id": "top",
+                    "provider": "mock",
+                    "grade": "L30",
+                    "capabilities": ["chat"],
+                    "lifecycle": "approved",
+                },
+            ]
+        }
+    )
+    policies = TenantRoutingPolicies(
+        [TenantRoutingPolicy(tenant_id=ACME, maximum_grade=Grade.parse("L10"))]
+    )
+    acme = issuer.issue_token(tenant_id=ACME, user_id="alice")
+    with _client(registry, policies) as client:
+        body = _preview(client, acme, model="L30", maximum_grade="L30")
+    assert body["selected"] is None or (
+        body["selected"]["grade"] in {"Grade08", "Grade10", "L8", "L10"}
+    )
+    assert any(item["rule"] == "grade_above_maximum" for item in body["excluded"])
+
+
+def test_explicit_unapproved_model_is_not_production_usable() -> None:
+    registry = ModelRegistry(
+        [
+            ModelSpec(
+                id="candidate",
+                provider="mock",
+                grade=Grade.GRADE20,
+                lifecycle=PromotionState.EVALUATED,
+            )
+        ]
+    )
+    plan = RoutePlanner(
+        registry,
+        require_approved=True,
+        pin_requires_approved=True,
+    ).plan(RouteRequest("candidate"))
+    assert plan.selected is None
+    assert plan.excluded[-1].rule is ExclusionRule.NOT_APPROVED
+
+
+def test_chat_request_cannot_mutate_promotion_state(
+    issuer: DevIdentityProvider,
+) -> None:
+    registry = ModelRegistry.from_mapping(
+        {
+            "models": [
+                {
+                    "id": "candidate",
+                    "provider": "mock",
+                    "capabilities": ["chat"],
+                    "lifecycle": "registered",
+                }
+            ]
+        }
+    )
+    token = issuer.issue_token(tenant_id=ACME, user_id="alice")
+    with _client(registry) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            headers=_auth(token),
+            json={
+                "model": "candidate",
+                "messages": [{"role": "user", "content": "hello"}],
+                "promotion_state": "approved",
+                "approved_tiers": ["L30"],
+            },
+        )
+    assert response.status_code == 200
+    assert registry.get("candidate").lifecycle is PromotionState.REGISTERED
 
 
 def test_a_locality_restriction_holds_against_every_lever(

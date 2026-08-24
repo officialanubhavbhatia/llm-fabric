@@ -341,7 +341,7 @@ class DeterministicClassifier:
         # A matched child already inherited parent evidence. Leaving the parent
         # in the ranking splits that evidence and can drop a clear child below
         # the cascade threshold.
-        shadowed = set()
+        shadowed: set[str] = set()
         for intent_id in inherited:
             shadowed.update(taxonomy.ancestors(intent_id))
         return {

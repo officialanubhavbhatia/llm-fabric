@@ -1,0 +1,37 @@
+# Intent → capability → preferred-tier policy.
+#
+# This file does not enable IntentOS on the serving path. Classification stays
+# off unless LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED is set. Preview and
+# `llm-fabric route explain --intent ...` can look up these policies without
+# classifying live traffic.
+#
+# `default_tier` is documentation for operators. It is not a global minimum:
+# applying it as a floor would exclude the default mock-small (Grade02 / L2)
+# deployment and break `make dev`.
+#
+# L30 is a public label for exceptional escalation and maps onto Grade29.
+
+routing:
+  version: "2026.08.24"
+  default_tier: L6
+  max_tier: L30
+  escalation:
+    enabled: true
+    max_steps: 3
+  intent:
+    general_conversation:
+      tiers: [L2, L3, L5]
+    summarization:
+      tiers: [L6, L8]
+    data_analysis:
+      tiers: [L10, L12, L14]
+      capabilities: [reasoning]
+    coding:
+      tiers: [L8, L12, L16]
+      capabilities: [code]
+    coding.debug:
+      tiers: [L12, L14, L16]
+      capabilities: [code]
+    advanced_reasoning:
+      tiers: [L18, L20, L22]
+      capabilities: [reasoning]

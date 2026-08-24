@@ -1,0 +1,11 @@
+# Fabric model workloads. Independent of datasets/eval/intentos (frozen 98).
+{"id": "general-1", "category": "general_conversation", "input": "Say hello in one sentence.", "expected": null}
+{"id": "reason-1", "category": "reasoning", "input": "If all bloops are razzles and some razzles are zoots, can you conclude that some bloops are zoots? Answer yes, no, or unknown.", "expected": "unknown"}
+{"id": "math-1", "category": "math", "input": "Compute 17*19. Reply with the integer only.", "expected": "323"}
+{"id": "math-2", "category": "math", "input": "What is 100-37? Reply with the integer only.", "expected": "63"}
+{"id": "code-1", "category": "coding", "input": "In Python, what does len([1,2,3]) return? Reply with the integer only.", "expected": "3"}
+{"id": "code-2", "category": "coding", "input": "Evaluate bool([]) in Python. Reply True or False.", "expected": "False"}
+{"id": "summ-1", "category": "summarization", "input": "Summarize in five words: The cat sat on the mat and then slept.", "expected": "cat sat mat slept"}
+{"id": "extract-1", "category": "structured_extraction", "input": "Extract JSON with keys name and year from: Ada Lovelace, 1815.", "expected_object": {"name": "Ada Lovelace", "year": "1815"}}
+{"id": "data-1", "category": "data_analysis", "input": "The column totals are 4, 8 and 12. What is the mean? Reply with the number only.", "expected": "8"}
+{"id": "long-1", "category": "long_context", "input": "Ignore the padding. padding padding padding. The secret token is alpha-42. What is the secret token?", "expected": "alpha-42"}

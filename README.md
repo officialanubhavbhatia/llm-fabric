@@ -44,9 +44,9 @@ IntentOS is **one component**, not the product.
 | --- | --- |
 | Core LLM gateway (`/v1/chat/completions`, SSE) | Built. Internal-VPC production path exists. |
 | OpenAI-compatible contract | Built. Honoured vs inert fields in [`docs/CONTRACT.md`](docs/CONTRACT.md). |
-| Provider adapters | `mock`, `openai`, `anthropic`. Ollama via OpenAI adapter + `OPENAI_BASE_URL`. |
-| Model registry and aliases | Built (`config/models.yaml`). |
-| Policy-based model routing | Built (30 grades, seven policies, health, circuit breakers, fallback graph). |
+| Provider adapters | `mock`, `openai`, `anthropic`, plus OpenAI-compatible `ollama` / `vllm` (and `ollama-*` / `vllm-*` pool names). |
+| Model registry and aliases | Built (`config/models.yaml`, local overlay `config/models.local.yaml`). |
+| Policy-based model routing | Built (Grade00–Grade29, public tiers L0–L30, seven policies, health, circuit breakers, fallback graph, `config/routing.yaml`). |
 | Route preview | Built (`POST /v1/routes/preview`). No inference. |
 | Identity (OIDC, API keys, dev issuer) | Built. Production refuses to start without auth. |
 | Multi-tenancy and quotas | Built. Postgres RLS when Postgres is configured. Production quotas are finite. |
@@ -68,7 +68,7 @@ IntentOS is **one component**, not the product.
 | Agent orchestration | **Not built** |
 | Tool execution / MCP / A2A | **Not built** |
 | `/v1/embeddings`, RAG, vector DB, knowledge graph | **Not built** |
-| Native vLLM adapter | **Not built** |
+| Native vLLM Python engine / engine `/metrics` scrape | **Not built.** Chat can use vLLM through the OpenAI-compatible adapter. |
 
 ---
 
@@ -342,11 +342,71 @@ curl -si http://127.0.0.1:47317/v1/chat/completions \
 Look for `x-fabric-served-model` and `x-fabric-policy`. The mock provider
 returns text assembled from the request; it does not call a network LLM.
 
+Mock is the deterministic zero-dependency development path. For local
+real-model inference, pull a tag and use Ollama:
+
+```bash
+ollama serve
+ollama pull llama3.2
+make dev-ollama
+```
+
 OpenAPI: [http://127.0.0.1:47317/docs](http://127.0.0.1:47317/docs).
 
 Stop: `Ctrl-C` in the `make dev` terminal.
 
 IntentOS is not required for this path.
+
+### Local inference with Ollama
+
+Preferred local runtime when you want a real model. Mock remains the zero-dependency path above.
+
+1. Install [Ollama](https://ollama.com/) and start it (`ollama serve` if it is not already a service).
+2. Pull the tag named in [`config/models.local.yaml`](config/models.local.yaml) (replaceable; not hard-coded in application logic):
+
+```bash
+ollama pull llama3.2
+```
+
+3. Point the gateway at the local registry:
+
+```bash
+cp .env.example .env
+# optional: LLM_FABRIC_REGISTRY_PATH=config/models.local.yaml
+make dev-ollama
+```
+
+4. Chat and inspect routing:
+
+```bash
+curl -si http://127.0.0.1:47317/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+
+curl -s http://127.0.0.1:47317/v1/routes/preview \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Look for `x-fabric-served-model`, `x-fabric-provider`, and `x-fabric-selected-tier`.
+If Ollama is down, `local-small` should fail over to `mock-small` (declared fallback).
+
+Compose equivalent (Ollama sidecar + development gateway, no Postgres required):
+
+```bash
+docker compose -f deployments/docker/docker-compose.yml --profile local up --build
+```
+
+Still pull a model into that Ollama container before expecting a real completion.
+
+Dry-run without inference:
+
+```bash
+LLM_FABRIC_ENVIRONMENT=development llm-fabric route explain \
+  --model auto --prompt "Hello" --registry config/models.local.yaml
+```
+
+IntentOS is not required for this path either. Serving-path classification stays **OFF**.
 
 ### Docker Compose (production-like local stack)
 
@@ -368,9 +428,10 @@ curl -s http://127.0.0.1:47317/v1/chat/completions \
   -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Optional Ollama sidecar: `--profile inference` (image `ollama/ollama:0.3.14`).
-Point `LLM_FABRIC_OPENAI_BASE_URL` at that server and enable an OpenAI-shaped
-model in the registry. There is no native Ollama adapter.
+Optional Ollama sidecar: `--profile inference` (image `ollama/ollama:0.3.14`)
+on the production-like stack, or `--profile local` for a development gateway
+that uses `config/models.local.yaml` and `LLM_FABRIC_OLLAMA_BASE_URL=http://ollama:11434/v1`.
+See [Providers](docs/PROVIDERS.md).
 
 ### Native production-shaped process (no reload)
 
@@ -419,12 +480,17 @@ Full variable list: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 ### Start
 
 ```bash
-make dev                          # reload, development
+make dev                          # mock only — zero-dependency smoke path
+make dev-ollama                   # local real models via Ollama (config/models.local.yaml)
 # or
 make serve                        # production-shaped uvicorn
 # or Compose (Postgres, Redis, migrate Job, gateway):
 docker compose -f deployments/docker/docker-compose.yml up --build
 ```
+
+`make dev` stays the recommended first command. Mock is the deterministic
+zero-dependency development path. Ollama is the recommended local real-model
+inference path. Production open-source inference is external vLLM (see below).
 
 ### Verify
 
@@ -466,7 +532,8 @@ Do not run `alembic downgrade` or `DROP DATABASE` as a routine reset.
 | Bind | `127.0.0.1:47317` | `0.0.0.0:47317` behind a private LB |
 | Configuration | `.env` | Kubernetes Secret + ConfigMap |
 | Auth | Anonymous allowed if no identity source (`ALLOW_ANONYMOUS=true`) | Mandatory OIDC or API keys; anonymous/`dev` refused |
-| Provider credentials | Optional (mock enabled) | Secret; enable models in registry |
+| Provider credentials | Optional (mock enabled); Ollama via `make dev-ollama` | Secret; vLLM/OpenAI/Anthropic as registered |
+| Inference runtime | Ollama on the workstation, or mock | vLLM pools (OpenAI-compatible) and/or remote providers |
 | Postgres | Unset → in-memory | Required; DML role `fabric_app` |
 | Redis | Unset → per-process quotas/breakers | Required; shared across replicas |
 | Migrations | Optional | Helm pre-upgrade Job as table owner |
@@ -606,27 +673,192 @@ More examples: [`examples/python`](examples/python), [`examples/typescript`](exa
 
 ---
 
+## Model lifecycle
+
+A deployment is never production-trusted solely because it appears in
+`config/models.yaml`, declares capabilities, or names high tiers.
+
+```text
+registered → probed → evaluated → shadow → approved
+                                         ↘ disabled
+```
+
+- **registered** — registry identity and declared tier eligibility only.
+- **probed** — a versioned compatibility artifact proves the live endpoint and
+  required model capabilities.
+- **evaluated** — a versioned deterministic evaluation artifact exists for the
+  intended workload. General/reasoning remain unscored when no objective metric
+  exists.
+- **shadow** — the candidate can participate in route simulation. The default
+  does not invoke it and cannot change the served route.
+- **approved** — evidence, identity, explicit approved tiers, policy hash and
+  shadow artifact satisfy `config/promotion.yaml`. Approved means eligible, not
+  always selected.
+- **disabled** — ineligible for traffic; history is retained.
+
+Promotion state is stored in
+`datasets/eval/models/promotion-state.json`. Artifact references include
+SHA-256, Fabric commit/version metadata, deployment identity and promotion
+policy identity. A revision, digest, provider or provider-model mismatch
+fail-closes to `registered` with `artifact_revision_mismatch`.
+
+Declared `tiers` are eligibility intent. Evidence can approve a subset:
+
+```text
+declared tiers: L10, L11, L12, L13
+approved tiers: L10, L11
+coding approval: L10, L11
+```
+
+### Promotion workflow
+
+```bash
+# Inspect/list
+llm-fabric model list
+llm-fabric model status vllm-coding-qwen
+
+# Probe attaches a hashed artifact reference; lifecycle does not auto-advance
+llm-fabric model probe vllm-coding-qwen \
+  --output datasets/eval/models/model-probe-vllm-coding-qwen-2026.08.24.json
+llm-fabric model promote vllm-coding-qwen --to probed --dry-run
+llm-fabric model promote vllm-coding-qwen --to probed
+
+# Deterministic model evaluation, separate from IntentOS frozen 98
+llm-fabric model evaluate --only vllm-coding-qwen \
+  --output datasets/eval/models/model-eval-vllm-coding-qwen-2026.08.24.json
+llm-fabric model promote vllm-coding-qwen --to evaluated
+
+# Simulation only: candidate is not invoked
+LLM_FABRIC_ROUTING_QUALITY_SHADOW=true \
+  llm-fabric route explain --model auto --prompt "Fix this traceback" --json \
+  > datasets/eval/models/model-shadow-vllm-coding-qwen-2026.08.24.json
+llm-fabric model promote vllm-coding-qwen --to shadow \
+  --shadow-artifact datasets/eval/models/model-shadow-vllm-coding-qwen-2026.08.24.json
+
+# Approval requires explicit tiers; workload approvals must be subsets
+llm-fabric model promote vllm-coding-qwen --to approved \
+  --approved-tiers L10 L11 \
+  --approved-workload coding=L10,L11 \
+  --reason "coding-v1 evidence accepted"
+
+# Explain production filtering and inspect provider health
+llm-fabric route explain --model auto --prompt "Fix this traceback"
+curl -s http://127.0.0.1:47317/v1/routes/health
+make dashboard
+
+# Reversible rollback; public chat requests cannot perform this
+llm-fabric model promote vllm-coding-qwen --to disabled \
+  --reason "rollback after provider errors"
+```
+
+Normal transitions cannot skip stages. `--force` only overrides the transition
+graph, requires `--reason`, and does not bypass missing probe/evaluation/shadow
+evidence, identity mismatch, licensing policy, or explicit tier approval.
+
+### Three user journeys
+
+**A. Zero-dependency local**
+
+```bash
+make install
+make dev
+```
+
+This is deterministic mock-only development.
+
+**B. Local real model**
+
+```bash
+ollama serve
+ollama pull llama3.2
+make dev-ollama
+llm-fabric model probe local-small
+```
+
+Ollama owns model loading; Fabric owns routing, policy, fallback, evidence and
+telemetry.
+
+**C. Production open-source inference**
+
+First inspect the installed vLLM version and its own CLI help; flags vary by
+release:
+
+```bash
+vllm --version
+vllm serve --help
+vllm serve <pinned-model-or-local-path> --host 0.0.0.0 --port 8000
+export LLM_FABRIC_VLLM_BASE_URL=http://127.0.0.1:8000/v1
+```
+
+Register a pinned deployment, then run the probe → evaluate → shadow → approve
+workflow above. Start Fabric only after provider, registry, auth and production
+dependencies are configured:
+
+```bash
+python -m llm_fabric
+make test-vllm-live
+```
+
+The current Darwin arm64 environment did not have vLLM or an NVIDIA GPU, so
+these vLLM launch flags were not executed in this repository phase. Live tests
+remain optional and report SKIPPED rather than PASS.
+
+---
+
 ## Providers and models
 
 Adapters in `src/llm_fabric/serving/factory.py`: **`mock`**, **`openai`**,
-**`anthropic`**.
+**`anthropic`**, **`ollama`** / **`ollama-*`**, **`vllm`** / **`vllm-*`**,
+**`openai-compatible`**.
+
+Ollama and vLLM use the OpenAI chat-completions contract. The fabric does not
+embed those engines and does not scrape KV-cache or batching metrics.
+
+| Provider | Transport | Credentials | Local/Remote |
+| --- | --- | --- | --- |
+| mock | in-process | none | local |
+| OpenAI | native HTTP | required | remote |
+| Anthropic | native HTTP | required | remote |
+| Ollama | OpenAI-compatible | none by default | local |
+| vLLM | OpenAI-compatible | none by default | local/remote |
+| openai-compatible | OpenAI-compatible | optional | remote/local |
+
+LLM Fabric supports models through runtime compatibility rather than a fixed
+model whitelist. Models served by a compatible Ollama, vLLM, or
+OpenAI-compatible endpoint can be registered as deployments, provided their
+required capabilities are validated. This is **not** a claim that every
+open-source model works.
+
+`huggingface_id` on a registry row is **metadata**. The fabric does not download
+weights from Hugging Face. vLLM and Ollama own model loading. Fabric owns
+routing, registry, policy, fallback, and telemetry.
+
+Register and check a model without changing router code:
+
+```bash
+llm-fabric model validate config/models.local.yaml
+llm-fabric model probe local-small
+llm-fabric route explain --model auto --prompt "Fix this Python traceback"
+```
 
 | Provider | Streaming | Tools executed | Structured output validated | Embeddings HTTP |
 | --- | --- | --- | --- | --- |
 | mock | yes | no | no | no |
-| openai (incl. OpenAI-compatible: Ollama, proxies) | yes | no (`tools` ignored) | no | no |
+| openai | yes | no (`tools` ignored) | no | no |
+| ollama / vllm / openai-compatible | same contract; live GPU not in CI | no | no | no |
 | anthropic | yes | no | no | no |
 
-Registry: [`config/models.yaml`](config/models.yaml). Default tree enables only
-`mock-small` and `mock-large`. OpenAI/Anthropic entries are `enabled: false`
-until you set keys, fill **operator-supplied** USD/MTok prices, and enable them.
-A price of `0.0` means “not filled in”, not free — cost ranking is dropped for
-the whole decision if any candidate is unpriced.
+Registry: [`config/models.yaml`](config/models.yaml) (CI / mock default) and
+[`config/models.local.yaml`](config/models.local.yaml) (Ollama local). Default
+tree enables only `mock-small` and `mock-large`. OpenAI/Anthropic/Ollama/vLLM
+entries stay `enabled: false` in the default file until you opt in.
 
 **Credentials**
 
-- `LLM_FABRIC_OPENAI_API_KEY` or `OPENAI_API_KEY`
-- `LLM_FABRIC_OPENAI_BASE_URL` (default `https://api.openai.com/v1`)
+- `LLM_FABRIC_OPENAI_API_KEY` or `OPENAI_API_KEY` (OpenAI only)
+- `LLM_FABRIC_OLLAMA_BASE_URL` (default `http://127.0.0.1:11434/v1`) — no OpenAI key
+- `LLM_FABRIC_VLLM_BASE_URL` (default `http://127.0.0.1:8000/v1`) — no OpenAI key
+- `LLM_FABRIC_PROVIDER_BASE_URLS` JSON map for extra pools
 - `LLM_FABRIC_ANTHROPIC_API_KEY` or `ANTHROPIC_API_KEY`
 
 **Timeouts / retries.** Per-attempt `LLM_FABRIC_REQUEST_TIMEOUT_S` (60).
@@ -644,36 +876,101 @@ gateway.
 
 ## Model and provider routing
 
-Three different mechanisms. Do not conflate them.
+These layers stay distinct. Do not conflate them.
 
 ```text
-Authorization     →  identity + scopes + tenant (middleware)
-Intent classification →  optional label + capabilities (IntentOS)
-Model/provider routing →  planner + registry + health + fallback graph
+Authorization          →  identity + scopes + tenant (middleware)
+Intent classification  →  optional label + capabilities (IntentOS; serving path OFF)
+Capability planner     →  required capabilities from request, alias, and optional intent policy
+Service tier           →  L0–L30 (Grade00–Grade29; L30 maps to Grade29)
+Model selection        →  registry deployments that satisfy filters + score
+Provider selection     →  adapter named on the chosen deployment
 ```
+
+Full write-up: [`docs/ROUTING.md`](docs/ROUTING.md). Policy YAML:
+[`config/routing.yaml`](config/routing.yaml).
 
 **Planner** (`src/llm_fabric/router/plan.py`):
 
-1. Resolve alias or pin.
-2. Choose policy: request/alias → (only if serving-path classification is on)
-   intent-inferred policy → `LLM_FABRIC_DEFAULT_POLICY`.
-3. Filter by capabilities, locality (`local_only` / `private_only`), grade,
-   tenant allow-lists, open breakers.
-4. Score remaining candidates. Missing quality/latency/cost features are
-   **dropped for everyone**, not imputed.
-5. Attach a directed fallback graph (`src/llm_fabric/router/fallback.py`).
+1. Resolve alias, public tier (`L12`), or pin.
+2. Choose policy: tenant pin → request → alias → (only if serving-path
+   classification is on) intent-inferred policy → `LLM_FABRIC_DEFAULT_POLICY`.
+3. Filter by capabilities, locality, grade floor/ceiling, tenant allow-lists,
+   open breakers, context, budget, SLO.
+4. If `config/routing.yaml` names preferred tiers for an explicit `intent_id` or
+   a supplied classification, narrow **only when a match exists**.
+5. Score remaining candidates. Quality/latency missing for anyone are dropped
+   for everyone. Cost is ranked only among **known** API prices (`0.0` is
+   known-zero; omitted is unknown). See [`docs/COST-MODEL.md`](docs/COST-MODEL.md).
+6. Auto-selection prefers `lifecycle: approved` when any approved candidate
+   remains.
+7. Attach a directed fallback graph (`src/llm_fabric/router/fallback.py`).
 
 **Execution** (`src/llm_fabric/router/engine.py`): try the winner; on a retryable
-error, follow edges matching that **reason** (timeout vs context-too-large are
-different). Loops cannot re-visit a deployment. Depth and optional cost/latency
-budgets apply.
+error, follow edges matching that **reason**. Loops cannot re-visit a deployment.
+Depth and optional cost/latency budgets apply. Ordinary failures do not jump to
+L30.
 
-**Intent-based routing** is the planner consuming an `IntentClassification`.
-That happens only when `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true`. Default
-**false**. Shadow mode classifies and **does not** pass the label into the
-planner.
+**Intent-based routing** is the planner consuming an `IntentClassification` or an
+explicit preview/`route explain` `intent_id`. Serving-path classification happens
+only when `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=true`. Default **false**.
+Shadow mode classifies and **does not** pass the label into the planner.
+
+### Conceptual examples
+
+These illustrate the intended mapping. They are not traces from production
+traffic unless you generate them with `llm-fabric route explain` against your
+registry.
+
+```text
+"hello"
+  → general_conversation (if that intent is supplied)
+  → preferred L2–L5
+  → small local or mock deployment
+
+"explain this Python traceback"
+  → coding.debug
+  → preferred L12–L16
+  → a coding-capable pool, not necessarily the highest general tier
+
+"analyze this 200-page contract"
+  → long context + reasoning (when those capabilities are required)
+  → a long-context reasoning deployment, if one is registered
+```
+
+A specialist at a lower tier can beat a higher-tier general model when the
+intent policy prefers that specialist's tiers.
 
 Route preview returns the same decision object without calling a provider.
+
+```bash
+llm-fabric route explain --model auto --prompt "Hello"
+llm-fabric route explain --model auto --prompt "Hello" --json
+```
+
+### L0–L30 are service tiers, not model names
+
+L0–L30 are **logical service tiers**, not individual models and not a 31st
+constitutional grade.
+
+| Public label | Internal constitution |
+| --- | --- |
+| L0–L29 | Grade00–Grade29 |
+| L30 | maps to Grade29 |
+
+There is no Grade30. L30 exists so operators can request exceptional
+escalation without inventing a 31st grade.
+
+`model: "L12"` means: select an eligible enabled deployment capable of serving
+**L12** under the caller's policy ceiling. It does **not** mean "run a model
+named L12".
+
+### Tenant ceilings cannot be bypassed
+
+A tenant `maximum_grade = L10` cannot be raised by `model = L30`, a request
+`maximum_grade`, or a preferred-tier list. Classification is not authorization.
+A tier request, provider request, or model request is also not authorization.
+Tenant policy remains authoritative. This is covered by isolation tests.
 
 ---
 
@@ -831,8 +1128,11 @@ Trust boundaries:
 | Providers | Server-side keys. Never taken from the client body. |
 | Caches / DB / Redis | Tenant discriminators. Redis loss: quotas/revocation fail-closed policy — see [`docs/BACKUP_RECOVERY.md`](docs/BACKUP_RECOVERY.md). |
 | Model output | Deterministic output redact/block. Not a full safety model. |
-| IntentOS | Signal only. Shadow cannot change the route. |
+| IntentOS | Signal only. Shadow cannot change the route. Serving-path classification default **OFF**. |
 | Agents / MCP | Not present; no tool permission surface to confuse with classification. |
+| Request parameters | Cannot raise `maximum_grade`, provider allow-lists, or model permissions. |
+
+**Tier request ≠ authorization. Provider request ≠ authorization. Model request ≠ authorization.** Tenant policy is the ceiling.
 
 **Secrets.** Environment / Kubernetes Secret. Image does not bake keys
 (`deployments/docker/Dockerfile`). OTLP headers belong in a Secret.
@@ -884,7 +1184,7 @@ LLM_FABRIC_REDIS_URL=...
 | Logs | Structured stdout (`src/llm_fabric/observability/logging.py`) |
 | Metrics | `GET /metrics` (Prometheus). Labels are a **closed set** — no tenant, user, or request id |
 | Traces | OTLP HTTP if `LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT` is set; otherwise in-process |
-| Command Center | `GET /command-center` — local-pod diagnostic, **not** fleet history. Dashboard JSON is tenant-scoped unless the caller has `fabric:observe` or an operator role. `/metrics` is public. |
+| Command Center | `GET /command-center` — local-pod diagnostic, **not** fleet history. Views include L0–L30 histogram, model fleet (declared vs measured), promotion/evidence state, and routing edges. The promotion view labels non-approved rows **NOT PRODUCTION ELIGIBLE** and exposes identity, artifact references, approved tiers/workloads and audit history in JSON. IntentOS safety gates (HN 0.50 / required ≥ 0.58 / routing OFF) show first. Dashboard JSON is tenant-scoped unless the caller has `fabric:observe` or an operator role. `/metrics` is public. |
 | Usage | `GET /v1/usage` · [`docs/USAGE_METERING.md`](docs/USAGE_METERING.md) |
 | Langfuse | Optional; missing config is a no-op; never fails a request |
 
@@ -928,7 +1228,7 @@ flowchart TB
     PG[(PostgreSQL: ledger, tenants, RLS)]
     Prom[Prometheus]
     OTel[OTLP collector]
-    Models[OpenAI / Anthropic / OpenAI-compatible]
+    Models[vLLM pools / Ollama / OpenAI / Anthropic]
 
     LB --> API1
     LB --> API2
@@ -943,6 +1243,31 @@ flowchart TB
     API1 --> OTel
     API2 --> OTel
 ```
+
+### Production open-source inference (vLLM)
+
+The fabric treats vLLM as an OpenAI-compatible HTTP backend. It does not embed
+the vLLM engine. Confirm flags against the vLLM version you installed; the
+following is the usual shape, not a pinned CLI contract:
+
+```bash
+vllm serve <huggingface-or-local-model> --host 0.0.0.0 --port 8000
+```
+
+Then:
+
+```bash
+export LLM_FABRIC_VLLM_BASE_URL=http://127.0.0.1:8000/v1
+# Enable a `provider: vllm` row in the registry (see config/models.yaml examples).
+```
+
+Multiple pools use distinct provider names (`vllm-coding`, `vllm-reasoning`) and
+`LLM_FABRIC_PROVIDER_BASE_URLS`. See
+[`examples/config/vllm-pools.yaml`](examples/config/vllm-pools.yaml) and
+[`examples/helm/vllm-pools-values.yaml`](examples/helm/vllm-pools-values.yaml).
+Kubernetes layout stays: load balancer → Fabric replicas → vLLM GPU pools
+([`docs/TOPOLOGY.md`](docs/TOPOLOGY.md)). Helm chart:
+`deployments/helm/llm-fabric`. HPA stays off until you measure it.
 
 ### Docker image
 
@@ -1055,7 +1380,8 @@ piped stdin). That is why an earlier stdin-launched HTTP job was aborted.
 | Chat contract | `tests/contract/` |
 | Isolation | `make test-isolation` |
 | Chaos / degraded deps | `tests/chaos/`, `tests/system/` |
-| Routing eval | Fixture match (`route_match`) — **not** routing quality |
+| Routing eval | Fixture match plus [`docs/ROUTING-QUALITY.md`](docs/ROUTING-QUALITY.md) |
+| Model probe / eval | `llm-fabric model probe` / `llm-fabric eval models` — not IntentOS 98 |
 | IntentOS | Frozen 98 + gates in [`docs/INTENTOS_SUCCESS_CRITERIA.md`](docs/INTENTOS_SUCCESS_CRITERIA.md) |
 | Load | `llm-fabric-load` · [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) |
 | DeepEval / lm-eval | Optional extras; adapters report unavailable if missing |
@@ -1203,16 +1529,22 @@ inside a process; that is not a substitute for shipping a previous image.
 
 ## Adding a provider
 
-1. Implement `Provider` in `src/llm_fabric/serving/base.py` (`generate` + `stream`).
+Prefer an OpenAI-compatible URL and a new registry `provider:` name
+(`vllm-coding`) over a bespoke adapter. Dedicated adapters are for contracts
+that cannot be expressed safely that way.
+
+1. Implement `Provider` in `src/llm_fabric/serving/base.py` (`generate` + `stream`) if needed.
 2. Add the adapter under `src/llm_fabric/serving/adapters/`.
-3. Register construction in `src/llm_fabric/serving/factory.py` (`_KNOWN_PROVIDERS`).
-4. Credentials via `Settings` (prefixed env).
+3. Register construction in `src/llm_fabric/serving/factory.py`.
+4. Credentials via `Settings` (prefixed env). Ollama/vLLM must not require `OPENAI_API_KEY`.
 5. Map provider errors to `RetryableError` / terminal errors so fallback reasons work.
 6. Streaming must end with exactly one `StreamEnd`.
 7. Tools/structured output: only claim what you implement. Today the gateway ignores `tools`.
 8. Metering uses provider usage when `usage_reported_by_provider` is true.
-9. Tests in `tests/unit/test_adapters.py` (and contract tests if the HTTP shape changes).
-10. Document the registry row in `config/models.yaml` (disabled until priced).
+9. Tests in `tests/unit/test_adapters.py` / `tests/unit/test_factory.py`.
+10. Document the registry row in `config/models.yaml` (disabled until you opt in).
+
+See [`docs/PROVIDERS.md`](docs/PROVIDERS.md).
 
 ---
 
@@ -1278,11 +1610,13 @@ It is a proxy plus planner, fallback graph, identity, quotas, and observability.
 It is not an agent platform.
 
 **Which providers are supported?**
-`mock`, `openai` (any OpenAI-compatible HTTP API), `anthropic`.
+`mock`, `openai`, `anthropic`, `ollama` / `ollama-*`, `vllm` / `vllm-*`, and
+generic `openai-compatible`. See the compatibility table above.
 
 **Does it support local models?**
-Yes, if they speak OpenAI chat completions (e.g. Ollama through
-`LLM_FABRIC_OPENAI_BASE_URL`). There is no native vLLM adapter.
+Yes, through runtime compatibility: register an Ollama, vLLM, or other
+OpenAI-compatible deployment. The fabric does not embed those engines and does
+not download Hugging Face weights.
 
 **How does routing work?**
 Registry + alias policy + health + directed fallback. See
@@ -1328,7 +1662,12 @@ Yes, at the **internal single-VPC** tier described in
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Built vs not built (older Phase 12 paragraph is superseded by `PRODUCTION_READINESS.md` for the 2026-08-24 verdict) |
 | [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md) | Production GO / NO-GO |
 | [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) | Environment variables |
-| [`docs/CONTRACT.md`](docs/CONTRACT.md) | Honoured API fields |
+| [`docs/PROVIDERS.md`](docs/PROVIDERS.md) | Adapters and compatibility matrix |
+| [`docs/ROUTING.md`](docs/ROUTING.md) | L0–L30, planner, fallback |
+| [`docs/ROUTING-QUALITY.md`](docs/ROUTING-QUALITY.md) | Overrouting / underrouting |
+| [`docs/COST-MODEL.md`](docs/COST-MODEL.md) | Known-zero vs unknown prices |
+| [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) | Fabric + external vLLM pools |
+| [`docs/adr/0004-service-tiers.md`](docs/adr/0004-service-tiers.md) | L30 → Grade29 |
 | [`docs/USAGE_METERING.md`](docs/USAGE_METERING.md) | Usage ledger |
 | [`docs/AUTH_REVOCATION.md`](docs/AUTH_REVOCATION.md) | Token revocation |
 | [`docs/BACKUP_RECOVERY.md`](docs/BACKUP_RECOVERY.md) | Postgres / Redis recovery |

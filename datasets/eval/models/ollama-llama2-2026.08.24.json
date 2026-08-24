@@ -1,0 +1,56 @@
+{
+  "status": "ok",
+  "deployment": null,
+  "provider": "ollama",
+  "provider_endpoint_class": "openai-compatible",
+  "model": "llama2",
+  "model_id": "llama2",
+  "model_revision": null,
+  "model_digest": null,
+  "huggingface_id": null,
+  "probe_version": "model-probe-v1",
+  "timestamp": 1787594428.104616,
+  "reachable": true,
+  "capabilities": {
+    "chat": {
+      "supported": true
+    },
+    "connectivity": {
+      "supported": true
+    },
+    "streaming": {
+      "supported": true
+    },
+    "json": {
+      "supported": true
+    },
+    "tools": {
+      "supported": false,
+      "reason": "model_capability"
+    },
+    "reasoning": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    },
+    "coding": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    },
+    "summarization": {
+      "supported": null,
+      "reason": "not_objectively_probed"
+    }
+  },
+  "performance": {
+    "ttft_ms": 5457.787416991778,
+    "total_latency_ms": 2531.339,
+    "stream_total_ms": 6059.399,
+    "output_tokens_per_second": 0.395
+  },
+  "environment": {
+    "environment": "test",
+    "fabric_version": "0.1.0",
+    "commit": "0765a0781c2ba0e09b1beb92fed518c70e98303e",
+    "python": "3.12"
+  }
+}

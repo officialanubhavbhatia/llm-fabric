@@ -113,9 +113,9 @@ def ollama_unavailable() -> UnavailableEngine:
     return UnavailableEngine(
         "ollama",
         reason=(
-            "The Ollama adapter is not built. Only measurements Ollama actually "
-            "exposes would be shown; KV-cache statistics are not among them "
-            "and will never be synthesized."
+            "Chat completions can use the OpenAI-compatible Ollama adapter. "
+            "Engine telemetry (loaded models, KV cache) is not scraped and "
+            "is not synthesized."
         ),
         supported_when_present=OLLAMA_MEASUREMENTS,
     )
@@ -125,9 +125,9 @@ def vllm_unavailable() -> UnavailableEngine:
     return UnavailableEngine(
         "vllm",
         reason=(
-            "The vLLM adapter is not built. When it is enabled the Command "
-            "Center will consume the engine's /metrics endpoint rather than "
-            "invent values."
+            "Chat completions can use the OpenAI-compatible vLLM adapter. "
+            "vLLM /metrics (KV cache, running requests, prefix cache) is not "
+            "scraped and is not synthesized."
         ),
         supported_when_present=VLLM_MEASUREMENTS,
     )
