@@ -16,6 +16,7 @@ Detailed runbooks:
 | --- | --- | --- |
 | Docker Compose (`mock`) | yes | yes, local (2026-08-24) |
 | Docker Compose (`local` Ollama stack) | yes | stack-up yes; model pull is a separate operator step |
+| Docker Compose (`local` + Grade00–Grade29 tags) | yes | pull and chat-check are operator/live steps; not a quality ranking |
 | kind | yes | yes (`make k8s-local-test`, 2026-08-24) |
 | Azure AKS | yes (`deployments/helm/examples/aks-values.yaml`) | **no** |
 | AWS EKS | yes (`deployments/helm/examples/eks-values.yaml`) | **no** |

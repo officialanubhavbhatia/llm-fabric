@@ -79,6 +79,7 @@ def test_vllm_pool_example_values_exist() -> None:
         "eks-values.yaml",
         "gke-values.yaml",
         "vllm-provider-values.yaml",
+        "local-ollama-grades-values.yaml",
     ),
 )
 def test_portable_values_examples_render(name: str) -> None:
@@ -86,8 +87,13 @@ def test_portable_values_examples_render(name: str) -> None:
     if helm is None:
         pytest.skip("Helm CLI is validated in the dedicated CI job")
     values = Path("deployments/helm/examples") / name
+    command = [helm, "template", "llm-fabric", str(CHART), "-f", str(values)]
+    if name == "local-ollama-grades-values.yaml":
+        command.extend(
+            ["--set-file", "fabricConfig.models=config/models.ollama-grades.yaml"]
+        )
     result = subprocess.run(
-        [helm, "template", "llm-fabric", str(CHART), "-f", str(values)],
+        command,
         check=False,
         capture_output=True,
         text=True,
@@ -95,6 +101,10 @@ def test_portable_values_examples_render(name: str) -> None:
     assert result.returncode == 0, result.stderr
     assert "kind: Deployment" in result.stdout
     assert "image:" in result.stdout
+    if name == "local-ollama-grades-values.yaml":
+        assert "g00-smollm2-135m" in result.stdout
+        assert "g29-qwen3-1.7b" in result.stdout
+        assert "ollama/ollama:0.32.15" in result.stdout
 
 
 def test_replica_count_two_and_optional_controls_render() -> None:

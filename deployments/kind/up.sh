@@ -6,6 +6,7 @@ CLUSTER="${KIND_CLUSTER_NAME:-llm-fabric}"
 IMAGE="${LLM_FABRIC_IMAGE:-llm-fabric:dev}"
 NAMESPACE="${LLM_FABRIC_NAMESPACE:-llm-fabric}"
 VALUES="${LLM_FABRIC_HELM_VALUES:-$ROOT/deployments/helm/examples/local-values.yaml}"
+MODELS_FILE="${LLM_FABRIC_MODELS_FILE:-}"
 REVISION="$(git -C "$ROOT" rev-parse HEAD)"
 
 for command in docker kind kubectl helm; do
@@ -44,16 +45,22 @@ if [[ "$cluster_exists" == false ]]; then
 fi
 
 kind load docker-image "$IMAGE" --name "$CLUSTER"
-helm upgrade --install llm-fabric \
-  "$ROOT/deployments/helm/llm-fabric" \
-  --namespace "$NAMESPACE" \
-  --create-namespace \
-  -f "$VALUES" \
-  --set image.repository="${IMAGE%:*}" \
-  --set image.tag="${IMAGE##*:}" \
-  --set image.pullPolicy=Never \
-  --wait \
+helm_args=(
+  upgrade --install llm-fabric
+  "$ROOT/deployments/helm/llm-fabric"
+  --namespace "$NAMESPACE"
+  --create-namespace
+  -f "$VALUES"
+  --set image.repository="${IMAGE%:*}"
+  --set image.tag="${IMAGE##*:}"
+  --set image.pullPolicy=Never
+  --wait
   --timeout 180s
+)
+if [[ -n "$MODELS_FILE" ]]; then
+  helm_args+=(--set-file "fabricConfig.models=$MODELS_FILE")
+fi
+helm "${helm_args[@]}"
 
 kubectl --context "kind-$CLUSTER" \
   --namespace "$NAMESPACE" \

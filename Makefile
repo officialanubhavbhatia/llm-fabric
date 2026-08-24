@@ -3,7 +3,9 @@
 	dashboard benchmark bench-intent bench-intent-cache bench-load bench-load-target bench-load-all \
 	profile-request eval-gate eval-run heal-analyze bench-stages model-probe eval-models eval-routing \
 	test-vllm-live docker-build docker-up docker-test docker-down docker-ollama ollama-pull \
-	k8s-local-up k8s-local-test k8s-local-down k8s-local-ollama-up k8s-ollama-pull helm-check
+	ollama-pull-grades docker-desktop-ollama grade-chat-check \
+	k8s-local-up k8s-local-test k8s-local-down k8s-local-ollama-up k8s-local-ollama-grades-up \
+	k8s-ollama-pull k8s-ollama-pull-grades helm-check docker-desktop
 
 PYTHON_VERSION := 3.12
 UV := uv
@@ -51,6 +53,7 @@ docker-ollama: ## Start Fabric and Ollama as separate containers
 	docker compose -f deployments/docker/docker-compose.yml \
 		--profile local up --build --detach --wait
 	@echo "Pull a model with: make ollama-pull MODEL=llama3.2"
+	@echo "Or the Grade00–Grade29 ladder: make ollama-pull-grades"
 
 ollama-pull: ## Deliberately pull an Ollama model into its persistent volume
 	docker compose -f deployments/docker/docker-compose.yml \
@@ -58,15 +61,52 @@ ollama-pull: ## Deliberately pull an Ollama model into its persistent volume
 	docker compose -f deployments/docker/docker-compose.yml \
 		--profile local --profile tools run --rm ollama-pull $(or $(MODEL),llama3.2)
 
+ollama-pull-grades: ## Pull the 30 Grade00–Grade29 Ollama tags (operator download)
+	deployments/docker/pull-ollama-grades.sh
+
+docker-desktop-ollama: ## Docker Desktop: Fabric + Ollama grades registry + platform + Grafana
+	LLM_FABRIC_COMPOSE_REGISTRY=/app/config/models.ollama-grades.yaml \
+	docker compose -f deployments/docker/docker-compose.yml \
+		-f deployments/docker/docker-compose.desktop.yml \
+		--profile local --profile platform --profile observability \
+		up --build --detach --wait
+	@echo "Fabric:      http://127.0.0.1:47317"
+	@echo "Command Center: http://127.0.0.1:47317/command-center"
+	@echo "Ollama:      http://127.0.0.1:11434"
+	@echo "Prometheus:  http://127.0.0.1:9090"
+	@echo "Grafana:     http://127.0.0.1:3000  (admin / admin)"
+	@echo "Pull tags:   make ollama-pull-grades"
+
+grade-chat-check: ## 30-grade smoke plus 1000 short/medium/large chats (gateway must be up)
+	$(UV) run python deployments/docker/grade-chat-check.py \
+		--host 127.0.0.1 --port 47317 --requests $(or $(REQUESTS),1000) \
+		--model $(or $(CHAT_MODEL),g00-smollm2-135m) \
+		--output artifacts/ollama-grades/chat-check.json
+
 docker-down: ## Stop all local Compose profiles and retain model volumes
 	docker compose -f deployments/docker/docker-compose.yml \
+		-f deployments/docker/docker-compose.desktop.yml \
 		--profile mock --profile local --profile observability --profile platform down
+
+docker-desktop: ## Full Docker Desktop stack: mock Fabric, Postgres, Redis, Prometheus, Grafana
+	docker compose -f deployments/docker/docker-compose.yml \
+		-f deployments/docker/docker-compose.desktop.yml \
+		--profile mock --profile platform --profile observability \
+		up --build --detach --wait
+	@echo "Fabric:      http://127.0.0.1:47317"
+	@echo "Command Center: http://127.0.0.1:47317/command-center"
+	@echo "Prometheus:  http://127.0.0.1:9090"
+	@echo "Grafana:     http://127.0.0.1:3000  (admin / admin)"
 
 helm-check: ## Lint and render every portable Helm values example
 	helm lint deployments/helm/llm-fabric
 	@for values in deployments/helm/examples/*.yaml; do \
 		echo "rendering $$values"; \
-		helm template llm-fabric deployments/helm/llm-fabric -f "$$values" >/dev/null; \
+		extra=""; \
+		if [ "$$(basename $$values)" = "local-ollama-grades-values.yaml" ]; then \
+			extra="--set-file fabricConfig.models=config/models.ollama-grades.yaml"; \
+		fi; \
+		helm template llm-fabric deployments/helm/llm-fabric -f "$$values" $$extra >/dev/null; \
 	done
 
 k8s-local-up: ## Build, load, and deploy Fabric to local kind
@@ -82,8 +122,16 @@ k8s-local-ollama-up: ## Deploy Fabric plus separate Ollama workload to kind
 	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-ollama-values.yaml \
 		deployments/kind/up.sh
 
+k8s-local-ollama-grades-up: ## kind + Ollama using the Grade00–Grade29 registry
+	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-ollama-grades-values.yaml \
+	LLM_FABRIC_MODELS_FILE=config/models.ollama-grades.yaml \
+		deployments/kind/up.sh
+
 k8s-ollama-pull: ## Pull a model in the optional kind Ollama workload
 	MODEL=$(or $(MODEL),llama3.2) deployments/kind/ollama-pull.sh
+
+k8s-ollama-pull-grades: ## Pull every Grade00–Grade29 tag into kind Ollama
+	MODEL=all deployments/kind/ollama-pull.sh
 
 benchmark: bench-stages ## Alias for isolated in-process stage benches
 

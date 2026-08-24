@@ -197,7 +197,7 @@ ollama:
   enabled: false
   image:
     repository: ollama/ollama
-    tag: "0.3.14"
+    tag: "0.32.15"
     pullPolicy: IfNotPresent
   persistence:
     enabled: true

@@ -120,6 +120,34 @@ def test_local_registry_is_valid() -> None:
     assert registry.get("local-small").provider_model == "llama3.2"
 
 
+def test_ollama_grades_registry_covers_grade00_to_grade29() -> None:
+    from pathlib import Path
+
+    from llm_fabric.router.grades import GRADE_COUNT, Grade
+
+    registry = ModelRegistry.from_yaml(Path("config/models.ollama-grades.yaml"))
+    tags = [
+        line.split("#", 1)[0].strip()
+        for line in Path("config/ollama-grade-tags.txt").read_text(encoding="utf-8").splitlines()
+        if line.split("#", 1)[0].strip()
+    ]
+    ollama = [spec for spec in registry.enabled_models() if spec.provider == "ollama"]
+    assert len(ollama) == GRADE_COUNT == 30
+    assert len(tags) == GRADE_COUNT
+    assert {spec.provider_model for spec in ollama} == set(tags)
+    grades = {spec.grade for spec in ollama}
+    assert grades == {Grade.from_index(index) for index in range(GRADE_COUNT)}
+    assert registry.is_alias("auto")
+    assert registry.is_alias("auto-coding")
+    assert registry.is_alias("auto-reasoning")
+    assert registry.is_alias("auto-agent")
+    for spec in ollama:
+        assert spec.quality.reasoning is None
+        assert spec.quality.coding is None
+        assert spec.quality.agent is None
+        assert spec.lifecycle.value == "approved"
+
+
 def test_identity_metadata_round_trips() -> None:
     registry = ModelRegistry.from_mapping(
         {

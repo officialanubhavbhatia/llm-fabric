@@ -1,0 +1,638 @@
+# Local Ollama ladder: Grade00–Grade29 (public L0–L29; L30 aliases Grade29).
+#
+# Tags are official Ollama-library names. Default pulls are quantized GGUF
+# (typically Q4_K_M). The fabric does not download weights; `ollama pull` is
+# an operator step (make ollama-pull-grades / k8s-ollama-pull-grades).
+#
+# This is NOT a quality ranking. Families were chosen so coding (coder /
+# starcoder / granite-code / codegemma), reasoning (deepseek-r1), and
+# tool-calling instruct models can be declared as capabilities. Quality and
+# performance scores are omitted because this checkout has not measured them.
+# `lifecycle: approved` here is local-development attestation, the same
+# pattern as config/models.local.yaml — not production promotion evidence.
+#
+# Thirty tags on disk are not thirty models in VRAM. Ollama loads on demand.
+# Docker Desktop and kind cannot hold the 7B–9B class concurrently.
+
+models:
+  - id: mock-small
+    provider: mock
+    provider_model: mock-small
+    grade: Grade02
+    context_window: 8192
+    input_cost_per_mtok: 0.05
+    output_cost_per_mtok: 0.15
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    enabled: true
+    lifecycle: approved
+
+  - id: g00-smollm2-135m
+    provider: ollama
+    provider_model: smollm2:135m
+    grade: Grade00
+    tiers: [L0]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [mock-small]
+
+  - id: g01-smollm2-360m
+    provider: ollama
+    provider_model: smollm2:360m
+    grade: Grade01
+    tiers: [L1]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g02-smollm-135m
+    provider: ollama
+    provider_model: smollm:135m
+    grade: Grade02
+    tiers: [L2]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g03-tinyllama
+    provider: ollama
+    provider_model: tinyllama
+    grade: Grade03
+    tiers: [L3]
+    context_window: 2048
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g04-qwen25-0.5b
+    provider: ollama
+    provider_model: qwen2.5:0.5b
+    grade: Grade04
+    tiers: [L4]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g05-qwen25-coder-0.5b
+    provider: ollama
+    provider_model: qwen2.5-coder:0.5b
+    grade: Grade05
+    tiers: [L5]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g06-llama32-1b
+    provider: ollama
+    provider_model: llama3.2:1b
+    grade: Grade06
+    tiers: [L6]
+    context_window: 131072
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: llama
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g07-qwen3-0.6b
+    provider: ollama
+    provider_model: qwen3:0.6b
+    grade: Grade07
+    tiers: [L7]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g08-qwen25-1.5b
+    provider: ollama
+    provider_model: qwen2.5:1.5b
+    grade: Grade08
+    tiers: [L8]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g09-qwen25-coder-1.5b
+    provider: ollama
+    provider_model: qwen2.5-coder:1.5b
+    grade: Grade09
+    tiers: [L9]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g10-deepseek-coder-1.3b
+    provider: ollama
+    provider_model: deepseek-coder:1.3b
+    grade: Grade10
+    tiers: [L10]
+    context_window: 16384
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g11-smollm2-1.7b
+    provider: ollama
+    provider_model: smollm2:1.7b
+    grade: Grade11
+    tiers: [L11]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g12-gemma2-2b
+    provider: ollama
+    provider_model: gemma2:2b
+    grade: Grade12
+    tiers: [L12]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: gemma
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g13-phi3-mini
+    provider: ollama
+    provider_model: phi3:mini
+    grade: Grade13
+    tiers: [L13]
+    context_window: 131072
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: mit
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g14-llama32-3b
+    provider: ollama
+    provider_model: llama3.2:3b
+    grade: Grade14
+    tiers: [L14]
+    context_window: 131072
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: llama
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g15-qwen25-3b
+    provider: ollama
+    provider_model: qwen2.5:3b
+    grade: Grade15
+    tiers: [L15]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, tools]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g16-qwen25-coder-3b
+    provider: ollama
+    provider_model: qwen2.5-coder:3b
+    grade: Grade16
+    tiers: [L16]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g17-granite-code-3b
+    provider: ollama
+    provider_model: granite-code:3b
+    grade: Grade17
+    tiers: [L17]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g18-starcoder2-3b
+    provider: ollama
+    provider_model: starcoder2:3b
+    grade: Grade18
+    tiers: [L18]
+    context_window: 16384
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, code]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g19-deepseek-r1-1.5b
+    provider: ollama
+    provider_model: deepseek-r1:1.5b
+    grade: Grade19
+    tiers: [L19]
+    context_window: 131072
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, reasoning]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: mit
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  # Grades 20–29 were first assigned 7B–9B Q4 tags. Those pulls failed on this
+  # Docker Desktop VM (59Gi disk, ENOSPC after ~21 models). The tags below are
+  # smaller official-library substitutes so thirty distinct quantized models
+  # can reside on a 64Gi VM. Expand the VM disk to use 7B-class tags instead.
+  - id: g20-qwen2-0.5b
+    provider: ollama
+    provider_model: qwen2:0.5b
+    grade: Grade20
+    tiers: [L20]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g21-smollm-360m
+    provider: ollama
+    provider_model: smollm:360m
+    grade: Grade21
+    tiers: [L21]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g22-tinydolphin
+    provider: ollama
+    provider_model: tinydolphin
+    grade: Grade22
+    tiers: [L22]
+    context_window: 4096
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g23-qwen-0.5b
+    provider: ollama
+    provider_model: qwen:0.5b
+    grade: Grade23
+    tiers: [L23]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g24-falcon3-1b
+    provider: ollama
+    provider_model: falcon3:1b
+    grade: Grade24
+    tiers: [L24]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g25-granite31-moe-1b
+    provider: ollama
+    provider_model: granite3.1-moe:1b
+    grade: Grade25
+    tiers: [L25]
+    context_window: 8192
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g26-phi
+    provider: ollama
+    provider_model: phi
+    grade: Grade26
+    tiers: [L26]
+    context_window: 4096
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: unknown
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g27-qwen2-1.5b
+    provider: ollama
+    provider_model: qwen2:1.5b
+    grade: Grade27
+    tiers: [L27]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g28-gemma3-1b
+    provider: ollama
+    provider_model: gemma3:1b
+    grade: Grade28
+    tiers: [L28]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: gemma
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+  - id: g29-qwen3-1.7b
+    provider: ollama
+    provider_model: qwen3:1.7b
+    grade: Grade29
+    tiers: [L29, L30]
+    context_window: 32768
+    input_cost_per_mtok: 0.0
+    output_cost_per_mtok: 0.0
+    cost_class: resource_cost_unknown
+    capabilities: [chat, streaming, reasoning]
+    placement:
+      locality: local
+    pool: local-ollama
+    license: apache-2.0
+    enabled: true
+    lifecycle: approved
+    fallbacks: [g00-smollm2-135m, mock-small]
+
+aliases:
+  # Equal known-zero API prices: cost_first cannot discriminate, so order is
+  # the candidate list. Smallest tag first so `auto` stays runnable on a laptop.
+  - id: auto
+    policy: cost_first
+    candidates:
+      - g00-smollm2-135m
+      - g01-smollm2-360m
+      - g02-smollm-135m
+      - g03-tinyllama
+      - g04-qwen25-0.5b
+      - g05-qwen25-coder-0.5b
+      - g06-llama32-1b
+      - g07-qwen3-0.6b
+      - g08-qwen25-1.5b
+      - g09-qwen25-coder-1.5b
+      - g10-deepseek-coder-1.3b
+      - g11-smollm2-1.7b
+      - g12-gemma2-2b
+      - g13-phi3-mini
+      - g14-llama32-3b
+      - g15-qwen25-3b
+      - g16-qwen25-coder-3b
+      - g17-granite-code-3b
+      - g18-starcoder2-3b
+      - g19-deepseek-r1-1.5b
+      - g20-qwen2-0.5b
+      - g21-smollm-360m
+      - g22-tinydolphin
+      - g23-qwen-0.5b
+      - g24-falcon3-1b
+      - g25-granite31-moe-1b
+      - g26-phi
+      - g27-qwen2-1.5b
+      - g28-gemma3-1b
+      - g29-qwen3-1.7b
+      - mock-small
+
+  - id: auto-coding
+    policy: cost_first
+    requires: [code]
+    candidates:
+      - g05-qwen25-coder-0.5b
+      - g09-qwen25-coder-1.5b
+      - g10-deepseek-coder-1.3b
+      - g16-qwen25-coder-3b
+      - g17-granite-code-3b
+      - g18-starcoder2-3b
+      - mock-small
+
+  - id: auto-reasoning
+    policy: cost_first
+    requires: [reasoning]
+    candidates:
+      - g19-deepseek-r1-1.5b
+      - g29-qwen3-1.7b
+      - mock-small
+
+  - id: auto-agent
+    policy: cost_first
+    requires: [tools]
+    candidates:
+      - g15-qwen25-3b
+      - mock-small

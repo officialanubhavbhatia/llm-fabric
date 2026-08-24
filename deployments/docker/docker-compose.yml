@@ -61,10 +61,14 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
 
   ollama:
-    image: ollama/ollama:0.3.14
+    image: ollama/ollama:0.32.15
     profiles: ["local"]
     ports:
       - "11434:11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:
@@ -74,7 +78,7 @@ services:
       retries: 20
 
   ollama-pull:
-    image: ollama/ollama:0.3.14
+    image: ollama/ollama:0.32.15
     profiles: ["tools"]
     depends_on:
       ollama:
@@ -132,11 +136,12 @@ services:
       LLM_FABRIC_HOST: 0.0.0.0
       LLM_FABRIC_PORT: 47317
       LLM_FABRIC_ALLOW_ANONYMOUS: "true"
-      LLM_FABRIC_REGISTRY_PATH: /app/config/models.local.yaml
+      LLM_FABRIC_REGISTRY_PATH: ${LLM_FABRIC_COMPOSE_REGISTRY:-/app/config/models.local.yaml}
       LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
       LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
       LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
       LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+      LLM_FABRIC_REQUEST_TIMEOUT_S: "300"
     volumes:
       - ../../config:/app/config:ro
     ports:

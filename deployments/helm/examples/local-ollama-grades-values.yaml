@@ -1,0 +1,51 @@
+# Local kind / Docker-Desktop Kubernetes: Fabric + separate Ollama workload
+# with the Grade00–Grade29 registry.
+#
+# Pair with:
+#   helm template ... -f this --set-file fabricConfig.models=config/models.ollama-grades.yaml
+#   make k8s-local-ollama-grades-up
+#
+# Without --set-file this file still enables Ollama and the ollama provider URL;
+# the chart default mock registry is used. That is not the 30-grade ladder.
+#
+# Disk vs VRAM: pulling thirty tags needs tens of gigabytes. emptyDir is the
+# kind default; enable persistence.size when the node has a PVC that large.
+# This file does not claim the tags are a measured quality ranking.
+
+replicaCount: 1
+
+image:
+  repository: llm-fabric
+  tag: dev
+  digest: ""
+  pullPolicy: IfNotPresent
+
+config:
+  environment: development
+  allowAnonymous: "true"
+  authMode: disabled
+  extraEnv:
+    - name: LLM_FABRIC_REQUEST_TIMEOUT_S
+      value: "300"
+
+secretName: ""
+migrations:
+  enabled: false
+
+service:
+  type: NodePort
+  nodePort: 30017
+
+providers:
+  baseUrls:
+    ollama: http://llm-fabric-ollama:11434/v1
+
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: "0.32.15"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: false
+    size: 120Gi

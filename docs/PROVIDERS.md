@@ -102,7 +102,8 @@ download weights from Hugging Face.
 
 ## Adding a model
 
-1. Add an entry to `config/models.yaml` or `config/models.local.yaml`.
+1. Add an entry to `config/models.yaml`, `config/models.local.yaml`, or the
+   local Ollama grade ladder `config/models.ollama-grades.yaml`.
 2. Declare `provider`, `provider_model` (the tag the backend expects), `grade`
    or `tiers`, and `capabilities`.
 3. Pin `revision` / `digest` in production when the backend supports it.

@@ -35,6 +35,14 @@ def test_compose_keeps_gateway_and_inference_as_separate_workloads() -> None:
     assert "read_only: true" in text
     assert "cap_drop:" in text
     assert "production-test-key" not in text
+    prometheus = (ROOT / "deployments/docker/prometheus.yml").read_text(encoding="utf-8")
+    assert "gateway-mock:47317" in prometheus
+    assert "gateway-ollama:47317" in prometheus
+    assert "ollama/ollama:0.32.15" in text
+    assert "models.local.yaml" in text
+    assert "models.ollama-grades.yaml" in (
+        ROOT / "Makefile"
+    ).read_text(encoding="utf-8")
 
 
 def test_runtime_has_no_cloud_platform_branching() -> None:
@@ -55,3 +63,6 @@ def test_kind_entrypoints_exist_and_are_executable() -> None:
         path = ROOT / "deployments/kind" / name
         assert path.is_file()
         assert path.stat().st_mode & 0o111
+    pull = ROOT / "deployments/docker" / "pull-ollama-grades.sh"
+    assert pull.is_file()
+    assert pull.stat().st_mode & 0o111

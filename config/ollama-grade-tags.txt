@@ -1,0 +1,34 @@
+# Official Ollama library tags for config/models.ollama-grades.yaml.
+# One tag per Grade00–Grade29. Default Ollama pulls are Q4-class GGUF.
+# This is a size/family ladder for Docker Desktop and Kubernetes Ollama,
+# not a measured quality ranking.
+smollm2:135m
+smollm2:360m
+smollm:135m
+tinyllama
+qwen2.5:0.5b
+qwen2.5-coder:0.5b
+llama3.2:1b
+qwen3:0.6b
+qwen2.5:1.5b
+qwen2.5-coder:1.5b
+deepseek-coder:1.3b
+smollm2:1.7b
+gemma2:2b
+phi3:mini
+llama3.2:3b
+qwen2.5:3b
+qwen2.5-coder:3b
+granite-code:3b
+starcoder2:3b
+deepseek-r1:1.5b
+qwen2:0.5b
+smollm:360m
+tinydolphin
+qwen:0.5b
+falcon3:1b
+granite3.1-moe:1b
+phi
+qwen2:1.5b
+gemma3:1b
+qwen3:1.7b
