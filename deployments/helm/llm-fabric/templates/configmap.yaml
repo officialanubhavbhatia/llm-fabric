@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "llm-fabric.fullname" . }}
+  labels:
+    app.kubernetes.io/name: llm-fabric
+data:
+  LLM_FABRIC_ENVIRONMENT: {{ .Values.config.environment | quote }}
+  LLM_FABRIC_HOST: {{ .Values.config.host | quote }}
+  LLM_FABRIC_PORT: {{ .Values.config.port | quote }}
+  LLM_FABRIC_ALLOW_ANONYMOUS: {{ .Values.config.allowAnonymous | quote }}
+  LLM_FABRIC_AUTH_MODE: {{ .Values.config.authMode | quote }}
+  {{- if .Values.observability.otlp.endpoint }}
+  LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otlp.endpoint | quote }}
+  {{- end }}

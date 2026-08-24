@@ -1,0 +1,281 @@
+{
+  "mode": "cache",
+  "taxonomy_version": "bootstrap-2026.08.1",
+  "classifier_version": "cascade-1:fc401d447e15",
+  "dataset_size": 98,
+  "scored": 17,
+  "duration_s": 0.217,
+  "warnings": [
+    "L4/L5 disabled: no --provider given, so only the offline layers were measured"
+  ],
+  "accuracy": 0.8824,
+  "lenient_accuracy": 0.8824,
+  "top_k_accuracy": {
+    "top_1": 0.8824,
+    "top_2": 0.9412,
+    "top_3": 0.9412
+  },
+  "macro_f1": 0.875,
+  "micro_f1": 0.8824,
+  "expected_calibration_error": 0.1372,
+  "brier_score": 0.0231,
+  "high_confidence_routing": [
+    {
+      "threshold": 0.8,
+      "coverage": 0.6470588235294118,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 11
+    },
+    {
+      "threshold": 0.85,
+      "coverage": 0.35294117647058826,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 6
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.35294117647058826,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 6
+    },
+    {
+      "threshold": 0.95,
+      "coverage": 0.11764705882352941,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 2
+    },
+    {
+      "threshold": 0.98,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    }
+  ],
+  "abstention": {
+    "abstained": 2,
+    "should_have_abstained": 0,
+    "rate": 0.11764705882352941,
+    "precision": 0.0,
+    "unknown_intent_recall": null,
+    "accuracy": 0.8823529411764706
+  },
+  "slices": {
+    "hard_negatives": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "multi_intent": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "expects_abstention": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "ordinary": {
+      "count": 17,
+      "accuracy": 0.8823529411764706,
+      "lenient_accuracy": 0.8823529411764706
+    }
+  },
+  "cache": {
+    "exact_hits": 0,
+    "semantic_hits": 8,
+    "hit_rate": 0.47058823529411764,
+    "exact_false_hit_rate": null,
+    "semantic_false_hit_rate": 0.0
+  },
+  "latency_ms": {
+    "mean": 2.6487,
+    "p50": 2.2599,
+    "p95": 4.7298,
+    "p99": 4.7298,
+    "max": 4.7298
+  },
+  "cost": {
+    "total_usd": 0.0,
+    "mean_usd": 0.0
+  },
+  "layer_distribution": {
+    "l0_exact_cache": 0,
+    "l1_semantic_cache": 8,
+    "l2_rules": 7,
+    "l3_embedding": 0,
+    "l4_structured_llm": 0,
+    "l5_escalation": 0,
+    "abstain": 2
+  },
+  "per_intent": {
+    "agent": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "classification": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding": {
+      "support": 2,
+      "predicted": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding.debug": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "data_analysis": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "extraction": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "general_conversation": {
+      "support": 1,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "math": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "math.arithmetic": {
+      "support": 1,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "rag": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "research": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "summarization": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "tool_use": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "translation": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "unknown": {
+      "support": 0,
+      "predicted": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "vision": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "writing": {
+      "support": 1,
+      "predicted": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "top_confusions": [
+    {
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "math.arithmetic",
+      "predicted": "unknown",
+      "count": 1
+    }
+  ],
+  "calibration_bins": [
+    {
+      "range": "0.1-0.2",
+      "count": 1,
+      "mean_confidence": 0.1101,
+      "accuracy": 0.0
+    },
+    {
+      "range": "0.2-0.3",
+      "count": 1,
+      "mean_confidence": 0.2481,
+      "accuracy": 0.0
+    },
+    {
+      "range": "0.7-0.8",
+      "count": 4,
+      "mean_confidence": 0.7981,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.8-0.9",
+      "count": 5,
+      "mean_confidence": 0.8347,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.9-1.0",
+      "count": 6,
+      "mean_confidence": 0.9434,
+      "accuracy": 1.0
+    }
+  ]
+}

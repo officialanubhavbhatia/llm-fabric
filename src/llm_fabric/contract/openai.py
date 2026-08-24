@@ -13,7 +13,7 @@ import time
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Role = Literal["system", "user", "assistant", "tool"]
 
@@ -28,6 +28,10 @@ class ChatMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
+    # Extra fields are ignored, not rejected: SDKs send keys the fabric does not
+    # act on, and refusing those would break clients the dialect exists to serve.
+    model_config = ConfigDict(extra="ignore")
+
     model: str
     messages: list[ChatMessage]
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)

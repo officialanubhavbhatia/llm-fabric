@@ -1,0 +1,33 @@
+{"id": "val-trans-001", "text": "Please render this sentence in Italian", "expected_intent_id": "translation", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-sum-001", "text": "Give me the gist of the meeting notes", "expected_intent_id": "summarization", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-debug-001", "text": "The process dumps core as soon as I open the file", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"], "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-code-001", "text": "Implement a ring buffer in Rust", "expected_intent_id": "coding", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-math-001", "text": "Differentiate x^3 sin(x)", "expected_intent_id": "math", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-write-001", "text": "Draft a short announcement about the office move", "expected_intent_id": "writing", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-extract-001", "text": "Pull out every date mentioned in this contract as JSON", "expected_intent_id": "extraction", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-class-001", "text": "Is this comment toxic or not?", "expected_intent_id": "classification", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-agent-001", "text": "Book a table for four on Friday and email the confirmation", "expected_intent_id": "agent", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-unknown-001", "text": "blorpt zindle 99qx", "expected_intent_id": "unknown", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-unknown-002", "text": "handle the thing", "expected_intent_id": "unknown", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-research-001", "text": "What does the literature say about urban heat islands?", "expected_intent_id": "research", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-vision-001", "text": "Read the text in this screenshot", "expected_intent_id": "vision", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-tool-001", "text": "What's the weather in Lisbon right now?", "expected_intent_id": "tool_use", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-reason-001", "text": "If all widgets are blue and this is a widget, what colour is it?", "expected_intent_id": "reasoning", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-conv-001", "text": "thanks, that helped", "expected_intent_id": "general_conversation", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-hn-001", "text": "Translate this Python into idiomatic Rust", "expected_intent_id": "coding", "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val"}
+{"id": "val-hn-002", "text": "Write a poem about a segmentation fault", "expected_intent_id": "writing", "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val"}
+{"id": "val-data-001", "text": "Is the lift in conversion statistically significant?", "expected_intent_id": "data_analysis", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-rag-001", "text": "Search our internal wiki for the on-call runbook", "expected_intent_id": "rag", "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-multi-001", "text": "Summarise the paper and then implement the method in Python", "expected_intent_id": "coding", "acceptable_intent_ids": ["summarization", "agent"], "split": "validation", "multi_intent": true, "language": "en", "source": "authored-val"}
+{"id": "val-review-001", "text": "Review this pull request for race conditions", "expected_intent_id": "coding.review", "acceptable_intent_ids": ["coding"], "split": "validation", "language": "en", "source": "authored-val"}
+{"id": "val-hn-sum-code-001", "text": "Give me a one-paragraph overview of this repo so a new hire can orient", "expected_intent_id": "summarization", "acceptable_intent_ids": ["coding"], "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val-1.1", "notes": "Prose overview of a repository; not an implementation request."}
+{"id": "val-hn-explain-cs-001", "text": "What does a null pointer exception mean, conceptually?", "expected_intent_id": "coding", "acceptable_intent_ids": ["general_conversation"], "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val-1.1", "notes": "Definitional CS, no live bug."}
+{"id": "val-hn-meta-sum-001", "text": "Which claims would disappear if this paper were reduced to a blurb?", "expected_intent_id": "reasoning", "acceptable_intent_ids": ["summarization"], "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val-1.1", "notes": "Critique of a hypothetical summary."}
+{"id": "val-hn-explain-agent-001", "text": "How do tool-using agents decide the next action?", "expected_intent_id": "general_conversation", "acceptable_intent_ids": ["research", "reasoning"], "split": "validation", "hard_negative": true, "language": "en", "source": "authored-val-1.1", "notes": "Explanatory; nothing is executed."}
+{"id": "val-data-corr-001", "text": "Among these columns, which tracks churn the closest?", "expected_intent_id": "data_analysis", "split": "validation", "language": "en", "source": "authored-val-1.1"}
+{"id": "val-sum-vs-extract-001", "text": "What is the overall argument of this memo?", "expected_intent_id": "summarization", "acceptable_intent_ids": ["reasoning"], "split": "validation", "language": "en", "source": "authored-val-1.1"}
+{"id": "val-extract-vs-sum-001", "text": "List every dollar amount in this memo", "expected_intent_id": "extraction", "split": "validation", "language": "en", "source": "authored-val-1.1"}
+{"id": "val-agent-exec-001", "text": "Book the flights and file the expenses when you are done", "expected_intent_id": "agent", "split": "validation", "language": "en", "source": "authored-val-1.1"}
+{"id": "val-debug-live-001", "text": "This null pointer is thrown on line 12, here is the stack", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"], "split": "validation", "language": "en", "source": "authored-val-1.1"}
+{"id": "val-unknown-short-001", "text": "ok", "expected_intent_id": "unknown", "split": "validation", "language": "en", "source": "authored-val-1.1"}
+

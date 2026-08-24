@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+
+import pytest
 from fastapi.testclient import TestClient
 
 from llm_fabric.config import Settings
@@ -49,6 +52,7 @@ def test_healthz_reports_ok(client: TestClient) -> None:
 def test_readyz_ready_when_models_are_enabled(client: TestClient) -> None:
     payload = client.get("/readyz").json()
     assert payload["status"] == "ready"
+    assert payload["ready"] is True
     assert payload["enabled_models"] > 0
 
 
@@ -89,7 +93,7 @@ def test_served_requests_appear_in_usage(client: TestClient) -> None:
     record = payload["recent"][0]
     assert record["requested_model"] == "auto"
     assert record["served_model"] == "cheap"
-    assert record["policy"] == "cheapest"
+    assert record["policy"] == "cost_first"
 
 
 def test_estimated_cost_is_flagged(client: TestClient) -> None:
@@ -103,12 +107,17 @@ def test_estimated_cost_is_flagged(client: TestClient) -> None:
 
 def test_usage_records_every_attempt_including_failures(client: TestClient) -> None:
     client.post(CHAT, json={"model": "broken", "messages": [{"role": "user", "content": "hi"}]})
-    record = client.get("/v1/usage").json()["recent"][0]
+    payload = client.get("/v1/usage").json()
+    record = payload["recent"][0]
 
     assert record["failover_count"] == 1
     assert len(record["attempts"]) == 2
     assert record["attempts"][0]["error"] is not None
     assert record["attempts"][1]["error"] is None
+    assert payload["invocations"]["count"] == 2
+    assert len(payload["recent_invocations"]) == 2
+    assert all("token_source" in row for row in payload["recent_invocations"])
+    assert "PROVIDER_MEASURED" not in {row["token_source"] for row in payload["recent_invocations"]}
 
 
 def test_streamed_requests_are_metered_as_streamed(client: TestClient) -> None:
@@ -126,9 +135,12 @@ def test_streamed_requests_are_metered_as_streamed(client: TestClient) -> None:
 # -- authentication ----------------------------------------------------------
 
 
+VALID_KEY = "secret-key-0123456789"
+
+
 def _authenticated_client(registry: ModelRegistry) -> TestClient:
     app = create_app(
-        settings=Settings(api_keys=["secret-key"]),
+        settings=Settings(api_keys=[VALID_KEY]),
         registry=registry,
         provider_overrides={"mock": MockProvider(), "failing": MockProvider(fail=True)},
         meter=InMemoryMeter(),
@@ -142,6 +154,7 @@ def test_request_without_key_is_rejected(registry: ModelRegistry) -> None:
 
     assert response.status_code == 401
     assert response.json()["error"]["type"] == "authentication_error"
+    assert response.headers["www-authenticate"].startswith("Bearer")
 
 
 def test_wrong_key_is_rejected(registry: ModelRegistry) -> None:
@@ -153,14 +166,14 @@ def test_wrong_key_is_rejected(registry: ModelRegistry) -> None:
 
 def test_bearer_token_is_accepted(registry: ModelRegistry) -> None:
     with _authenticated_client(registry) as client:
-        response = client.get("/v1/models", headers={"Authorization": "Bearer secret-key"})
+        response = client.get("/v1/models", headers={"Authorization": f"Bearer {VALID_KEY}"})
 
     assert response.status_code == 200
 
 
 def test_x_api_key_header_is_accepted(registry: ModelRegistry) -> None:
     with _authenticated_client(registry) as client:
-        response = client.get("/v1/models", headers={"x-api-key": "secret-key"})
+        response = client.get("/v1/models", headers={"x-api-key": VALID_KEY})
 
     assert response.status_code == 200
 
@@ -171,16 +184,69 @@ def test_probes_do_not_require_authentication(registry: ModelRegistry) -> None:
         assert client.get("/readyz").status_code == 200
 
 
-def test_client_is_recorded_as_a_fingerprint_not_the_key(registry: ModelRegistry) -> None:
+def test_short_api_keys_are_refused_with_a_clear_error() -> None:
+    from llm_fabric.errors import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match="shorter than"):
+        Settings(api_keys=["tiny"]).resolved_credentials()
+
+
+def test_usage_never_echoes_the_presented_key(registry: ModelRegistry) -> None:
     with _authenticated_client(registry) as client:
         client.post(
             CHAT,
             json={"model": "cheap", "messages": [{"role": "user", "content": "hi"}]},
-            headers={"Authorization": "Bearer secret-key"},
+            headers={"Authorization": f"Bearer {VALID_KEY}"},
         )
-        record = client.get("/v1/usage", headers={"Authorization": "Bearer secret-key"}).json()[
-            "recent"
-        ][0]
+        payload = client.get("/v1/usage", headers={"Authorization": f"Bearer {VALID_KEY}"}).json()
 
-    assert record["client_id"]
-    assert "secret-key" not in record["client_id"]
+    assert VALID_KEY not in json.dumps(payload)
+    assert payload["recent"][0]["tenant_id"] == "default"
+
+
+async def test_non_ascii_key_is_rejected_as_unauthorized() -> None:
+    """`secrets.compare_digest` raises on non-ASCII; that must be a 401, not a 500."""
+    from llm_fabric.errors import AuthenticationError
+    from llm_fabric.identity.apikey import ApiCredential, ApiKeyVerifier
+
+    verifier = ApiKeyVerifier([ApiCredential(key=VALID_KEY, tenant_id="t")])
+
+    with pytest.raises(AuthenticationError):
+        await verifier.verify("café-key-0123456789")
+
+
+def test_failed_request_is_still_metered() -> None:
+    registry = ModelRegistry.from_mapping({"models": [{"id": "only", "provider": "failing"}]})
+    meter = InMemoryMeter()
+    app = create_app(
+        settings=Settings(api_keys=[]),
+        registry=registry,
+        provider_overrides={"failing": MockProvider(fail=True)},
+        meter=meter,
+    )
+    with TestClient(app) as client:
+        failed = client.post(
+            CHAT, json={"model": "only", "messages": [{"role": "user", "content": "hi"}]}
+        )
+        usage = client.get("/v1/usage").json()
+
+    assert failed.status_code == 502
+    assert usage["totals"]["requests"] == 1
+    assert usage["recent"][0]["error"]
+    assert usage["recent"][0]["attempts"][0]["error"] is not None
+
+
+def test_readyz_not_ready_when_enabled_provider_has_no_credentials() -> None:
+    registry = ModelRegistry.from_mapping(
+        {"models": [{"id": "gpt", "provider": "openai", "enabled": True}]}
+    )
+    app = create_app(
+        settings=Settings(api_keys=[], openai_api_key=None),
+        registry=registry,
+    )
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "no_servable_provider"
+    assert response.json()["servable_models"] == 0

@@ -1,0 +1,470 @@
+{
+  "model": "local-rerank-1.1 mixed MiniLM",
+  "prompt_version": null,
+  "l4_layer": "l4_structured_llm",
+  "paid_provider": false,
+  "escalation_rate": 0.02040816326530612,
+  "latency_ms": {
+    "mean": 30.9127,
+    "p50": 8.9701,
+    "p95": 19.8548,
+    "p99": 1068.2102,
+    "max": 1068.2102
+  },
+  "cost": {
+    "total_usd": 0.0,
+    "mean_usd": 0.0
+  },
+  "quality_vs_B": {
+    "accuracy_delta": -0.0102,
+    "hn_delta": 0.0,
+    "unk_delta": -0.0714
+  },
+  "focus": [
+    {
+      "id": "data-002",
+      "expected": "data_analysis",
+      "predicted": "data_analysis",
+      "strict_ok": true,
+      "lenient_ok": true,
+      "confidence": 0.6902,
+      "layer": "l3_embedding",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.01,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 0.617,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "data_analysis",
+          "confidence": 0.4257,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.106,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 7.50 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.6902,
+          "threshold": 0.62,
+          "accepted": true,
+          "latency_ms": 0.975,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.491, share 0.971, margin 0.202"
+        }
+      ]
+    },
+    {
+      "id": "hn-003",
+      "expected": "summarization",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.626,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.01,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.395,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "summarization",
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.101,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.50 of 6.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "summarization",
+          "confidence": 0.1483,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 0.958,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.271, share 0.258, margin 0.001"
+        },
+        {
+          "layer": "l4_structured_llm",
+          "intent_id": "summarization",
+          "confidence": 0.4369,
+          "threshold": 0.55,
+          "accepted": false,
+          "latency_ms": 1057.674,
+          "cost_usd": 0.0,
+          "rationale": "rerank cosine 0.330 margin 0.061"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-005",
+      "expected": "coding",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.5437,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.01,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.249,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.084,
+          "cost_usd": 0.0,
+          "rationale": "no rule matched"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "coding.debug",
+          "confidence": 0.3045,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 0.988,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.351, share 0.478, margin 0.014"
+        },
+        {
+          "layer": "l4_structured_llm",
+          "intent_id": "coding.debug",
+          "confidence": 0.5437,
+          "threshold": 0.55,
+          "accepted": false,
+          "latency_ms": 9.111,
+          "cost_usd": 0.0,
+          "rationale": "rerank cosine 0.423 margin 0.090"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.5437,
+          "threshold": 0.55,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-008",
+      "expected": "reasoning",
+      "predicted": "summarization",
+      "strict_ok": false,
+      "lenient_ok": true,
+      "confidence": 0.7428,
+      "layer": "l4_structured_llm",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.009,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.297,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "reasoning",
+          "confidence": 0.3991,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.103,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 8.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "summarization",
+          "confidence": 0.4228,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.017,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.479, share 0.599, margin 0.058"
+        },
+        {
+          "layer": "l4_structured_llm",
+          "intent_id": "summarization",
+          "confidence": 0.7428,
+          "threshold": 0.55,
+          "accepted": true,
+          "latency_ms": 9.044,
+          "cost_usd": 0.0,
+          "rationale": "rerank cosine 0.578 margin 0.151"
+        }
+      ]
+    },
+    {
+      "id": "hn-010",
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.6988,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.009,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.306,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "agent",
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.097,
+          "cost_usd": 0.0,
+          "rationale": "rule score 3.00 of 3.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "reasoning",
+          "confidence": 0.3606,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 0.988,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.347, share 0.568, margin 0.022"
+        },
+        {
+          "layer": "l4_structured_llm",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.55,
+          "accepted": false,
+          "latency_ms": 9.029,
+          "cost_usd": 0.0,
+          "rationale": "rerank abstain cosine 0.420 margin 0.004"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    }
+  ],
+  "headlines": {
+    "A": {
+      "name": "A_L2_hashing",
+      "accuracy": 0.9082,
+      "macro_f1": 0.9269,
+      "hn_acc": 0.5,
+      "unk": 0.8571428571428571,
+      "abst_p": 0.7058823529411765,
+      "ece": 0.1769,
+      "hc90": 0.9642857142857143,
+      "hc90_cov": 0.2857142857142857,
+      "sem_fh": null,
+      "ordinary": 0.9861111111111112,
+      "layers": {
+        "l2_rules": 76,
+        "l3_embedding": 5,
+        "abstain": 17
+      },
+      "p50": 1.372,
+      "p95": 3.4651,
+      "cost": {
+        "total_usd": 0.0,
+        "mean_usd": 0.0
+      },
+      "l4_rate": 0.0,
+      "version": "cascade-1.1:d3218fda27d5",
+      "hn_miss": [
+        "hn-003",
+        "hn-005",
+        "hn-008",
+        "hn-009",
+        "hn-010",
+        "hn-012"
+      ],
+      "weak_recall": {
+        "summarization": 0.6667,
+        "data_analysis": 0.75,
+        "general_conversation": 0.75
+      }
+    },
+    "B": {
+      "name": "B_L2_minilm",
+      "accuracy": 0.898,
+      "macro_f1": 0.9196,
+      "hn_acc": 0.5,
+      "unk": 0.7142857142857143,
+      "abst_p": 0.7142857142857143,
+      "ece": 0.137,
+      "hc90": 0.9642857142857143,
+      "hc90_cov": 0.2857142857142857,
+      "sem_fh": null,
+      "ordinary": 1.0,
+      "layers": {
+        "l2_rules": 76,
+        "l3_embedding": 8,
+        "abstain": 14
+      },
+      "p50": 9.2753,
+      "p95": 13.8856,
+      "cost": {
+        "total_usd": 0.0,
+        "mean_usd": 0.0
+      },
+      "l4_rate": 0.0,
+      "version": "cascade-1.1:832a8f1cd8dc",
+      "hn_miss": [
+        "hn-003",
+        "hn-005",
+        "hn-008",
+        "hn-009",
+        "hn-010",
+        "hn-012"
+      ],
+      "weak_recall": {
+        "summarization": 0.6667,
+        "data_analysis": 1.0,
+        "general_conversation": 0.75
+      }
+    },
+    "C": {
+      "name": "C_L2_minilm_l4",
+      "accuracy": 0.8878,
+      "macro_f1": 0.9088,
+      "hn_acc": 0.5,
+      "unk": 0.6428571428571429,
+      "abst_p": 0.75,
+      "ece": 0.1406,
+      "hc90": 0.9642857142857143,
+      "hc90_cov": 0.2857142857142857,
+      "sem_fh": null,
+      "ordinary": 1.0,
+      "layers": {
+        "l2_rules": 76,
+        "l3_embedding": 8,
+        "l4_structured_llm": 2,
+        "abstain": 12
+      },
+      "p50": 8.9701,
+      "p95": 19.8548,
+      "cost": {
+        "total_usd": 0.0,
+        "mean_usd": 0.0
+      },
+      "l4_rate": 0.02040816326530612,
+      "version": "cascade-1.1:797d9afd2fe6",
+      "hn_miss": [
+        "hn-003",
+        "hn-005",
+        "hn-008",
+        "hn-009",
+        "hn-010",
+        "hn-012"
+      ],
+      "weak_recall": {
+        "summarization": 0.6667,
+        "data_analysis": 1.0,
+        "general_conversation": 0.75
+      }
+    }
+  }
+}

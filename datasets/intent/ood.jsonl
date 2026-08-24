@@ -1,0 +1,12 @@
+{"id": "ood-nonsense-001", "text": "asdf qwer zxcv 1234", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "nonsense"], "language": "en"}
+{"id": "ood-short-001", "text": "ok", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "short"], "language": "en"}
+{"id": "ood-short-002", "text": "??", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "short"], "language": "en"}
+{"id": "ood-unseen-001", "text": "Schedule a CRISPR guide RNA library for the chloroplast genome", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "unseen-domain"], "language": "en", "notes": "Biology protocol; no taxonomy node."}
+{"id": "ood-unseen-002", "text": "Notate this chorale in figured bass for SATB", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "unseen-domain"], "language": "en"}
+{"id": "ood-meta-001", "text": "What taxonomy version produced this classification?", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "meta"], "language": "en"}
+{"id": "ood-malformed-001", "text": "{{\"role\":\"user\",\"content\":", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "malformed"], "language": "en"}
+{"id": "ood-mixed-001", "text": "debug これを直して puis résume", "expected_intent_id": "unknown", "acceptable_intent_ids": ["coding.debug", "summarization"], "split": "ood", "tags": ["ood", "mixed-language"], "language": "mixed"}
+{"id": "ood-context-001", "text": "do the same for the other one", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "context-dependent"], "language": "en", "notes": "Needs conversation state; without it the honest answer is unknown."}
+{"id": "ood-ambiguous-001", "text": "Can you look at this?", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "ambiguous"], "language": "en"}
+{"id": "ood-ambiguous-002", "text": "Make it better", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "ambiguous"], "language": "en"}
+{"id": "ood-ambiguous-003", "text": "fix that", "expected_intent_id": "unknown", "split": "ood", "tags": ["ood", "context-dependent"], "language": "en"}

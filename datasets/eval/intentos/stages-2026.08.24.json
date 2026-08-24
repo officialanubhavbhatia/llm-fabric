@@ -1,0 +1,106 @@
+{
+  "machine": "arm64",
+  "sysname": "Darwin",
+  "results": [
+    {
+      "name": "intent_exact_cache",
+      "available": true,
+      "iterations": 800,
+      "errors": 0,
+      "p50_ms": 0.0052,
+      "p95_ms": 0.0055,
+      "p99_ms": 0.0066,
+      "throughput_per_s": 191075.3,
+      "error_rate": 0.0,
+      "tokens_per_s": null,
+      "cpu_s": 0.0052,
+      "rss_bytes": 95404032,
+      "gpu": null,
+      "queue_depth": null,
+      "note": "L0 exact hit. Miss path is not this stage.",
+      "configuration": {}
+    },
+    {
+      "name": "semantic_intent_cache",
+      "available": true,
+      "iterations": 800,
+      "errors": 0,
+      "p50_ms": 0.0276,
+      "p95_ms": 0.034,
+      "p99_ms": 0.0641,
+      "throughput_per_s": 34520.8,
+      "error_rate": 0.0,
+      "tokens_per_s": null,
+      "cpu_s": 0.0255,
+      "rss_bytes": 95420416,
+      "gpu": null,
+      "queue_depth": null,
+      "note": "L1 semantic hit against HashingEmbedder, which is lexical hashing and not a semantic model.",
+      "configuration": {
+        "embedder": "HashingEmbedder"
+      }
+    },
+    {
+      "name": "intent_rules",
+      "available": true,
+      "iterations": 800,
+      "errors": 0,
+      "p50_ms": 0.0187,
+      "p95_ms": 0.0199,
+      "p99_ms": 0.0377,
+      "throughput_per_s": 50816.1,
+      "error_rate": 0.0,
+      "tokens_per_s": null,
+      "cpu_s": 0.0181,
+      "rss_bytes": 95436800,
+      "gpu": null,
+      "queue_depth": null,
+      "note": "L2 deterministic rules only. L0 misses; L3\u2013L5 off.",
+      "configuration": {
+        "layers": "L2"
+      }
+    },
+    {
+      "name": "intent_embedding",
+      "available": true,
+      "iterations": 800,
+      "errors": 0,
+      "p50_ms": 0.9607,
+      "p95_ms": 1.2274,
+      "p99_ms": 1.6537,
+      "throughput_per_s": 995.3,
+      "error_rate": 0.0,
+      "tokens_per_s": null,
+      "cpu_s": 0.8776,
+      "rss_bytes": 98484224,
+      "gpu": null,
+      "queue_depth": null,
+      "note": "L3 nearest-centroid over HashingEmbedder. Lexical, not semantic.",
+      "configuration": {
+        "layers": "L3",
+        "embedder": "HashingEmbedder"
+      }
+    },
+    {
+      "name": "intent_mixed",
+      "available": true,
+      "iterations": 800,
+      "errors": 0,
+      "p50_ms": 0.0229,
+      "p95_ms": 1.1503,
+      "p99_ms": 1.358,
+      "throughput_per_s": 4065.4,
+      "error_rate": 0.0,
+      "tokens_per_s": null,
+      "cpu_s": 0.2414,
+      "rss_bytes": 98746368,
+      "gpu": null,
+      "queue_depth": null,
+      "note": "Offline cascade on a rotating mix of obvious, ordinary and OOD prompts.",
+      "configuration": {
+        "layers": "L0-L3",
+        "mix": "rules/embed/ood"
+      }
+    }
+  ]
+}

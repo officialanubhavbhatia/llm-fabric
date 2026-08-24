@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyVista Command Center</title>
+  <style>
+    :root {
+      --bg: #0f1419; --panel: #1a222c; --line: #2a3542; --text: #e8eef4;
+      --muted: #8b9aab; --accent: #6ea8fe; --warn: #e6b84d; --bad: #e06c75;
+      --ok: #7fd99a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+    header h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+    header span { color: var(--muted); font-size: 12px; }
+    nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+    nav button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+    nav button.active { border-color: var(--accent); color: var(--accent); }
+    main { padding: 20px; }
+    .note { color: var(--warn); background: #2a2416; border: 1px solid #5a4a1a; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; }
+    .empty { color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+    .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card .v { font-size: 20px; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    pre { background: var(--panel); border: 1px solid var(--line); padding: 12px; overflow: auto; border-radius: 8px; font-size: 12px; }
+    .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; border: 1px solid var(--line); }
+    .pill.bad { color: var(--bad); border-color: var(--bad); }
+    .pill.ok { color: var(--ok); border-color: var(--ok); }
+    .fields { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MyVista Command Center</h1>
+    <span>
+      <input id="token" type="password" placeholder="Bearer token (optional)" style="background:#1a222c;color:#e8eef4;border:1px solid #2a3542;padding:4px 8px;border-radius:6px;width:220px" />
+      <span id="scope"></span>
+    </span>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"><p class="empty">Loading…</p></main>
+  <script>
+    const VIEWS = [
+      "overview","users","tenants","requests","traces","threads","intents",
+      "models","kv_cache","batching","routing","fallbacks","tokens","context",
+      "economics","evals","drift","reliability"
+    ];
+    const nav = document.getElementById("nav");
+    const main = document.getElementById("main");
+    const scopeEl = document.getElementById("scope");
+    let current = "overview";
+
+    VIEWS.forEach((name) => {
+      const b = document.createElement("button");
+      b.textContent = name.replaceAll("_", " ");
+      b.dataset.view = name;
+      b.onclick = () => load(name);
+      nav.appendChild(b);
+    });
+
+    function fmt(v) {
+      if (v === null || v === undefined) return "—";
+      if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
+      return String(v);
+    }
+
+    function cards(obj) {
+      const g = document.createElement("div");
+      g.className = "grid";
+      Object.entries(obj).forEach(([k, v]) => {
+        if (v && typeof v === "object") return;
+        const c = document.createElement("div");
+        c.className = "card";
+        c.innerHTML = `<div class="k">${k.replaceAll("_", " ")}</div><div class="v">${fmt(v)}</div>`;
+        g.appendChild(c);
+      });
+      return g;
+    }
+
+    function table(rows) {
+      if (!rows || !rows.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "No rows in this process buffer.";
+        return p;
+      }
+      const keys = Object.keys(rows[0]).filter((k) => typeof rows[0][k] !== "object" || rows[0][k] === null);
+      const t = document.createElement("table");
+      t.innerHTML = `<thead><tr>${keys.map((k) => `<th>${k}</th>`).join("")}</tr></thead>`;
+      const body = document.createElement("tbody");
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = keys.map((k) => `<td>${fmt(row[k])}</td>`).join("");
+        body.appendChild(tr);
+      });
+      t.appendChild(body);
+      return t;
+    }
+
+    function render(payload) {
+      main.innerHTML = "";
+      scopeEl.textContent = payload.scope || "";
+      document.querySelectorAll("nav button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.view === current);
+      });
+      if (payload.unavailable_fields && payload.unavailable_fields.length) {
+        const f = document.createElement("div");
+        f.className = "fields";
+        f.textContent = "Unavailable fields (not synthesized): " + payload.unavailable_fields.join(", ");
+        main.appendChild(f);
+      }
+      if (payload.note) {
+        const n = document.createElement("div");
+        n.className = "note";
+        n.textContent = payload.note;
+        main.appendChild(n);
+      }
+      if (current === "traces") {
+        const n = document.createElement("div");
+        n.className = "note";
+        n.textContent = "local-pod diagnostic only — not authoritative fleet trace history";
+        main.appendChild(n);
+      }
+      if (!payload.available) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "This view has no backend in this build.";
+        main.appendChild(p);
+        return;
+      }
+      const data = payload.data || {};
+      if (data.recent) main.appendChild(table(data.recent));
+      else if (data.users) main.appendChild(table(data.users));
+      else if (data.tenants) main.appendChild(table(data.tenants));
+      else if (data.models) main.appendChild(table(data.models));
+      else if (data.events) main.appendChild(table(data.events));
+      else if (data.traces) {
+        main.appendChild(cards({
+          built_stages: (data.built_stages || []).join(", "),
+          unbuilt_stages: (data.unbuilt_stages || []).join(", "),
+        }));
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(data.traces, null, 2);
+        main.appendChild(pre);
+      } else {
+        main.appendChild(cards(data));
+        const nested = Object.entries(data).filter(([, v]) => v && typeof v === "object");
+        nested.forEach(([k, v]) => {
+          const h = document.createElement("h3");
+          h.textContent = k.replaceAll("_", " ");
+          main.appendChild(h);
+          if (Array.isArray(v)) main.appendChild(table(v));
+          else {
+            const pre = document.createElement("pre");
+            pre.textContent = JSON.stringify(v, null, 2);
+            main.appendChild(pre);
+          }
+        });
+      }
+    }
+
+    async function load(view) {
+      current = view;
+      main.innerHTML = "<p class='empty'>Loading…</p>";
+      const headers = {};
+      const token = document.getElementById("token").value.trim();
+      if (token) headers["authorization"] = token.startsWith("Bearer ") ? token : "Bearer " + token;
+      const res = await fetch("/v1/observability/dashboards/" + view, { credentials: "same-origin", headers });
+      if (res.status === 401) {
+        main.innerHTML = "<p class='empty'>Sign in to view the Command Center.</p>";
+        return;
+      }
+      render(await res.json());
+    }
+
+    load(current);
+    setInterval(() => load(current), 15000);
+  </script>
+</body>
+</html>

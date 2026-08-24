@@ -5,36 +5,71 @@
 #
 # Costs are USD per million tokens and are OPERATOR-SUPPLIED INPUTS, not figures
 # the fabric measures or verifies. Provider pricing changes; fill these in from
-# your provider's current pricing page. The `cheapest` policy ranks candidates
+# your provider's current pricing page. The `cost_first` policy ranks candidates
 # using exactly these numbers, so a wrong price here produces a wrong route.
 #
 # The default configuration enables only the `mock` provider, so the fabric runs
 # with no credentials. The mock provider performs no inference — it returns text
 # assembled from the request. Enable the real providers below once their API keys
 # are set and their prices and context windows are filled in.
+#
+# OPTIONAL ATTRIBUTES, all of which routing will use if you supply them:
+#
+#   grade                   Grade00 (least capable) .. Grade29. A logical class,
+#                           not a model name, so a deployment can be moved
+#                           between grades as benchmark data changes.
+#   locality                local | private | external. DEFAULTS TO `external`,
+#                           because assuming a deployment is local when it is not
+#                           would send prompts to a third party under a
+#                           local-only policy.
+#   quality: {...}          reasoning, coding, agent, math, rag, tool_use,
+#                           structured_output, safety — each in [0, 1].
+#   performance: {...}      p50_ttft_ms, p95_ttft_ms, p99_ttft_ms, p50_tpot_ms,
+#                           prefill_tokens_per_second, decode_tokens_per_second.
+#   placement: {...}        region, hardware, locality.
+#
+# QUALITY AND PERFORMANCE ARE LEFT BLANK BELOW ON PURPOSE. Nobody has benchmarked
+# these models for this repository, and inventing scores would make the router
+# rank confidently on fiction. Absent is handled honestly: the planner drops a
+# feature it cannot obtain for every candidate and says so in the explanation,
+# rather than treating a missing score as zero. Fill them in from your own
+# measurements and routing will start using them.
 
 models:
   # --- local, no credentials required -------------------------------------
+  # The two mock deployments are graded relative to each other because they are
+  # this project's own fixtures; the grades say "large is the more capable of
+  # these two" and claim nothing beyond that.
   - id: mock-small
     provider: mock
     provider_model: mock-small
+    grade: Grade02
     context_window: 8192
     input_cost_per_mtok: 0.05
     output_cost_per_mtok: 0.15
     capabilities: [chat, streaming]
+    placement:
+      locality: local
     enabled: true
     fallbacks: [mock-large]
 
   - id: mock-large
     provider: mock
     provider_model: mock-large
+    grade: Grade08
     context_window: 32768
     input_cost_per_mtok: 0.50
     output_cost_per_mtok: 1.50
     capabilities: [chat, streaming, reasoning]
+    placement:
+      locality: local
     enabled: true
 
   # --- external providers: set keys, fill in pricing, then enable ----------
+  # Ungraded and unpriced. A price of 0.0 means "not filled in", and the router
+  # treats it as unknown rather than free. Because an unknown feature is dropped
+  # for the whole decision, leaving one candidate unpriced stops cost being used
+  # to rank ANY of them — the route preview will say so.
   - id: gpt-4o-mini
     provider: openai
     provider_model: gpt-4o-mini
@@ -42,6 +77,8 @@ models:
     input_cost_per_mtok: 0.0
     output_cost_per_mtok: 0.0
     capabilities: [chat, streaming]
+    placement:
+      locality: external
     enabled: false
 
   - id: gpt-4o
@@ -50,7 +87,9 @@ models:
     context_window: null
     input_cost_per_mtok: 0.0
     output_cost_per_mtok: 0.0
-    capabilities: [chat, streaming, reasoning]
+    capabilities: [chat, streaming, reasoning, vision, json_schema, tools]
+    placement:
+      locality: external
     enabled: false
     fallbacks: [gpt-4o-mini]
 
@@ -60,18 +99,28 @@ models:
     context_window: null
     input_cost_per_mtok: 0.0
     output_cost_per_mtok: 0.0
-    capabilities: [chat, streaming, reasoning]
+    capabilities: [chat, streaming, reasoning, vision, tools]
+    placement:
+      locality: external
     enabled: false
 
 # Aliases are virtual model ids resolved by policy at request time. A client that
 # sends `auto` gets whichever candidate the policy picks, and learns which one it
 # was from the `x-fabric-served-model` response header.
+#
+# Policies: quality_first, latency_first, cost_first, balanced, local_only,
+# private_only, custom. `cheapest` is still accepted and means `cost_first`.
 aliases:
   - id: auto
-    policy: cheapest
+    policy: cost_first
     candidates: [mock-small, mock-large, gpt-4o-mini, gpt-4o, claude-sonnet]
 
   - id: auto-reasoning
-    policy: cheapest
+    policy: cost_first
     requires: [reasoning]
     candidates: [mock-large, gpt-4o, claude-sonnet]
+
+  # Never leaves infrastructure the operator controls, whatever else is enabled.
+  - id: auto-local
+    policy: local_only
+    candidates: [mock-small, mock-large, gpt-4o-mini, gpt-4o, claude-sonnet]

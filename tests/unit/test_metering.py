@@ -74,3 +74,22 @@ def test_empty_meter_reports_zeroes() -> None:
     totals = InMemoryMeter().totals()
     assert totals.requests == 0
     assert totals.cost_usd == 0
+
+
+def test_totals_and_recent_are_scoped_to_a_tenant() -> None:
+    meter = InMemoryMeter()
+    meter.record(_record(request_id="a", tenant_id="tenant-a"))
+    meter.record(_record(request_id="b", tenant_id="tenant-b", prompt_tokens=99))
+
+    assert meter.totals(tenant_id="tenant-a").requests == 1
+    assert meter.totals(tenant_id="tenant-a").prompt_tokens == 10
+    assert [r.request_id for r in meter.recent(tenant_id="tenant-b")] == ["b"]
+
+
+def test_usage_can_be_narrowed_to_one_user_inside_a_tenant() -> None:
+    meter = InMemoryMeter()
+    meter.record(_record(request_id="a", tenant_id="acme", user_id="alice"))
+    meter.record(_record(request_id="b", tenant_id="acme", user_id="bob"))
+
+    assert meter.totals(tenant_id="acme").requests == 2
+    assert [r.request_id for r in meter.recent(tenant_id="acme", user_id="alice")] == ["a"]

@@ -1,0 +1,95 @@
+# Production-like stack for integration tests. Not a production deployment.
+# Inference endpoint is mock by default; enable the `inference` profile for Ollama.
+
+services:
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: fabric
+      POSTGRES_PASSWORD: fabric
+      POSTGRES_DB: fabric
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fabric"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.109.0
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4318:4318"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+  ollama:
+    image: ollama/ollama:0.3.14
+    profiles: ["inference"]
+    ports:
+      - "11434:11434"
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    working_dir: /app
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      LLM_FABRIC_MIGRATION_DATABASE_URL: postgresql://fabric:fabric@postgres:5432/fabric
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      LLM_FABRIC_ENVIRONMENT: production
+      LLM_FABRIC_HOST: 0.0.0.0
+      LLM_FABRIC_PORT: 47317
+      LLM_FABRIC_ALLOW_ANONYMOUS: "false"
+      LLM_FABRIC_AUTH_MODE: api_key
+      LLM_FABRIC_API_KEYS: production-test-key-16
+      LLM_FABRIC_DATABASE_URL: postgresql://fabric_app:fabric@postgres:5432/fabric
+      LLM_FABRIC_REDIS_URL: redis://redis:6379/0
+      LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+    ports:
+      - "47317:47317"

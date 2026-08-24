@@ -1,0 +1,1060 @@
+{
+  "mode": "classifier",
+  "taxonomy_version": "bootstrap-2026.08.1",
+  "classifier_version": "cascade-1.1:d3218fda27d5",
+  "dataset_size": 98,
+  "scored": 98,
+  "duration_s": 0.453,
+  "warnings": [],
+  "accuracy": 0.9082,
+  "lenient_accuracy": 0.949,
+  "top_k_accuracy": {
+    "top_1": 0.949,
+    "top_2": 0.9796,
+    "top_3": 0.9796
+  },
+  "macro_f1": 0.9269,
+  "micro_f1": 0.9082,
+  "expected_calibration_error": 0.1769,
+  "brier_score": 0.1469,
+  "high_confidence_routing": [
+    {
+      "threshold": 0.8,
+      "coverage": 0.4897959183673469,
+      "precision": 0.9375,
+      "lenient_precision": 1.0,
+      "n": 48
+    },
+    {
+      "threshold": 0.85,
+      "coverage": 0.3163265306122449,
+      "precision": 0.967741935483871,
+      "lenient_precision": 1.0,
+      "n": 31
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.2857142857142857,
+      "precision": 0.9642857142857143,
+      "lenient_precision": 1.0,
+      "n": 28
+    },
+    {
+      "threshold": 0.95,
+      "coverage": 0.1326530612244898,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 13
+    },
+    {
+      "threshold": 0.98,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    }
+  ],
+  "abstention": {
+    "abstained": 17,
+    "should_have_abstained": 14,
+    "rate": 0.17346938775510204,
+    "precision": 0.7058823529411765,
+    "unknown_intent_recall": 0.8571428571428571,
+    "accuracy": 0.9285714285714286
+  },
+  "slices": {
+    "hard_negatives": {
+      "count": 12,
+      "accuracy": 0.5,
+      "lenient_accuracy": 0.6666666666666666
+    },
+    "multi_intent": {
+      "count": 6,
+      "accuracy": 0.6666666666666666,
+      "lenient_accuracy": 1.0
+    },
+    "expects_abstention": {
+      "count": 14,
+      "accuracy": 0.8571428571428571,
+      "lenient_accuracy": 1.0
+    },
+    "ordinary": {
+      "count": 72,
+      "accuracy": 0.9861111111111112,
+      "lenient_accuracy": 0.9861111111111112
+    }
+  },
+  "cache": {
+    "exact_hits": 0,
+    "semantic_hits": 0,
+    "hit_rate": 0.0,
+    "exact_false_hit_rate": null,
+    "semantic_false_hit_rate": null
+  },
+  "latency_ms": {
+    "mean": 1.7345,
+    "p50": 1.372,
+    "p95": 3.4651,
+    "p99": 16.5743,
+    "max": 16.5743
+  },
+  "cost": {
+    "total_usd": 0.0,
+    "mean_usd": 0.0
+  },
+  "layer_distribution": {
+    "l0_exact_cache": 0,
+    "l1_semantic_cache": 0,
+    "l2_rules": 76,
+    "l3_embedding": 5,
+    "l4_structured_llm": 0,
+    "l5_escalation": 0,
+    "abstain": 17
+  },
+  "per_intent": {
+    "agent": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "classification": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding": {
+      "support": 10,
+      "predicted": 9,
+      "precision": 1.0,
+      "recall": 0.9,
+      "f1": 0.9474
+    },
+    "coding.debug": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding.review": {
+      "support": 2,
+      "predicted": 3,
+      "precision": 0.6667,
+      "recall": 1.0,
+      "f1": 0.8
+    },
+    "data_analysis": {
+      "support": 4,
+      "predicted": 3,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571
+    },
+    "extraction": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "general_conversation": {
+      "support": 8,
+      "predicted": 6,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571
+    },
+    "math": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "math.arithmetic": {
+      "support": 3,
+      "predicted": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "rag": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "reasoning": {
+      "support": 6,
+      "predicted": 5,
+      "precision": 1.0,
+      "recall": 0.8333,
+      "f1": 0.9091
+    },
+    "research": {
+      "support": 5,
+      "predicted": 5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "summarization": {
+      "support": 6,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8
+    },
+    "tool_use": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "translation": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "unknown": {
+      "support": 14,
+      "predicted": 17,
+      "precision": 0.7059,
+      "recall": 0.8571,
+      "f1": 0.7742
+    },
+    "vision": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "writing": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "top_confusions": [
+    {
+      "expected": "coding",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "data_analysis",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "general_conversation",
+      "predicted": "tool_use",
+      "count": 1
+    },
+    {
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "summarization",
+      "predicted": "extraction",
+      "count": 1
+    },
+    {
+      "expected": "summarization",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "unknown",
+      "predicted": "coding.review",
+      "count": 1
+    },
+    {
+      "expected": "unknown",
+      "predicted": "translation",
+      "count": 1
+    }
+  ],
+  "calibration_bins": [
+    {
+      "range": "0.0-0.1",
+      "count": 5,
+      "mean_confidence": 0.0405,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.1-0.2",
+      "count": 4,
+      "mean_confidence": 0.1412,
+      "accuracy": 0.75
+    },
+    {
+      "range": "0.3-0.4",
+      "count": 1,
+      "mean_confidence": 0.3991,
+      "accuracy": 0.0
+    },
+    {
+      "range": "0.4-0.5",
+      "count": 3,
+      "mean_confidence": 0.4538,
+      "accuracy": 0.6667
+    },
+    {
+      "range": "0.5-0.6",
+      "count": 2,
+      "mean_confidence": 0.5748,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.6-0.7",
+      "count": 4,
+      "mean_confidence": 0.6515,
+      "accuracy": 0.5
+    },
+    {
+      "range": "0.7-0.8",
+      "count": 31,
+      "mean_confidence": 0.7803,
+      "accuracy": 0.9677
+    },
+    {
+      "range": "0.8-0.9",
+      "count": 20,
+      "mean_confidence": 0.8413,
+      "accuracy": 0.9
+    },
+    {
+      "range": "0.9-1.0",
+      "count": 28,
+      "mean_confidence": 0.9422,
+      "accuracy": 0.9643
+    }
+  ],
+  "combination": "A_L2_hashing",
+  "config": {
+    "embedder": "hashing-512d",
+    "prototype": "examples",
+    "hn_lambda": 0.35,
+    "cx_lambda": 0.0,
+    "l4_rerank": false,
+    "elapsed_s": 0.453
+  },
+  "failures": [
+    {
+      "id": "data-002",
+      "text": "Which of these variables correlates most strongly with retention?",
+      "expected": "data_analysis",
+      "predicted": "unknown",
+      "confidence": 0.4879,
+      "layer": "abstain",
+      "hard_negative": false,
+      "multi_intent": false,
+      "notes": ""
+    },
+    {
+      "id": "hn-003",
+      "text": "Summarise what this codebase does for a new joiner",
+      "expected": "summarization",
+      "predicted": "unknown",
+      "confidence": 0.626,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Code vocabulary, but the deliverable is prose."
+    },
+    {
+      "id": "hn-005",
+      "text": "Explain what a segmentation fault actually is",
+      "expected": "coding",
+      "predicted": "unknown",
+      "confidence": 0.1784,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Debugging vocabulary with no bug to diagnose."
+    },
+    {
+      "id": "hn-008",
+      "text": "What would a summary of this document leave out?",
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "confidence": 0.3991,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Summarisation vocabulary; the request is critique."
+    },
+    {
+      "id": "hn-010",
+      "text": "Explain how autonomous agents plan multi-step work",
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "confidence": 0.6988,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Agent vocabulary; nothing is to be executed."
+    }
+  ],
+  "strict_hard_negative_misses": [
+    {
+      "id": "hn-003",
+      "expected": "summarization",
+      "predicted": "unknown",
+      "confidence": 0.626,
+      "layer": "abstain",
+      "acceptable": [
+        "coding"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.011,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.601,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "summarization",
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.083,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.50 of 6.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.0673,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.249,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.219, share 0.129, margin 0.009"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-005",
+      "expected": "coding",
+      "predicted": "unknown",
+      "confidence": 0.1784,
+      "layer": "abstain",
+      "acceptable": [
+        "general_conversation"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.605,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.067,
+          "cost_usd": 0.0,
+          "rationale": "no rule matched"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "reasoning",
+          "confidence": 0.1784,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.323,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.251, share 0.321, margin 0.033"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.1784,
+          "threshold": 0.62,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-008",
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "confidence": 0.3991,
+      "layer": "abstain",
+      "acceptable": [
+        "summarization"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.65,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "reasoning",
+          "confidence": 0.3991,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.088,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 8.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.157,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.228,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.263, share 0.276, margin 0.058"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.3991,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-009",
+      "expected": "summarization",
+      "predicted": "extraction",
+      "confidence": 0.7981,
+      "layer": "l2_rules",
+      "acceptable": [
+        "extraction"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.008,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.631,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "extraction",
+          "confidence": 0.7981,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.071,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 4.00 total"
+        }
+      ]
+    },
+    {
+      "id": "hn-010",
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "confidence": 0.6988,
+      "layer": "abstain",
+      "acceptable": [
+        "research",
+        "reasoning"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.729,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "agent",
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.103,
+          "cost_usd": 0.0,
+          "rationale": "rule score 3.00 of 3.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "reasoning",
+          "confidence": 0.0789,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.214,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.213, share 0.153, margin 0.002"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-012",
+      "expected": "general_conversation",
+      "predicted": "tool_use",
+      "confidence": 0.8347,
+      "layer": "l2_rules",
+      "acceptable": [
+        "tool_use"
+      ],
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.008,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.685,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "tool_use",
+          "confidence": 0.8347,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.091,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.50 of 4.50 total"
+        }
+      ]
+    }
+  ],
+  "focus": [
+    {
+      "id": "data-002",
+      "expected": "data_analysis",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.4879,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 0.776,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "data_analysis",
+          "confidence": 0.4257,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.098,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 7.50 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.4879,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.344,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.385, share 0.742, margin 0.146"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.4879,
+          "threshold": 0.62,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-003",
+      "expected": "summarization",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.626,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.011,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.601,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "summarization",
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.083,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.50 of 6.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.0673,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.249,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.219, share 0.129, margin 0.009"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.626,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-005",
+      "expected": "coding",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.1784,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.605,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.067,
+          "cost_usd": 0.0,
+          "rationale": "no rule matched"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "reasoning",
+          "confidence": 0.1784,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.323,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.251, share 0.321, margin 0.033"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.1784,
+          "threshold": 0.62,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-008",
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.3991,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.65,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "reasoning",
+          "confidence": 0.3991,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.088,
+          "cost_usd": 0.0,
+          "rationale": "rule score 4.00 of 8.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "data_analysis",
+          "confidence": 0.157,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.228,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.263, share 0.276, margin 0.058"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.3991,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    },
+    {
+      "id": "hn-010",
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "strict_ok": false,
+      "lenient_ok": false,
+      "confidence": 0.6988,
+      "layer": "abstain",
+      "attempts": [
+        {
+          "layer": "l0_exact_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.0,
+          "accepted": false,
+          "latency_ms": 0.007,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l1_semantic_cache",
+          "intent_id": null,
+          "confidence": 0.0,
+          "threshold": 0.8,
+          "accepted": false,
+          "latency_ms": 1.729,
+          "cost_usd": 0.0,
+          "rationale": "miss"
+        },
+        {
+          "layer": "l2_rules",
+          "intent_id": "agent",
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": false,
+          "latency_ms": 0.103,
+          "cost_usd": 0.0,
+          "rationale": "rule score 3.00 of 3.00 total"
+        },
+        {
+          "layer": "l3_embedding",
+          "intent_id": "reasoning",
+          "confidence": 0.0789,
+          "threshold": 0.62,
+          "accepted": false,
+          "latency_ms": 1.214,
+          "cost_usd": 0.0,
+          "rationale": "cosine 0.213, share 0.153, margin 0.002"
+        },
+        {
+          "layer": "abstain",
+          "intent_id": null,
+          "confidence": 0.6988,
+          "threshold": 0.7,
+          "accepted": true,
+          "latency_ms": 0.0,
+          "cost_usd": 0.0,
+          "rationale": "no layer reached its threshold"
+        }
+      ]
+    }
+  ]
+}

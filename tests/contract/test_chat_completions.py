@@ -46,7 +46,7 @@ def test_response_reports_the_model_that_served_it(client: TestClient) -> None:
     assert response.headers["x-fabric-requested-model"] == "auto"
     assert response.headers["x-fabric-served-model"] == "cheap"
     assert response.headers["x-fabric-provider"] == "mock"
-    assert response.headers["x-fabric-policy"] == "cheapest"
+    assert response.headers["x-fabric-policy"] == "cost_first"
 
 
 def test_failover_is_visible_to_the_caller(client: TestClient) -> None:
@@ -54,6 +54,7 @@ def test_failover_is_visible_to_the_caller(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.headers["x-fabric-served-model"] == "cheap"
     assert response.headers["x-fabric-failovers"] == "1"
+    assert response.headers["x-fabric-invocations"] == "2"
 
 
 def test_caller_request_id_is_echoed(client: TestClient) -> None:
@@ -61,10 +62,42 @@ def test_caller_request_id_is_echoed(client: TestClient) -> None:
     assert response.headers["x-fabric-request-id"] == "trace-abc"
 
 
-def test_optional_parameters_are_accepted(client: TestClient) -> None:
+def test_optional_parameters_are_forwarded_to_the_provider(registry, settings, meter) -> None:
+    from llm_fabric.gateway.app import create_app
+    from llm_fabric.serving.adapters.mock import MockProvider
+    from llm_fabric.serving.base import InferenceRequest, ProviderResult
+
+    seen: list[InferenceRequest] = []
+
+    class RecordingProvider(MockProvider):
+        async def generate(self, request: InferenceRequest) -> ProviderResult:
+            seen.append(request)
+            return await super().generate(request)
+
+    app = create_app(
+        settings=settings,
+        registry=registry,
+        provider_overrides={"mock": RecordingProvider(), "failing": MockProvider(fail=True)},
+        meter=meter,
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            PATH,
+            json=_body(temperature=0.2, top_p=0.9, max_tokens=64, stop=["END"]),
+        )
+
+    assert response.status_code == 200
+    assert len(seen) == 1
+    assert seen[0].temperature == 0.2
+    assert seen[0].top_p == 0.9
+    assert seen[0].max_tokens == 64
+    assert seen[0].stop == ["END"]
+
+
+def test_unknown_sdk_fields_are_ignored(client: TestClient) -> None:
     response = client.post(
         PATH,
-        json=_body(temperature=0.2, top_p=0.9, max_tokens=64, stop=["END"]),
+        json=_body(stream_options={"include_usage": True}, frequency_penalty=0.0),
     )
     assert response.status_code == 200
 
@@ -174,3 +207,35 @@ def test_unknown_model_fails_before_streaming_starts(client: TestClient) -> None
     response = client.post(PATH, json=_body(model="no-such-model", stream=True))
     assert response.status_code == 400
     assert not response.headers["content-type"].startswith("text/event-stream")
+
+
+def test_stream_failure_is_metered(meter, registry, settings) -> None:
+    from llm_fabric.errors import ProviderUnavailableError
+    from llm_fabric.gateway.app import create_app
+    from llm_fabric.observability.metering import InMemoryMeter
+    from llm_fabric.serving.adapters.mock import MockProvider
+    from llm_fabric.serving.base import InferenceRequest, StreamDelta
+
+    class DeltaThenFail(MockProvider):
+        async def stream(self, request: InferenceRequest) -> object:
+            yield StreamDelta(text="partial")
+            raise ProviderUnavailableError("cut off")
+            yield  # pragma: no cover
+
+    isolated = InMemoryMeter()
+    app = create_app(
+        settings=settings,
+        registry=registry,
+        provider_overrides={"mock": MockProvider(), "failing": DeltaThenFail()},
+        meter=isolated,
+    )
+    with TestClient(app) as client:
+        response = client.post(PATH, json=_body(model="broken", stream=True))
+        usage = client.get("/v1/usage").json()
+
+    assert response.status_code == 200
+    events = _sse_events(response.text)
+    assert any("error" in event for event in events)
+    assert usage["totals"]["requests"] == 1
+    assert usage["recent"][0]["error"]
+    assert usage["recent"][0]["streamed"] is True

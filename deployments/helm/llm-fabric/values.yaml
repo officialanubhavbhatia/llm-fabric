@@ -1,0 +1,86 @@
+replicaCount: 2
+
+image:
+  repository: llm-fabric
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 47317
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+probes:
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 20
+  startup:
+    path: /healthz
+    failureThreshold: 30
+    periodSeconds: 5
+
+autoscaling:
+  # Disabled until metrics-server + CPU targets are proven on the cluster.
+  # Opt in with --set autoscaling.enabled=true after installing metrics-server
+  # and confirming resource requests exist. YAML alone is not verified autoscaling.
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  minAvailable: 1
+
+terminationGracePeriodSeconds: 30
+
+config:
+  environment: production
+  host: 0.0.0.0
+  port: 47317
+  allowAnonymous: "false"
+  authMode: oidc
+
+secretName: llm-fabric
+
+# Pre-install/pre-upgrade Job runs `alembic upgrade head` from the gateway
+# image. The Secret named by secretName must contain:
+#   LLM_FABRIC_MIGRATION_DATABASE_URL  DDL / table-owner role (Compose: fabric)
+#   LLM_FABRIC_DATABASE_URL            DML role fabric_app (no CREATE)
+# Gateway pods use DATABASE_URL and never run migrations. Do not point
+# workers at the migration role.
+migrations:
+  enabled: true
+
+env:
+  - name: LLM_FABRIC_ENVIRONMENT
+    value: production
+  - name: LLM_FABRIC_HOST
+    value: "0.0.0.0"
+  - name: LLM_FABRIC_PORT
+    value: "47317"
+  - name: LLM_FABRIC_ALLOW_ANONYMOUS
+    value: "false"
+
+# Shared traces: set otlp.endpoint to an OTLP HTTP traces URL
+# (http://otel-collector:4318/v1/traces). A host:port base is accepted and
+# /v1/traces is appended. Auth headers belong in the Secret as
+# LLM_FABRIC_OTEL_EXPORTER_OTLP_HEADERS, never in this ConfigMap.
+# Collector outage is fail-soft; readiness stays up.
+# In-cluster collector is off by default.
+observability:
+  otlp:
+    endpoint: ""
+  collector:
+    enabled: false

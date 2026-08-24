@@ -1,0 +1,98 @@
+{"id": "code-001", "text": "Add a retry with exponential backoff to this HTTP client", "expected_intent_id": "coding", "paraphrases": ["Give this HTTP client retries with exponential backoff"]}
+{"id": "code-002", "text": "Convert this class-based React component into one that uses hooks", "expected_intent_id": "coding"}
+{"id": "code-003", "text": "Implement binary search over a sorted slice in Go", "expected_intent_id": "coding", "paraphrases": ["Implement a binary search on a sorted Go slice"]}
+{"id": "code-004", "text": "Rename this variable consistently across the whole module", "expected_intent_id": "coding"}
+{"id": "code-005", "text": "Add pagination to this REST endpoint and keep the response shape stable", "expected_intent_id": "coding"}
+{"id": "code-006", "text": "Write a SQL query that returns the top ten customers by lifetime value", "expected_intent_id": "coding"}
+{"id": "debug-001", "text": "My unit test hangs forever and never completes, what should I look at?", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"]}
+{"id": "debug-002", "text": "Getting a KeyError on line 42, here is the full traceback", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"], "paraphrases": ["I hit a KeyError at line 42 and here is the traceback"]}
+{"id": "debug-003", "text": "The container exits immediately with exit code 139 and no logs", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"]}
+{"id": "debug-004", "text": "Why does this query keep returning duplicate rows after the join?", "expected_intent_id": "coding.debug", "acceptable_intent_ids": ["coding"]}
+{"id": "review-001", "text": "Review this pull request and flag anything risky before I merge", "expected_intent_id": "coding.review", "acceptable_intent_ids": ["coding"]}
+{"id": "review-002", "text": "Is this concurrency safe under two writers?", "expected_intent_id": "coding.review", "acceptable_intent_ids": ["coding"]}
+{"id": "agent-001", "text": "Find a restaurant near the office, reserve a table for six and confirm it by email", "expected_intent_id": "agent"}
+{"id": "agent-002", "text": "Check our three cloud bills every morning and open a ticket if any jumps by twenty percent", "expected_intent_id": "agent"}
+{"id": "agent-003", "text": "Book me a hotel in Lisbon for the conference and add it to my calendar", "expected_intent_id": "agent", "paraphrases": ["Reserve a Lisbon hotel for the conference and put it in my calendar"]}
+{"id": "agent-004", "text": "Work through the backlog, triage each item and then assign owners", "expected_intent_id": "agent"}
+{"id": "reason-001", "text": "If every manager is an employee and some employees are contractors, what follows about managers?", "expected_intent_id": "reasoning"}
+{"id": "reason-002", "text": "Given these four constraints, work out which schedule satisfies all of them and justify it", "expected_intent_id": "reasoning"}
+{"id": "reason-003", "text": "Which of these three explanations best fits the evidence we have?", "expected_intent_id": "reasoning"}
+{"id": "reason-004", "text": "What are the second-order consequences of removing the approval step?", "expected_intent_id": "reasoning"}
+{"id": "math-001", "text": "Differentiate x cubed times the natural log of x", "expected_intent_id": "math"}
+{"id": "math-002", "text": "Prove that there are infinitely many prime numbers", "expected_intent_id": "math", "paraphrases": ["Give a proof that the primes are infinite"]}
+{"id": "math-003", "text": "Solve this system of equations for x and y", "expected_intent_id": "math"}
+{"id": "math-004", "text": "Find the eigenvalues of this two by two matrix", "expected_intent_id": "math"}
+{"id": "arith-001", "text": "What is 2,340 divided by 12?", "expected_intent_id": "math.arithmetic", "acceptable_intent_ids": ["math"]}
+{"id": "arith-002", "text": "What is 7% of 1,250?", "expected_intent_id": "math.arithmetic", "acceptable_intent_ids": ["math"], "paraphrases": ["What is seven percent of 1250?"]}
+{"id": "arith-003", "text": "Add up 45.20, 118.75 and 9.05", "expected_intent_id": "math.arithmetic", "acceptable_intent_ids": ["math"]}
+{"id": "research-001", "text": "What does the literature say about the efficacy of spaced repetition?", "expected_intent_id": "research"}
+{"id": "research-002", "text": "Compare the leading approaches to vector search and their trade-offs", "expected_intent_id": "research"}
+{"id": "research-003", "text": "Give me a survey of the current research on model distillation", "expected_intent_id": "research", "paraphrases": ["Survey what current research says about model distillation"]}
+{"id": "research-004", "text": "What is the state of the art in speech separation?", "expected_intent_id": "research"}
+{"id": "rag-001", "text": "According to the attached policy, how long is the probation period?", "expected_intent_id": "rag"}
+{"id": "rag-002", "text": "Using only the supplied contract, what is the liability cap?", "expected_intent_id": "rag", "paraphrases": ["Based on the provided contract alone, what is the liability cap?"]}
+{"id": "rag-003", "text": "What does our runbook say to do when the primary database fails over?", "expected_intent_id": "rag"}
+{"id": "rag-004", "text": "Search our internal documentation for the key rotation procedure", "expected_intent_id": "rag"}
+{"id": "data-001", "text": "Is the uplift in this A/B test statistically significant?", "expected_intent_id": "data_analysis"}
+{"id": "data-002", "text": "Which of these variables correlates most strongly with retention?", "expected_intent_id": "data_analysis"}
+{"id": "data-003", "text": "Break down these revenue figures by region and flag any anomalies", "expected_intent_id": "data_analysis", "paraphrases": ["Analyse this revenue data by region and point out anomalies"]}
+{"id": "data-004", "text": "What trend do you see in this cohort retention data?", "expected_intent_id": "data_analysis"}
+{"id": "write-001", "text": "Draft a short apology email to a customer whose order was delayed", "expected_intent_id": "writing"}
+{"id": "write-002", "text": "Write a blog post introducing our new pricing tier", "expected_intent_id": "writing", "paraphrases": ["Write me a blog post announcing the new pricing tier"]}
+{"id": "write-003", "text": "Write a short story about a lighthouse keeper who loses the light", "expected_intent_id": "writing"}
+{"id": "write-004", "text": "Turn these bullet points into a paragraph for the annual report", "expected_intent_id": "writing"}
+{"id": "sum-001", "text": "Give me a two-line summary of this thread", "expected_intent_id": "summarization", "paraphrases": ["Summarise this thread in two lines"]}
+{"id": "sum-002", "text": "TL;DR this changelog please", "expected_intent_id": "summarization"}
+{"id": "sum-003", "text": "Condense these meeting notes into action items", "expected_intent_id": "summarization"}
+{"id": "sum-004", "text": "What is the gist of the attached report?", "expected_intent_id": "summarization", "acceptable_intent_ids": ["rag"]}
+{"id": "trans-001", "text": "Translate the following sentence into Italian", "expected_intent_id": "translation", "paraphrases": ["Put the following sentence into Italian"]}
+{"id": "trans-002", "text": "How do you say 'thank you very much' in Korean?", "expected_intent_id": "translation"}
+{"id": "trans-003", "text": "Render this paragraph in formal Japanese", "expected_intent_id": "translation"}
+{"id": "trans-004", "text": "Translate these subtitles into German and keep the line breaks", "expected_intent_id": "translation"}
+{"id": "extract-001", "text": "Extract all invoice numbers and totals from this document as JSON", "expected_intent_id": "extraction", "paraphrases": ["Pull every invoice number and total out of this document as JSON"]}
+{"id": "extract-002", "text": "Pull out every phone number mentioned in this text", "expected_intent_id": "extraction"}
+{"id": "extract-003", "text": "Return the line items from this receipt as a table", "expected_intent_id": "extraction"}
+{"id": "extract-004", "text": "List all the dates and counterparties in this agreement", "expected_intent_id": "extraction", "acceptable_intent_ids": ["rag"]}
+{"id": "class-001", "text": "Classify each of these tickets as billing, technical or account", "expected_intent_id": "classification"}
+{"id": "class-002", "text": "Is this customer message positive or negative?", "expected_intent_id": "classification", "paraphrases": ["Is the sentiment of this customer message positive or negative?"]}
+{"id": "class-003", "text": "Does this comment violate our community guidelines?", "expected_intent_id": "classification"}
+{"id": "class-004", "text": "Which category does this expense belong to?", "expected_intent_id": "classification"}
+{"id": "vision-001", "text": "What is shown in this screenshot?", "expected_intent_id": "vision"}
+{"id": "vision-002", "text": "Describe the attached photograph in detail", "expected_intent_id": "vision", "paraphrases": ["Give me a detailed description of the attached photo"]}
+{"id": "vision-003", "text": "Read the text in this image and give it back to me", "expected_intent_id": "vision"}
+{"id": "vision-004", "text": "Does this chart actually support the claim in the caption?", "expected_intent_id": "vision", "acceptable_intent_ids": ["data_analysis"]}
+{"id": "tool-001", "text": "What is the weather in Lisbon right now?", "expected_intent_id": "tool_use", "paraphrases": ["What's the current weather in Lisbon?"]}
+{"id": "tool-002", "text": "Look up today's EUR to GBP exchange rate", "expected_intent_id": "tool_use"}
+{"id": "tool-003", "text": "Check whether this domain name is still available", "expected_intent_id": "tool_use"}
+{"id": "tool-004", "text": "Query the orders table for yesterday's total", "expected_intent_id": "tool_use", "acceptable_intent_ids": ["coding"]}
+{"id": "chat-001", "text": "Hello there, how are you today?", "expected_intent_id": "general_conversation"}
+{"id": "chat-002", "text": "What is the capital of Peru?", "expected_intent_id": "general_conversation", "paraphrases": ["What's Peru's capital city?"]}
+{"id": "chat-003", "text": "Thanks, that was really helpful", "expected_intent_id": "general_conversation"}
+{"id": "chat-004", "text": "Tell me something interesting about octopuses", "expected_intent_id": "general_conversation"}
+{"id": "chat-005", "text": "Who won the 1998 World Cup final?", "expected_intent_id": "general_conversation"}
+{"id": "hn-001", "text": "Translate this Python function into Go", "expected_intent_id": "coding", "hard_negative": true, "notes": "Reads as translation; porting code is a coding task."}
+{"id": "hn-002", "text": "Write a Python function that computes compound interest", "expected_intent_id": "coding", "hard_negative": true, "notes": "Financial maths vocabulary, but the deliverable is code."}
+{"id": "hn-003", "text": "Summarise what this codebase does for a new joiner", "expected_intent_id": "summarization", "acceptable_intent_ids": ["coding"], "hard_negative": true, "notes": "Code vocabulary, but the deliverable is prose."}
+{"id": "hn-004", "text": "Write a script that translates text between languages", "expected_intent_id": "coding", "hard_negative": true, "notes": "Strong translation signal; the deliverable is a program."}
+{"id": "hn-005", "text": "Explain what a segmentation fault actually is", "expected_intent_id": "coding", "acceptable_intent_ids": ["general_conversation"], "hard_negative": true, "notes": "Debugging vocabulary with no bug to diagnose."}
+{"id": "hn-006", "text": "Describe what a histogram is used for", "expected_intent_id": "general_conversation", "acceptable_intent_ids": ["data_analysis"], "hard_negative": true, "notes": "Chart vocabulary with no chart attached."}
+{"id": "hn-007", "text": "Estimate how long it would take to rewrite this service", "expected_intent_id": "reasoning", "acceptable_intent_ids": ["coding"], "hard_negative": true, "notes": "Code context, but the task is judgement not implementation."}
+{"id": "hn-008", "text": "What would a summary of this document leave out?", "expected_intent_id": "reasoning", "acceptable_intent_ids": ["summarization"], "hard_negative": true, "notes": "Summarisation vocabulary; the request is critique."}
+{"id": "hn-009", "text": "Extract the underlying argument from this essay", "expected_intent_id": "summarization", "acceptable_intent_ids": ["extraction"], "hard_negative": true, "notes": "Extraction verb, but the target is a gist, not a field."}
+{"id": "hn-010", "text": "Explain how autonomous agents plan multi-step work", "expected_intent_id": "general_conversation", "acceptable_intent_ids": ["research", "reasoning"], "hard_negative": true, "notes": "Agent vocabulary; nothing is to be executed."}
+{"id": "hn-011", "text": "Review the literature on code review effectiveness", "expected_intent_id": "research", "acceptable_intent_ids": ["coding.review"], "hard_negative": true, "notes": "Contains 'review' twice; the task is research."}
+{"id": "hn-012", "text": "What is the weather like in Antarctica in general?", "expected_intent_id": "general_conversation", "acceptable_intent_ids": ["tool_use"], "hard_negative": true, "notes": "Weather vocabulary without a live lookup."}
+{"id": "mi-001", "text": "Summarise this article and then translate the summary into German", "expected_intent_id": "unknown", "acceptable_intent_ids": ["summarization", "translation"], "multi_intent": true, "notes": "Two intents chained; abstention or either constituent is defensible."}
+{"id": "mi-002", "text": "Review this diff and fix any bugs you find", "expected_intent_id": "unknown", "acceptable_intent_ids": ["coding", "coding.review", "coding.debug"], "multi_intent": true}
+{"id": "mi-003", "text": "Extract the figures from this report and tell me whether the trend is significant", "expected_intent_id": "unknown", "acceptable_intent_ids": ["extraction", "data_analysis"], "multi_intent": true}
+{"id": "mi-004", "text": "Translate this contract into French and flag any risky clauses", "expected_intent_id": "unknown", "acceptable_intent_ids": ["translation", "rag", "reasoning"], "multi_intent": true}
+{"id": "mi-005", "text": "Classify this image as a cat or a dog", "expected_intent_id": "unknown", "acceptable_intent_ids": ["vision", "classification"], "multi_intent": true, "notes": "Genuinely both; the modality and the task point at different intents."}
+{"id": "mi-006", "text": "Summarise these numbers and then write the announcement", "expected_intent_id": "unknown", "acceptable_intent_ids": ["summarization", "writing", "data_analysis"], "multi_intent": true}
+{"id": "unk-001", "text": "asdkjh qwe zxcvb", "expected_intent_id": "unknown", "notes": "No linguistic content at all."}
+{"id": "unk-002", "text": "Do the thing we discussed earlier", "expected_intent_id": "unknown", "notes": "Referential; the intent lives in context this classifier cannot see."}
+{"id": "unk-003", "text": "Please proceed", "expected_intent_id": "unknown"}
+{"id": "unk-004", "text": "42", "expected_intent_id": "unknown"}
+{"id": "unk-005", "text": "the the the and and", "expected_intent_id": "unknown"}
+{"id": "unk-006", "text": "Can you help me with something?", "expected_intent_id": "unknown", "acceptable_intent_ids": ["general_conversation"], "notes": "Contentless opener."}
+{"id": "unk-007", "text": "Same as last time but better", "expected_intent_id": "unknown"}
+{"id": "unk-008", "text": "###", "expected_intent_id": "unknown"}

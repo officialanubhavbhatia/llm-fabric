@@ -1,0 +1,146 @@
+{
+  "workload": "chat-pinned mock-small",
+  "duration_s": 8,
+  "warmup_s": 2,
+  "connections": 16,
+  "processes": 1,
+  "auth": "anonymous development",
+  "runs": [
+    {
+      "name": "intent_off",
+      "intent": {
+        "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "false"
+      },
+      "requests": 12608,
+      "achieved_rps": 1574.5498313355417,
+      "p50_ms": 9.983416006434709,
+      "p95_ms": 11.535624973475933,
+      "p99_ms": 13.481708010658622,
+      "max_ms": 41.62516602082178,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 12608
+      },
+      "errors": {},
+      "server_rss_kb": 108992,
+      "resources": {
+        "cpu_user_s": 0.5842,
+        "cpu_system_s": 0.5056,
+        "cpu_s": 1.0898,
+        "rss_bytes": 81559552,
+        "gpu": null,
+        "queue_depth": null,
+        "note": "CPU is the generator parent plus its waited-for worker children. RSS is the parent only. The server is a separate process and is not sampled here. GPU is absent unless nvidia-smi reports a device. Server queue depth is not polled during a run."
+      }
+    },
+    {
+      "name": "intent_on_hashing",
+      "intent": {
+        "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+        "LLM_FABRIC_INTENT_EMBEDDER": "hashing"
+      },
+      "requests": 10832,
+      "achieved_rps": 1352.1192021925006,
+      "p50_ms": 11.726125027053058,
+      "p95_ms": 13.345209008548409,
+      "p99_ms": 15.265499998349696,
+      "max_ms": 18.560916010756046,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 10832
+      },
+      "errors": {},
+      "server_rss_kb": 108624,
+      "resources": {
+        "cpu_user_s": 0.591,
+        "cpu_system_s": 0.4423,
+        "cpu_s": 1.0333,
+        "rss_bytes": 82001920,
+        "gpu": null,
+        "queue_depth": null,
+        "note": "CPU is the generator parent plus its waited-for worker children. RSS is the parent only. The server is a separate process and is not sampled here. GPU is absent unless nvidia-smi reports a device. Server queue depth is not polled during a run."
+      }
+    },
+    {
+      "name": "intent_on_minilm",
+      "intent": {
+        "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+        "LLM_FABRIC_INTENT_EMBEDDER": "minilm"
+      },
+      "requests": 10576,
+      "achieved_rps": 1320.6926244142367,
+      "p50_ms": 11.990833037998527,
+      "p95_ms": 13.513999991118908,
+      "p99_ms": 15.472750004846603,
+      "max_ms": 20.78249998157844,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 10576
+      },
+      "errors": {},
+      "server_rss_kb": 342272,
+      "resources": {
+        "cpu_user_s": 0.6144,
+        "cpu_system_s": 0.4647,
+        "cpu_s": 1.0791,
+        "rss_bytes": 82870272,
+        "gpu": null,
+        "queue_depth": null,
+        "note": "CPU is the generator parent plus its waited-for worker children. RSS is the parent only. The server is a separate process and is not sampled here. GPU is absent unless nvidia-smi reports a device. Server queue depth is not polled during a run."
+      }
+    },
+    {
+      "name": "intent_on_minilm_l4",
+      "intent": {
+        "LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED": "true",
+        "LLM_FABRIC_INTENT_EMBEDDER": "minilm",
+        "LLM_FABRIC_INTENT_L4_RERANK": "true"
+      },
+      "requests": 10448,
+      "achieved_rps": 1303.9784122822311,
+      "p50_ms": 12.163375038653612,
+      "p95_ms": 13.650125009007752,
+      "p99_ms": 15.957833034917712,
+      "max_ms": 19.065040978603065,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 10448
+      },
+      "errors": {},
+      "server_rss_kb": 363088,
+      "resources": {
+        "cpu_user_s": 0.5806,
+        "cpu_system_s": 0.4442,
+        "cpu_s": 1.0249,
+        "rss_bytes": 82870272,
+        "gpu": null,
+        "queue_depth": null,
+        "note": "CPU is the generator parent plus its waited-for worker children. RSS is the parent only. The server is a separate process and is not sampled here. GPU is absent unless nvidia-smi reports a device. Server queue depth is not polled during a run."
+      }
+    }
+  ],
+  "overhead_hashing_vs_off": {
+    "rps_delta": -222.4306291430412,
+    "p50_ms_delta": 1.7427090206183493,
+    "p95_ms_delta": 1.8095840350724757,
+    "p99_ms_delta": 1.7837919876910746
+  },
+  "overhead_minilm_vs_off": {
+    "rps_delta": -253.85720692130508,
+    "p50_ms_delta": 2.0074170315638185,
+    "p95_ms_delta": 1.9783750176429749,
+    "p99_ms_delta": 1.991041994187981
+  },
+  "l4": {
+    "escalation_rate_frozen": 0.0204,
+    "blended_http": {
+      "achieved_rps": 1303.9784122822311,
+      "p50_ms": 12.163375038653612,
+      "p95_ms": 13.650125009007752,
+      "p99_ms": 15.957833034917712
+    },
+    "cost_per_1000_classifications_usd": 0.0,
+    "paid_provider": false,
+    "note": "Local rerank L4; 2/98 frozen cases escalated. No paid tokens."
+  }
+}

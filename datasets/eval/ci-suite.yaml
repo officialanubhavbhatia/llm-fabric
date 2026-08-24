@@ -1,0 +1,97 @@
+name: ci
+description: >
+  Offline CI suite. Classification reuses the intent bootstrap dataset.
+  DeepEval and lm-evaluation-harness are present so the adapters are exercised;
+  they produce no scores unless those packages are installed and mapped.
+tenant_id: public
+
+tasks:
+  - name: deterministic
+    evaluator: deterministic
+    dataset_path: datasets/eval/deterministic.jsonl
+    metrics: [exact_match, json_valid]
+
+  - name: routing
+    evaluator: routing
+    dataset_path: datasets/eval/routing.jsonl
+    metrics: [route_match, policy_match]
+
+  - name: classification
+    evaluator: classification
+    dataset_path: datasets/intent/bootstrap.jsonl
+    metrics: [accuracy, macro_f1, unknown_intent_recall, high_confidence_precision]
+
+  - name: deepeval
+    evaluator: deepeval
+    metrics: []
+
+  - name: lm_eval
+    evaluator: lm_eval
+    metrics: []
+    options:
+      harness_tasks: []
+
+gates:
+  - metric: exact_match
+    kind: absolute
+    direction: higher
+    minimum: 1.0
+    critical: true
+    description: Recorded deterministic outputs must stay exact.
+
+  - metric: route_match
+    kind: absolute
+    direction: higher
+    minimum: 1.0
+    critical: true
+    description: Planner must keep picking the labelled mock routes.
+
+  - metric: accuracy
+    kind: regression
+    direction: higher
+    max_degradation: 0.05
+    critical: true
+    description: Classification accuracy must not drop more than 5 points from the accepted baseline.
+
+  - metric: accuracy
+    kind: absolute
+    direction: higher
+    minimum: 0.80
+    critical: true
+    description: >
+      Absolute quality floor for the bootstrap intent dataset, set from the
+      measured 0.8776 accuracy on datasets/intent/bootstrap.jsonl after the
+      unmatched-child dilution fix. Not a 0.97 claim.
+
+  - metric: macro_f1
+    kind: regression
+    direction: higher
+    max_degradation: 0.05
+    critical: true
+
+  - metric: macro_f1
+    kind: absolute
+    direction: higher
+    minimum: 0.85
+    critical: true
+
+  - metric: unknown_intent_recall
+    kind: regression
+    direction: higher
+    max_degradation: 0.05
+    critical: true
+
+  - metric: unknown_intent_recall
+    kind: absolute
+    direction: higher
+    minimum: 0.75
+    critical: true
+
+  - metric: high_confidence_precision
+    kind: absolute
+    direction: higher
+    minimum: 0.90
+    critical: true
+    description: >
+      Precision among classifications at confidence ≥ 0.90. A wrong
+      high-confidence routing decision is worse than an abstention.

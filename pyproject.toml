@@ -12,6 +12,15 @@ dependencies = [
     "pydantic-settings>=2.6",
     "httpx>=0.27",
     "pyyaml>=6.0",
+    "pyjwt[crypto]>=2.9",
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "prometheus-client>=0.21",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "redis>=5.0",
+    "alembic>=1.14",
 ]
 
 [project.optional-dependencies]
@@ -19,17 +28,38 @@ dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
+    "mypy>=1.13",
+    "types-PyYAML>=6.0",
+    "fakeredis>=2.26",
+]
+eval-frameworks = [
+    "deepeval>=2.0",
+    "lm-eval>=0.4",
+]
+embed = [
+    "fastembed>=0.4",
 ]
 
 [project.scripts]
 llm-fabric = "llm_fabric.__main__:main"
+llm-fabric-doctor = "llm_fabric.doctor:main"
+llm-fabric-bench = "llm_fabric.intent.cli:main"
+llm-fabric-load = "llm_fabric.bench.cli:main"
+llm-fabric-eval = "llm_fabric.eval.cli:main"
+llm-fabric-heal = "llm_fabric.heal.cli:main"
+llm-fabric-profile = "llm_fabric.bench.profile:main"
+llm-fabric-perf = "llm_fabric.bench.perf:main"
+llm-fabric-usage = "llm_fabric.observability.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/llm_fabric"]
+packages = ["src/llm_fabric", "src/myvista"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/llm_fabric/gateway/static/command_center.html" = "llm_fabric/gateway/static/command_center.html"
 
 [tool.ruff]
 line-length = 100
@@ -51,3 +81,41 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "isolation: cross-tenant adversarial tests; a failure here must fail CI",
+    "tenant_isolation: cross-tenant tests against a real database/cache",
+    "chaos: expected degraded behaviour under injected failure",
+    "system: live multi-process stack; skipped unless LLM_FABRIC_SYSTEM_TEST=1",
+]
+
+[tool.mypy]
+python_version = "3.12"
+explicit_package_bases = true
+mypy_path = "src"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["deepeval.*", "lm_eval"]
+ignore_missing_imports = true
+
+# Core modules carry the security invariants, so they are checked strictly.
+[[tool.mypy.overrides]]
+module = [
+    "llm_fabric.identity.*",
+    "llm_fabric.tenancy.*",
+    "llm_fabric.intent.*",
+    "llm_fabric.eval.*",
+    "llm_fabric.heal.*",
+    "llm_fabric.errors",
+    "myvista",
+    "myvista.*",
+]
+strict = true
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.26",
+]

@@ -1,7 +1,15 @@
 agent-tools/
 .venv/
+.cursor/
+:memory:.ses
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .env
+# Benchmark output. Derived, and stale the moment the classifier changes;
+# measured results belong in docs/EVALUATIONS.md with the run that produced them.
+artifacts/
+sdk/typescript/node_modules/
+sdk/typescript/dist/

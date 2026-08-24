@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "llm-fabric.fullname" . }}
+  labels:
+    app.kubernetes.io/name: llm-fabric
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: llm-fabric
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http

@@ -29,18 +29,23 @@ def build_client(base_url: str, headers: dict[str, str], timeout_s: float) -> ht
         base_url=base_url.rstrip("/"),
         headers=headers,
         timeout=httpx.Timeout(timeout_s),
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
+        follow_redirects=False,
     )
 
 
 def _extract_message(payload: object, fallback: str) -> str:
     if isinstance(payload, dict):
         error = payload.get("error")
-        if isinstance(error, dict) and isinstance(error.get("message"), str):
-            return error["message"]
+        if isinstance(error, dict):
+            nested = error.get("message")
+            if isinstance(nested, str):
+                return nested
         if isinstance(error, str):
             return error
-        if isinstance(payload.get("message"), str):
-            return payload["message"]
+        message = payload.get("message")
+        if isinstance(message, str):
+            return message
     return fallback
 
 

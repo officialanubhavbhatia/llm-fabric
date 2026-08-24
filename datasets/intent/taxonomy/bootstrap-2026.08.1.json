@@ -1,0 +1,564 @@
+{
+  "taxonomy_version": "bootstrap-2026.08.1",
+  "created_at": 1787565398.800477,
+  "intents": [
+    {
+      "intent_id": "agent",
+      "parent_intent_id": null,
+      "name": "Agentic execution",
+      "description": "Multi-step autonomous work with tools and intermediate state.",
+      "positive_examples": [
+        "Book me a flight to Berlin next Tuesday and add it to my calendar",
+        "Go through the open issues, triage them and assign owners",
+        "Monitor this endpoint and open a ticket if it fails twice",
+        "Research three vendors, compare them and email me a recommendation"
+      ],
+      "counterexamples": [
+        "What are the best flight booking sites?",
+        "Explain how autonomous agents work"
+      ],
+      "hard_negatives": [
+        "List the steps you would take to triage these issues",
+        "What tools would an agent need to book a flight?"
+      ],
+      "required_capabilities": [
+        "chat",
+        "reasoning",
+        "tools"
+      ],
+      "default_quality_class": "maximum",
+      "default_latency_class": "batch",
+      "default_context_class": "long",
+      "default_route_policy": "declared",
+      "created_at": 1787565396.946186,
+      "updated_at": 1787565396.946186,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "classification",
+      "parent_intent_id": null,
+      "name": "Classification",
+      "description": "Assigning supplied content to one of a known set of labels.",
+      "positive_examples": [
+        "Is this review positive, negative or neutral?",
+        "Label this ticket as billing, technical or account",
+        "Does this message violate our content policy?",
+        "Tag each of these sentences with its topic"
+      ],
+      "counterexamples": [
+        "Explain what sentiment analysis is"
+      ],
+      "hard_negatives": [
+        "Extract the sentiment-bearing phrases from this review",
+        "Write a classifier for support tickets"
+      ],
+      "required_capabilities": [
+        "chat",
+        "structured_output"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "realtime",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.946229,
+      "updated_at": 1787565396.94623,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "coding",
+      "parent_intent_id": null,
+      "name": "Coding",
+      "description": "Writing, changing, explaining or fixing software.",
+      "positive_examples": [
+        "Write a Python function that merges two sorted lists",
+        "Refactor this class to use dependency injection",
+        "Why does this TypeScript generic fail to compile?",
+        "Add pagination to this REST endpoint",
+        "Convert this callback-based code to async/await"
+      ],
+      "counterexamples": [
+        "What is the history of the Python programming language?",
+        "Should our team adopt Rust next quarter?"
+      ],
+      "hard_negatives": [
+        "Translate this paragraph of documentation into German",
+        "Summarise what this repository does for a non-technical reader",
+        "Estimate how long it would take to rewrite this service"
+      ],
+      "required_capabilities": [
+        "chat",
+        "code"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "interactive",
+      "default_context_class": "short",
+      "default_route_policy": "cheapest",
+      "created_at": 1787565396.946164,
+      "updated_at": 1787565396.946165,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "coding.debug",
+      "parent_intent_id": "coding",
+      "name": "Debugging",
+      "description": "Diagnosing a specific failure in existing code.",
+      "positive_examples": [
+        "This test passes locally and fails in CI, here is the stack trace",
+        "I get a segfault on the third iteration, what is wrong?",
+        "Why is this query returning duplicate rows?",
+        "My container exits immediately with code 137"
+      ],
+      "counterexamples": [
+        "Write a new parser for this file format"
+      ],
+      "hard_negatives": [
+        "Explain what a segmentation fault is",
+        "Review this pull request for style issues"
+      ],
+      "required_capabilities": [
+        "chat",
+        "code"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "medium",
+      "default_route_policy": null,
+      "created_at": 1787565396.946174,
+      "updated_at": 1787565396.946174,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "coding.review",
+      "parent_intent_id": "coding",
+      "name": "Code review",
+      "description": "Assessing a change for correctness, style or risk.",
+      "positive_examples": [
+        "Review this diff and tell me what could break",
+        "Is this concurrency safe?",
+        "Does this migration risk data loss?"
+      ],
+      "counterexamples": [
+        "Write the migration for me"
+      ],
+      "hard_negatives": [
+        "Fix the bug you find in this diff"
+      ],
+      "required_capabilities": [
+        "chat",
+        "code"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "long",
+      "default_route_policy": null,
+      "created_at": 1787565396.94618,
+      "updated_at": 1787565396.94618,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "data_analysis",
+      "parent_intent_id": null,
+      "name": "Data analysis",
+      "description": "Interpreting datasets, statistics and trends.",
+      "positive_examples": [
+        "What trend do you see in these monthly revenue figures?",
+        "Is this difference between the two cohorts statistically significant?",
+        "Which of these features correlates most with churn?",
+        "Break down these sales numbers by region and flag anomalies"
+      ],
+      "counterexamples": [
+        "Write a SQL query to fetch the sales table"
+      ],
+      "hard_negatives": [
+        "Extract the revenue figures from this PDF",
+        "Compute the mean of these five numbers"
+      ],
+      "required_capabilities": [
+        "chat",
+        "reasoning"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "long",
+      "default_route_policy": null,
+      "created_at": 1787565396.9462101,
+      "updated_at": 1787565396.9462101,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "extraction",
+      "parent_intent_id": null,
+      "name": "Extraction",
+      "description": "Pulling specific structured values out of unstructured input.",
+      "positive_examples": [
+        "Extract every invoice number and amount from this document",
+        "Pull out the names, dates and locations as JSON",
+        "List all email addresses mentioned in this thread",
+        "Return the line items from this receipt as a table"
+      ],
+      "counterexamples": [
+        "Summarise this invoice"
+      ],
+      "hard_negatives": [
+        "Summarise the key points of this receipt",
+        "Classify this document as an invoice or a receipt"
+      ],
+      "required_capabilities": [
+        "chat",
+        "structured_output"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "interactive",
+      "default_context_class": "medium",
+      "default_route_policy": null,
+      "created_at": 1787565396.946226,
+      "updated_at": 1787565396.946226,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "general_conversation",
+      "parent_intent_id": null,
+      "name": "General conversation",
+      "description": "Chat, simple factual questions and social exchange.",
+      "positive_examples": [
+        "Hello, how are you today?",
+        "What is the capital of Australia?",
+        "Thanks, that was helpful",
+        "Tell me something interesting",
+        "Who won the 1998 World Cup?"
+      ],
+      "counterexamples": [
+        "Write me a 2000-word essay on the Peloponnesian War"
+      ],
+      "hard_negatives": [
+        "What do you think we should do about this architecture?",
+        "Can you help me with something?"
+      ],
+      "required_capabilities": [
+        "chat"
+      ],
+      "default_quality_class": "draft",
+      "default_latency_class": "realtime",
+      "default_context_class": "tiny",
+      "default_route_policy": null,
+      "created_at": 1787565396.9462411,
+      "updated_at": 1787565396.9462411,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "math",
+      "parent_intent_id": null,
+      "name": "Mathematics",
+      "description": "Calculation, symbolic manipulation and proof.",
+      "positive_examples": [
+        "Integrate x squared times sine x with respect to x",
+        "What is 17% of 2,340?",
+        "Prove that the square root of two is irrational",
+        "Solve this system of three linear equations",
+        "Find the eigenvalues of this 3x3 matrix"
+      ],
+      "counterexamples": [
+        "Explain why mathematics education matters"
+      ],
+      "hard_negatives": [
+        "Write a Python function to compute a factorial",
+        "Summarise this paper on number theory",
+        "Extract every figure from this financial statement"
+      ],
+      "required_capabilities": [
+        "chat",
+        "reasoning"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.946194,
+      "updated_at": 1787565396.946194,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "math.arithmetic",
+      "parent_intent_id": "math",
+      "name": "Arithmetic",
+      "description": "Direct numeric calculation with no symbolic work.",
+      "positive_examples": [
+        "What is 4,821 divided by 17?",
+        "Add up 12.5, 108.75 and 3.2",
+        "What is 15% of 80?"
+      ],
+      "counterexamples": [
+        "Prove the fundamental theorem of arithmetic"
+      ],
+      "hard_negatives": [
+        "Write code that adds these numbers"
+      ],
+      "required_capabilities": [],
+      "default_quality_class": "draft",
+      "default_latency_class": "realtime",
+      "default_context_class": "tiny",
+      "default_route_policy": null,
+      "created_at": 1787565396.946199,
+      "updated_at": 1787565396.946199,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "rag",
+      "parent_intent_id": null,
+      "name": "Grounded question answering",
+      "description": "Answering strictly from supplied or retrieved documents.",
+      "positive_examples": [
+        "According to the attached handbook, how many leave days do I get?",
+        "Using only the provided contract, what is the termination notice period?",
+        "Search our internal docs and tell me how to rotate a key",
+        "What does our runbook say to do when the queue backs up?"
+      ],
+      "counterexamples": [
+        "What do you think about remote work in general?"
+      ],
+      "hard_negatives": [
+        "Summarise the attached handbook",
+        "What does the law generally say about termination notice?"
+      ],
+      "required_capabilities": [
+        "chat",
+        "retrieval"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "very_long",
+      "default_route_policy": null,
+      "created_at": 1787565396.946207,
+      "updated_at": 1787565396.946207,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "reasoning",
+      "parent_intent_id": null,
+      "name": "Reasoning",
+      "description": "Multi-step inference, planning or logical deduction in prose.",
+      "positive_examples": [
+        "If all A are B and some B are C, what follows about A and C?",
+        "Work out which of these three explanations best fits the evidence",
+        "Plan the order of these dependent tasks and justify it",
+        "What are the second-order consequences of this policy change?"
+      ],
+      "counterexamples": [
+        "What is the capital of France?"
+      ],
+      "hard_negatives": [
+        "Compute the compound interest on 5000 at 3% over 7 years",
+        "Summarise the argument in this essay"
+      ],
+      "required_capabilities": [
+        "chat",
+        "reasoning"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.94619,
+      "updated_at": 1787565396.946191,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "research",
+      "parent_intent_id": null,
+      "name": "Research",
+      "description": "Open-ended investigation and synthesis across sources.",
+      "positive_examples": [
+        "What does the current literature say about intermittent fasting?",
+        "Compare the main approaches to federated learning and their trade-offs",
+        "Give me a survey of vector database options with pros and cons",
+        "What happened in the EU AI Act negotiations and why did it matter?"
+      ],
+      "counterexamples": [
+        "What time is it in Tokyo?"
+      ],
+      "hard_negatives": [
+        "Summarise this one paper for me",
+        "Find the author and publication date in this document"
+      ],
+      "required_capabilities": [
+        "chat",
+        "reasoning"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "standard",
+      "default_context_class": "long",
+      "default_route_policy": null,
+      "created_at": 1787565396.946203,
+      "updated_at": 1787565396.946203,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "summarization",
+      "parent_intent_id": null,
+      "name": "Summarisation",
+      "description": "Condensing supplied content while preserving meaning.",
+      "positive_examples": [
+        "Summarise this article in three bullet points",
+        "Give me the gist of this thread",
+        "TL;DR of the attached report",
+        "Condense these meeting notes into action items"
+      ],
+      "counterexamples": [
+        "Write a new article on this topic"
+      ],
+      "hard_negatives": [
+        "Extract every date and name from this article",
+        "Critique the argument in this article",
+        "Translate this article and keep it the same length"
+      ],
+      "required_capabilities": [
+        "chat"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "interactive",
+      "default_context_class": "long",
+      "default_route_policy": null,
+      "created_at": 1787565396.946218,
+      "updated_at": 1787565396.946218,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "tool_use",
+      "parent_intent_id": null,
+      "name": "Tool use",
+      "description": "A single call to an external tool or API, not a multi-step plan.",
+      "positive_examples": [
+        "What is the weather in Oslo right now?",
+        "Look up the current EUR to USD rate",
+        "Check whether this domain is available",
+        "Query the database for yesterday's order count"
+      ],
+      "counterexamples": [
+        "Explain how REST APIs work"
+      ],
+      "hard_negatives": [
+        "Plan and execute a full competitor analysis using these tools",
+        "Write the code that calls the weather API"
+      ],
+      "required_capabilities": [
+        "chat",
+        "tools"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "realtime",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.9462368,
+      "updated_at": 1787565396.9462368,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "translation",
+      "parent_intent_id": null,
+      "name": "Translation",
+      "description": "Rendering text from one natural language into another.",
+      "positive_examples": [
+        "Translate this paragraph into Japanese",
+        "How do you say 'where is the station' in Portuguese?",
+        "Put this contract clause into formal French",
+        "Translate these subtitles into German, keeping the timing"
+      ],
+      "counterexamples": [
+        "Explain the grammar of this Japanese sentence"
+      ],
+      "hard_negatives": [
+        "Translate this Python code into Rust",
+        "Summarise this French article in English"
+      ],
+      "required_capabilities": [
+        "chat",
+        "multilingual"
+      ],
+      "default_quality_class": "standard",
+      "default_latency_class": "interactive",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.946222,
+      "updated_at": 1787565396.946222,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "vision",
+      "parent_intent_id": null,
+      "name": "Vision",
+      "description": "Understanding images, diagrams, screenshots or video frames.",
+      "positive_examples": [
+        "What is happening in this photograph?",
+        "Read the text in this screenshot",
+        "Does this chart support the claim in the caption?",
+        "Describe this architecture diagram"
+      ],
+      "counterexamples": [
+        "Generate an image of a lighthouse"
+      ],
+      "hard_negatives": [
+        "Describe what a bar chart is",
+        "Write code that reads text from images"
+      ],
+      "required_capabilities": [
+        "chat",
+        "vision"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "medium",
+      "default_route_policy": null,
+      "created_at": 1787565396.9462342,
+      "updated_at": 1787565396.9462342,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    },
+    {
+      "intent_id": "writing",
+      "parent_intent_id": null,
+      "name": "Writing",
+      "description": "Producing original prose for a human audience.",
+      "positive_examples": [
+        "Write a launch announcement for our new pricing tier",
+        "Draft a polite email declining this vendor",
+        "Write a short story about a lighthouse keeper",
+        "Turn these bullet points into a paragraph for the annual report"
+      ],
+      "counterexamples": [
+        "Fix the grammar in this sentence"
+      ],
+      "hard_negatives": [
+        "Summarise this announcement in two sentences",
+        "Translate this announcement into Spanish",
+        "Write a Python script that generates announcements"
+      ],
+      "required_capabilities": [
+        "chat"
+      ],
+      "default_quality_class": "high",
+      "default_latency_class": "interactive",
+      "default_context_class": "short",
+      "default_route_policy": null,
+      "created_at": 1787565396.946214,
+      "updated_at": 1787565396.946214,
+      "taxonomy_version": "bootstrap-2026.08.1",
+      "status": "active"
+    }
+  ]
+}

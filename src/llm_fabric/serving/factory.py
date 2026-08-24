@@ -8,8 +8,10 @@ router is exercised without network access.
 
 from __future__ import annotations
 
+import threading
+
 from llm_fabric.config import Settings
-from llm_fabric.errors import ConfigurationError
+from llm_fabric.errors import ConfigurationError, ProviderUnavailableError
 from llm_fabric.serving.adapters import AnthropicProvider, MockProvider, OpenAIProvider
 from llm_fabric.serving.base import Provider
 
@@ -25,20 +27,37 @@ class ProviderFactory:
         self._settings = settings
         self._instances: dict[str, Provider] = dict(overrides or {})
         self._owned: set[str] = set()
+        self._lock = threading.Lock()
 
     def get(self, name: str) -> Provider:
         if existing := self._instances.get(name):
             return existing
 
-        provider = self._build(name)
-        self._instances[name] = provider
-        self._owned.add(name)
-        return provider
+        with self._lock:
+            if existing := self._instances.get(name):
+                return existing
+            try:
+                provider = self._build(name)
+            except ConfigurationError as exc:
+                # Missing credentials or an unknown provider name must be
+                # retryable so a later candidate in the chain can still serve.
+                raise ProviderUnavailableError(str(exc)) from exc
+            self._instances[name] = provider
+            self._owned.add(name)
+            return provider
+
+    def constructible(self, name: str) -> bool:
+        """True when this factory can return a provider for `name`."""
+        try:
+            self.get(name)
+        except ProviderUnavailableError:
+            return False
+        return True
 
     def _build(self, name: str) -> Provider:
         settings = self._settings
         if name == "mock":
-            return MockProvider()
+            return MockProvider(delay_s=settings.mock_delay_s)
         if name == "openai":
             return OpenAIProvider(
                 api_key=settings.openai_api_key,
@@ -55,9 +74,14 @@ class ProviderFactory:
 
     async def aclose(self) -> None:
         """Close only the providers this factory created, never injected ones."""
-        for name in self._owned:
+        with self._lock:
+            owned = list(self._owned)
+        for name in owned:
             await self._instances[name].aclose()
-        self._instances = {
-            name: provider for name, provider in self._instances.items() if name not in self._owned
-        }
-        self._owned.clear()
+        with self._lock:
+            self._instances = {
+                name: provider
+                for name, provider in self._instances.items()
+                if name not in self._owned
+            }
+            self._owned.clear()

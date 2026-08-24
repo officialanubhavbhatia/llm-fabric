@@ -1,0 +1,3 @@
+{"id": "det-001", "input": "ping", "expected": "pong", "output": "pong"}
+{"id": "det-002", "input": "json", "expected": "{\"ok\": true}", "output": "{\"ok\": true}"}
+{"id": "det-003", "input": "hello", "expected": "Hello", "output": "Hello"}

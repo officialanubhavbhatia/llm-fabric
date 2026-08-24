@@ -1,0 +1,222 @@
+{
+  "run_id": "evrun_7b350fbd6bce43a8a642",
+  "tenant_id": "public",
+  "suite_name": "ci",
+  "created_at": 1787553246.370189,
+  "provenance": {
+    "dataset_version": "23bea5d76a17f633",
+    "metric_version": "eval-metrics-v1",
+    "configuration": {
+      "suite": "ci",
+      "tasks": [
+        "deterministic",
+        "routing",
+        "classification",
+        "deepeval",
+        "lm_eval"
+      ]
+    },
+    "timestamp": 1787553246.370146,
+    "commit": "92ae8cc76f4e7ae6fdaff149ec2ec9e58d50b267",
+    "model": null,
+    "model_version": null,
+    "prompt_version": null,
+    "taxonomy_version": "bootstrap-2026.08.1"
+  },
+  "results": [
+    {
+      "task": "deterministic",
+      "evaluator": "deterministic",
+      "metrics": {
+        "exact_match": 1.0,
+        "json_valid": 1.0
+      },
+      "unavailable": [],
+      "note": "Metrics are means over examples that had a label and an output. Unlabelled examples do not pull the mean toward zero.",
+      "examples": [
+        {
+          "example_id": "det-001",
+          "scores": {
+            "exact_match": 1.0,
+            "json_valid": null
+          },
+          "output": "pong",
+          "error": null,
+          "notes": null
+        },
+        {
+          "example_id": "det-002",
+          "scores": {
+            "exact_match": 1.0,
+            "json_valid": 1.0
+          },
+          "output": "{\"ok\": true}",
+          "error": null,
+          "notes": null
+        },
+        {
+          "example_id": "det-003",
+          "scores": {
+            "exact_match": 1.0,
+            "json_valid": null
+          },
+          "output": "Hello",
+          "error": null,
+          "notes": null
+        }
+      ]
+    },
+    {
+      "task": "routing",
+      "evaluator": "routing",
+      "metrics": {
+        "route_match": 1.0,
+        "policy_match": 1.0
+      },
+      "unavailable": [],
+      "note": "route_match is labelled expected model vs the planner. Regret metrics use declared registry numbers when both sides have them, and stay unavailable otherwise. This is not a routing-quality eval against production traffic.",
+      "examples": [
+        {
+          "example_id": "rt-auto-cost",
+          "scores": {
+            "route_match": 1.0,
+            "policy_match": 1.0
+          },
+          "output": "mock-small",
+          "error": null,
+          "notes": "cost_first"
+        },
+        {
+          "example_id": "rt-auto-reasoning",
+          "scores": {
+            "route_match": 1.0,
+            "policy_match": 1.0
+          },
+          "output": "mock-large",
+          "error": null,
+          "notes": "cost_first"
+        },
+        {
+          "example_id": "rt-pinned-large",
+          "scores": {
+            "route_match": 1.0,
+            "policy_match": 1.0
+          },
+          "output": "mock-large",
+          "error": null,
+          "notes": "declared"
+        }
+      ]
+    },
+    {
+      "task": "classification",
+      "evaluator": "classification",
+      "metrics": {
+        "accuracy": 0.8776,
+        "macro_f1": 0.9012,
+        "unknown_intent_recall": 0.8571428571428571
+      },
+      "unavailable": [],
+      "note": "Scores come from llm-fabric-bench against the labelled dataset. They are a regression tripwire, not a claim about production traffic.",
+      "examples": [
+        {
+          "example_id": "debug-001",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected coding.debug"
+        },
+        {
+          "example_id": "data-002",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected data_analysis"
+        },
+        {
+          "example_id": "trans-002",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected translation"
+        },
+        {
+          "example_id": "tool-004",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected tool_use"
+        },
+        {
+          "example_id": "hn-003",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected summarization"
+        },
+        {
+          "example_id": "hn-005",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected coding"
+        },
+        {
+          "example_id": "hn-008",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected reasoning"
+        },
+        {
+          "example_id": "hn-010",
+          "scores": {
+            "accuracy": 0.0
+          },
+          "output": "unknown",
+          "error": null,
+          "notes": "expected general_conversation"
+        }
+      ]
+    },
+    {
+      "task": "deepeval",
+      "evaluator": "deepeval",
+      "metrics": {},
+      "unavailable": [],
+      "note": "No DeepEval metrics were named. None were applied.",
+      "examples": []
+    },
+    {
+      "task": "lm_eval",
+      "evaluator": "lm_eval",
+      "metrics": {},
+      "unavailable": [],
+      "note": "No lm-evaluation-harness tasks were named. None were applied.",
+      "examples": []
+    }
+  ],
+  "metrics": {
+    "exact_match": 1.0,
+    "json_valid": 1.0,
+    "route_match": 1.0,
+    "policy_match": 1.0,
+    "accuracy": 0.8776,
+    "macro_f1": 0.9012,
+    "unknown_intent_recall": 0.8571428571428571
+  }
+}

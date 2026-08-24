@@ -1,0 +1,189 @@
+{
+  "mode": "classifier",
+  "taxonomy_version": "bootstrap-2026.08.1",
+  "classifier_version": "cascade-1:71548b74ca94",
+  "dataset_size": 5,
+  "scored": 5,
+  "duration_s": 0.018,
+  "warnings": [
+    "L4/L5 disabled: no --provider given, so only the offline layers were measured"
+  ],
+  "accuracy": 0.0,
+  "lenient_accuracy": 1.0,
+  "top_k_accuracy": {
+    "top_1": 1.0,
+    "top_2": 1.0,
+    "top_3": 1.0
+  },
+  "macro_f1": 0.0,
+  "micro_f1": 0.0,
+  "expected_calibration_error": 0.0801,
+  "brier_score": 0.0084,
+  "high_confidence_routing": [
+    {
+      "threshold": 0.8,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    },
+    {
+      "threshold": 0.85,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    },
+    {
+      "threshold": 0.95,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    },
+    {
+      "threshold": 0.98,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    }
+  ],
+  "abstention": {
+    "abstained": 5,
+    "should_have_abstained": 0,
+    "rate": 1.0,
+    "precision": 0.0,
+    "unknown_intent_recall": null,
+    "accuracy": 0.0
+  },
+  "slices": {
+    "hard_negatives": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "multi_intent": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "expects_abstention": {
+      "count": 0,
+      "accuracy": null,
+      "lenient_accuracy": null
+    },
+    "ordinary": {
+      "count": 5,
+      "accuracy": 0.0,
+      "lenient_accuracy": 1.0
+    }
+  },
+  "cache": {
+    "exact_hits": 0,
+    "semantic_hits": 0,
+    "hit_rate": 0.0,
+    "exact_false_hit_rate": null,
+    "semantic_false_hit_rate": null
+  },
+  "latency_ms": {
+    "mean": 3.5427,
+    "p50": 1.067,
+    "p95": 13.5157,
+    "p99": 13.5157,
+    "max": 13.5157
+  },
+  "cost": {
+    "total_usd": 0.0,
+    "mean_usd": 0.0
+  },
+  "layer_distribution": {
+    "l0_exact_cache": 0,
+    "l1_semantic_cache": 0,
+    "l2_rules": 0,
+    "l3_embedding": 0,
+    "l4_structured_llm": 0,
+    "l5_escalation": 0,
+    "abstain": 5
+  },
+  "per_intent": {
+    "general_conversation": {
+      "support": 1,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "math.arithmetic": {
+      "support": 2,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "summarization": {
+      "support": 1,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "translation": {
+      "support": 1,
+      "predicted": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "unknown": {
+      "support": 0,
+      "predicted": 5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  },
+  "top_confusions": [
+    {
+      "expected": "math.arithmetic",
+      "predicted": "unknown",
+      "count": 2
+    },
+    {
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "summarization",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "translation",
+      "predicted": "unknown",
+      "count": 1
+    }
+  ],
+  "calibration_bins": [
+    {
+      "range": "0.0-0.1",
+      "count": 2,
+      "mean_confidence": 0.0313,
+      "accuracy": 0.0
+    },
+    {
+      "range": "0.1-0.2",
+      "count": 3,
+      "mean_confidence": 0.1126,
+      "accuracy": 0.0
+    }
+  ]
+}

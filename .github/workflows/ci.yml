@@ -1,0 +1,276 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A superseded run tells you nothing useful, so in-flight runs for the same ref
+# are cancelled. `main` is exempt: those runs are the release record.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Fail-closed environment selection: every job that constructs Settings or
+  # create_app must name a mode. `test` is the CI mode. Do not infer it.
+  LLM_FABRIC_ENVIRONMENT: test
+
+jobs:
+  # Deliberately a separate job rather than a step inside `tests`. A cross-tenant
+  # failure means one customer can read another's data, and it should be legible
+  # as exactly that on the checks list, not buried in a general test log.
+  tenant-isolation:
+    name: Tenant isolation (cross-tenant leak gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fabric
+          POSTGRES_PASSWORD: fabric
+          POSTGRES_DB: fabric
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      LLM_FABRIC_TEST_DATABASE_URL: postgresql://fabric:fabric@localhost:5432/fabric
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        run: uv sync --extra dev
+
+      - name: Run the adversarial isolation suite
+        # `-m isolation` exits 5 when nothing is collected, so deleting or
+        # renaming the marker fails the gate instead of silently passing it.
+        run: uv run pytest -m isolation -v --strict-markers
+
+  # Also its own job, for a different reason: this one is a *regression* gate.
+  # Floors sit below the IntentOS v1 measured run in INTENTOS_EVALUATION.md so
+  # the job fails when the classifier gets worse, not when it fails to get
+  # better. Raise a floor only after a measured run justifies it.
+  intent-benchmark:
+    name: Intent benchmark (classifier regression gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        run: uv sync --extra dev
+
+      # Offline: no --provider, so L4/L5 never run and no credentials are needed.
+      - name: Classifier metrics
+        run: >
+          uv run llm-fabric-bench
+          --show-failures
+          --min-accuracy 0.85
+          --min-macro-f1 0.88
+          --min-unknown-recall 0.80
+          --min-high-confidence-precision 0.90
+
+      # A false hit is a prompt answered with a different prompt's intent, so the
+      # ceiling is deliberately near zero rather than merely "low". The
+      # similarity threshold is pinned to the value docs/EVALUATIONS.md was
+      # measured at: at the stricter default the cache serves no semantic hits at
+      # all on this dataset, which leaves the rate unmeasured, and the CLI fails
+      # an unmeasured gate rather than passing it by default.
+      - name: Cache false-hit rate
+        run: >
+          uv run llm-fabric-bench
+          --mode cache
+          --semantic-similarity 0.60
+          --max-semantic-false-hit-rate 0.05
+
+  quality:
+    name: Lint, format and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        run: uv sync --extra dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format
+        run: uv run ruff format --check .
+
+      - name: Types
+        run: uv run mypy src
+
+  tests:
+    name: Test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fabric
+          POSTGRES_PASSWORD: fabric
+          POSTGRES_DB: fabric
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      LLM_FABRIC_TEST_DATABASE_URL: postgresql://fabric:fabric@localhost:5432/fabric
+      LLM_FABRIC_TEST_REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        run: uv sync --extra dev
+
+      - name: Run every test
+        run: uv run pytest -v --strict-markers
+
+  typescript-sdk:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Typecheck and unit tests
+        working-directory: sdk/typescript
+        run: npm test
+
+  security:
+    name: Security and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fabric
+          POSTGRES_PASSWORD: fabric
+          POSTGRES_DB: fabric
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      LLM_FABRIC_ENVIRONMENT: test
+      LLM_FABRIC_TEST_DATABASE_URL: postgresql://fabric:fabric@localhost:5432/fabric
+      LLM_FABRIC_TEST_REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+      - name: Install
+        run: uv sync --extra dev
+      - name: Security tests
+        run: uv run pytest tests/security -v --strict-markers
+
+  build:
+    name: Production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build gateway image
+        run: docker build -f deployments/docker/Dockerfile -t llm-fabric:ci .
+
+  # Regression gate for the evaluation platform. The committed baseline is a
+  # measured run of datasets/eval/ci-suite.yaml. A material drop on a critical
+  # metric fails the job; an unmeasured critical metric also fails.
+  eval-gates:
+    name: Evaluation gates (baseline vs candidate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        run: uv sync --extra dev
+
+      - name: Enforce evaluation gates
+        env:
+          LLM_FABRIC_ENVIRONMENT: test
+        run: >
+          uv run llm-fabric-eval gate
+          --suite datasets/eval/ci-suite.yaml
+          --baseline datasets/eval/baseline.json

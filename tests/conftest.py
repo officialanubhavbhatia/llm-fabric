@@ -6,6 +6,8 @@ the suite is deterministic and needs no credentials.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -14,6 +16,23 @@ from llm_fabric.gateway.app import create_app
 from llm_fabric.observability.metering import InMemoryMeter
 from llm_fabric.router.registry import ModelRegistry
 from llm_fabric.serving.adapters.mock import MockProvider
+
+
+@pytest.fixture(autouse=True)
+def _explicit_test_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The runtime has no implicit environment. Pytest names this one.
+
+    Host `LLM_FABRIC_*` values (a local `.env`, a Compose shell, a previous
+    live run) must not leak into unit tests: those are a different deployment.
+    """
+    for name in [key for key in os.environ if key.startswith("LLM_FABRIC_")]:
+        if name.startswith("LLM_FABRIC_TEST_") or name.startswith("LLM_FABRIC_SYSTEM_"):
+            continue
+        if name == "LLM_FABRIC_SKIP_EVALS":
+            continue
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("LLM_FABRIC_ENVIRONMENT", "test")
+
 
 REGISTRY_DATA = {
     "models": [
@@ -77,7 +96,12 @@ def registry() -> ModelRegistry:
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(api_keys=[], max_attempts=3, default_policy="cheapest")
+    return Settings(
+        environment="test",
+        api_keys=[],
+        max_attempts=3,
+        default_policy="cheapest",
+    )
 
 
 @pytest.fixture

@@ -1,0 +1,411 @@
+{
+  "mode": "classifier",
+  "taxonomy_version": "bootstrap-2026.08.1",
+  "classifier_version": "cascade-1:fc401d447e15",
+  "dataset_size": 98,
+  "scored": 98,
+  "duration_s": 0.169,
+  "warnings": [
+    "L4/L5 disabled: no --provider given, so only the offline layers were measured"
+  ],
+  "accuracy": 0.9082,
+  "lenient_accuracy": 0.949,
+  "top_k_accuracy": {
+    "top_1": 0.949,
+    "top_2": 0.9796,
+    "top_3": 0.9796
+  },
+  "macro_f1": 0.9269,
+  "micro_f1": 0.9082,
+  "expected_calibration_error": 0.1767,
+  "brier_score": 0.1464,
+  "high_confidence_routing": [
+    {
+      "threshold": 0.8,
+      "coverage": 0.4897959183673469,
+      "precision": 0.9375,
+      "lenient_precision": 1.0,
+      "n": 48
+    },
+    {
+      "threshold": 0.85,
+      "coverage": 0.3163265306122449,
+      "precision": 0.967741935483871,
+      "lenient_precision": 1.0,
+      "n": 31
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.2857142857142857,
+      "precision": 0.9642857142857143,
+      "lenient_precision": 1.0,
+      "n": 28
+    },
+    {
+      "threshold": 0.95,
+      "coverage": 0.1326530612244898,
+      "precision": 1.0,
+      "lenient_precision": 1.0,
+      "n": 13
+    },
+    {
+      "threshold": 0.98,
+      "coverage": 0.0,
+      "precision": null,
+      "lenient_precision": null,
+      "n": 0
+    }
+  ],
+  "abstention": {
+    "abstained": 17,
+    "should_have_abstained": 14,
+    "rate": 0.17346938775510204,
+    "precision": 0.7058823529411765,
+    "unknown_intent_recall": 0.8571428571428571,
+    "accuracy": 0.9285714285714286
+  },
+  "slices": {
+    "hard_negatives": {
+      "count": 12,
+      "accuracy": 0.5,
+      "lenient_accuracy": 0.6666666666666666
+    },
+    "multi_intent": {
+      "count": 6,
+      "accuracy": 0.6666666666666666,
+      "lenient_accuracy": 1.0
+    },
+    "expects_abstention": {
+      "count": 14,
+      "accuracy": 0.8571428571428571,
+      "lenient_accuracy": 1.0
+    },
+    "ordinary": {
+      "count": 72,
+      "accuracy": 0.9861111111111112,
+      "lenient_accuracy": 0.9861111111111112
+    }
+  },
+  "cache": {
+    "exact_hits": 0,
+    "semantic_hits": 0,
+    "hit_rate": 0.0,
+    "exact_false_hit_rate": null,
+    "semantic_false_hit_rate": null
+  },
+  "latency_ms": {
+    "mean": 1.7146,
+    "p50": 1.4483,
+    "p95": 3.1216,
+    "p99": 13.8988,
+    "max": 13.8988
+  },
+  "cost": {
+    "total_usd": 0.0,
+    "mean_usd": 0.0
+  },
+  "layer_distribution": {
+    "l0_exact_cache": 0,
+    "l1_semantic_cache": 0,
+    "l2_rules": 76,
+    "l3_embedding": 5,
+    "l4_structured_llm": 0,
+    "l5_escalation": 0,
+    "abstain": 17
+  },
+  "per_intent": {
+    "agent": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "classification": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding": {
+      "support": 10,
+      "predicted": 9,
+      "precision": 1.0,
+      "recall": 0.9,
+      "f1": 0.9474
+    },
+    "coding.debug": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "coding.review": {
+      "support": 2,
+      "predicted": 3,
+      "precision": 0.6667,
+      "recall": 1.0,
+      "f1": 0.8
+    },
+    "data_analysis": {
+      "support": 4,
+      "predicted": 3,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571
+    },
+    "extraction": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "general_conversation": {
+      "support": 8,
+      "predicted": 6,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571
+    },
+    "math": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "math.arithmetic": {
+      "support": 3,
+      "predicted": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "rag": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "reasoning": {
+      "support": 6,
+      "predicted": 5,
+      "precision": 1.0,
+      "recall": 0.8333,
+      "f1": 0.9091
+    },
+    "research": {
+      "support": 5,
+      "predicted": 5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "summarization": {
+      "support": 6,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8
+    },
+    "tool_use": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "translation": {
+      "support": 4,
+      "predicted": 5,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    "unknown": {
+      "support": 14,
+      "predicted": 17,
+      "precision": 0.7059,
+      "recall": 0.8571,
+      "f1": 0.7742
+    },
+    "vision": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "writing": {
+      "support": 4,
+      "predicted": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "top_confusions": [
+    {
+      "expected": "coding",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "data_analysis",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "general_conversation",
+      "predicted": "tool_use",
+      "count": 1
+    },
+    {
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "summarization",
+      "predicted": "extraction",
+      "count": 1
+    },
+    {
+      "expected": "summarization",
+      "predicted": "unknown",
+      "count": 1
+    },
+    {
+      "expected": "unknown",
+      "predicted": "coding.review",
+      "count": 1
+    },
+    {
+      "expected": "unknown",
+      "predicted": "translation",
+      "count": 1
+    }
+  ],
+  "calibration_bins": [
+    {
+      "range": "0.0-0.1",
+      "count": 5,
+      "mean_confidence": 0.0414,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.1-0.2",
+      "count": 4,
+      "mean_confidence": 0.1436,
+      "accuracy": 0.75
+    },
+    {
+      "range": "0.3-0.4",
+      "count": 1,
+      "mean_confidence": 0.3991,
+      "accuracy": 0.0
+    },
+    {
+      "range": "0.4-0.5",
+      "count": 3,
+      "mean_confidence": 0.4534,
+      "accuracy": 0.6667
+    },
+    {
+      "range": "0.5-0.6",
+      "count": 2,
+      "mean_confidence": 0.5748,
+      "accuracy": 1.0
+    },
+    {
+      "range": "0.6-0.7",
+      "count": 4,
+      "mean_confidence": 0.6503,
+      "accuracy": 0.5
+    },
+    {
+      "range": "0.7-0.8",
+      "count": 31,
+      "mean_confidence": 0.7803,
+      "accuracy": 0.9677
+    },
+    {
+      "range": "0.8-0.9",
+      "count": 20,
+      "mean_confidence": 0.8412,
+      "accuracy": 0.9
+    },
+    {
+      "range": "0.9-1.0",
+      "count": 28,
+      "mean_confidence": 0.9422,
+      "accuracy": 0.9643
+    }
+  ],
+  "failures": [
+    {
+      "id": "data-002",
+      "text": "Which of these variables correlates most strongly with retention?",
+      "expected": "data_analysis",
+      "predicted": "unknown",
+      "confidence": 0.4868,
+      "layer": "abstain",
+      "hard_negative": false,
+      "multi_intent": false,
+      "notes": ""
+    },
+    {
+      "id": "hn-003",
+      "text": "Summarise what this codebase does for a new joiner",
+      "expected": "summarization",
+      "predicted": "unknown",
+      "confidence": 0.626,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Code vocabulary, but the deliverable is prose."
+    },
+    {
+      "id": "hn-005",
+      "text": "Explain what a segmentation fault actually is",
+      "expected": "coding",
+      "predicted": "unknown",
+      "confidence": 0.1695,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Debugging vocabulary with no bug to diagnose."
+    },
+    {
+      "id": "hn-008",
+      "text": "What would a summary of this document leave out?",
+      "expected": "reasoning",
+      "predicted": "unknown",
+      "confidence": 0.3991,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Summarisation vocabulary; the request is critique."
+    },
+    {
+      "id": "hn-010",
+      "text": "Explain how autonomous agents plan multi-step work",
+      "expected": "general_conversation",
+      "predicted": "unknown",
+      "confidence": 0.6988,
+      "layer": "abstain",
+      "hard_negative": true,
+      "multi_intent": false,
+      "notes": "Agent vocabulary; nothing is to be executed."
+    }
+  ]
+}

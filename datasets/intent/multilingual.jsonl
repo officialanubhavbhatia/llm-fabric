@@ -1,0 +1,5 @@
+{"id": "ml-es-math-001", "text": "¿Cuánto es 7% de 1250?", "expected_intent_id": "math.arithmetic", "acceptable_intent_ids": ["math", "unknown"], "split": "test", "tags": ["multilingual"], "language": "es"}
+{"id": "ml-fr-trans-001", "text": "Traduis ce paragraphe en anglais", "expected_intent_id": "translation", "acceptable_intent_ids": ["unknown"], "split": "test", "tags": ["multilingual"], "language": "fr"}
+{"id": "ml-de-sum-001", "text": "Fasse diesen Text in zwei Sätzen zusammen", "expected_intent_id": "summarization", "acceptable_intent_ids": ["unknown"], "split": "test", "tags": ["multilingual"], "language": "de"}
+{"id": "ml-ja-hello-001", "text": "こんにちは", "expected_intent_id": "general_conversation", "acceptable_intent_ids": ["unknown"], "split": "test", "tags": ["multilingual"], "language": "ja"}
+{"id": "ml-hi-math-001", "text": "15 ka 20 percent kitna hota hai?", "expected_intent_id": "math.arithmetic", "acceptable_intent_ids": ["math", "unknown"], "split": "test", "tags": ["multilingual"], "language": "hi"}

@@ -39,6 +39,8 @@ class MockProvider(Provider):
         self._fail = fail
         self._reply = reply
         self._delay_s = delay_s
+        self.generate_calls = 0
+        self.stream_calls = 0
 
     def _compose(self, request: InferenceRequest) -> str:
         if self._reply is not None:
@@ -50,6 +52,7 @@ class MockProvider(Provider):
         return f"[mock:{request.model}] {last_user}"
 
     async def generate(self, request: InferenceRequest) -> ProviderResult:
+        self.generate_calls += 1
         if self._fail:
             raise ProviderUnavailableError(f"mock provider configured to fail for {request.model}")
         if self._delay_s:
@@ -65,6 +68,7 @@ class MockProvider(Provider):
         )
 
     async def stream(self, request: InferenceRequest) -> AsyncIterator[StreamEvent]:
+        self.stream_calls += 1
         if self._fail:
             raise ProviderUnavailableError(f"mock provider configured to fail for {request.model}")
 

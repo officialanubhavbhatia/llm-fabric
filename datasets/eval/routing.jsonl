@@ -1,0 +1,3 @@
+{"id": "rt-auto-cost", "requested_model": "auto", "input": "hello", "expected_model": "mock-small", "expected_policy": "cost_first", "expected_grade": "Grade02"}
+{"id": "rt-auto-reasoning", "requested_model": "auto-reasoning", "input": "think this through", "expected_model": "mock-large", "expected_policy": "cost_first", "expected_grade": "Grade08"}
+{"id": "rt-pinned-large", "requested_model": "mock-large", "input": "hello", "expected_model": "mock-large", "expected_policy": "declared", "expected_grade": "Grade08"}
