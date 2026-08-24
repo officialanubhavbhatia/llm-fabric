@@ -63,10 +63,15 @@ async def capture() -> list[Path]:
         await cdp(ws, "Page.navigate", {"url": f"{BASE_URL}/command-center"})
         await asyncio.sleep(2.5)
         for view in VIEWS:
-            await cdp(ws, "Runtime.evaluate", {"expression": f"load({view!r})", "awaitPromise": True})
+            await cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": f"load({view!r})", "awaitPromise": True},
+            )
             await asyncio.sleep(1.2)
             shot = await cdp(ws, "Page.captureScreenshot", {"format": "png", "fromSurface": True})
-            dest = OUT / ("command-center.png" if view == "overview" else f"command-center-{view}.png")
+            name = "command-center.png" if view == "overview" else f"command-center-{view}.png"
+            dest = OUT / name
             dest.write_bytes(base64.b64decode(shot["data"]))
             paths.append(dest)
             print(dest, dest.stat().st_size)
@@ -82,7 +87,7 @@ def start_chrome(profile: Path) -> subprocess.Popen:
             "--headless=new",
             "--disable-gpu",
             "--hide-scrollbars",
-            f"--window-size=1440,900",
+            "--window-size=1440,900",
             f"--remote-debugging-port={PORT}",
             f"--user-data-dir={profile}",
             f"{BASE_URL}/command-center",

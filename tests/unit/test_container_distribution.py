@@ -40,9 +40,7 @@ def test_compose_keeps_gateway_and_inference_as_separate_workloads() -> None:
     assert "gateway-ollama:47317" in prometheus
     assert "ollama/ollama:0.32.15" in text
     assert "models.local.yaml" in text
-    assert "models.ollama-grades.yaml" in (
-        ROOT / "Makefile"
-    ).read_text(encoding="utf-8")
+    assert "models.ollama-grades.yaml" in (ROOT / "Makefile").read_text(encoding="utf-8")
 
 
 def test_runtime_has_no_cloud_platform_branching() -> None:

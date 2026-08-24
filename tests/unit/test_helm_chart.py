@@ -89,9 +89,7 @@ def test_portable_values_examples_render(name: str) -> None:
     values = Path("deployments/helm/examples") / name
     command = [helm, "template", "llm-fabric", str(CHART), "-f", str(values)]
     if name == "local-ollama-grades-values.yaml":
-        command.extend(
-            ["--set-file", "fabricConfig.models=config/models.ollama-grades.yaml"]
-        )
+        command.extend(["--set-file", "fabricConfig.models=config/models.ollama-grades.yaml"])
     result = subprocess.run(
         command,
         check=False,

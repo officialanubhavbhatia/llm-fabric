@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Render the README architecture SVGs with a shared Command Center palette."""
 
 from __future__ import annotations
@@ -63,9 +64,7 @@ def card(
 
 
 def arrow(x1: float, y1: float, x2: float, y2: float, color: str = ACCENT) -> str:
-    return (
-        f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="1.5" marker-end="url(#arrow)"/>'
-    )
+    return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="1.5" marker-end="url(#arrow)"/>'
 
 
 defs = f'''<defs>
@@ -191,29 +190,63 @@ def intentos() -> None:
         f'<text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Classify API exists. Serving-path IntentOS routing is OFF. Frozen eval n=98 is a regression tripwire, not production quality.</text>',
     ]
     for i, (y, title, line, color, dashed, tag) in enumerate(layers):
-        parts.append(card(40, y, 360, 58, title=title, lines=(line,), stroke=color, dashed=dashed, tag=tag, tag_fill=color or MUTED))
+        parts.append(
+            card(
+                40,
+                y,
+                360,
+                58,
+                title=title,
+                lines=(line,),
+                stroke=color,
+                dashed=dashed,
+                tag=tag,
+                tag_fill=color or MUTED,
+            )
+        )
         if i < len(layers) - 1:
             parts.append(arrow(220, y + 58, 220, layers[i + 1][0]))
             if title != "Request":
                 parts.append(
                     f'<text x="236" y="{y + 70}" fill="{MUTED}" font-family="{FONT}" font-size="10">miss</text>'
                 )
-    parts.append(card(430, 78, 470, 220, title="Frozen eval (2026-08-24)", lines=(
-        "accuracy 0.9082",
-        "macro-F1 0.9269",
-        "high-conf precision 0.964 at threshold 0.9 (n=28, coverage ~0.29)",
-        "unknown-intent recall 0.857",
-        "hard-negative accuracy 0.50  /  target ≥ 0.58",
-        "hard-negative gate not yet cleared",
-        "dataset n=98 · artifact datasets/eval/intentos/final-2026.08.24.json",
-    ), stroke=BAD, tag="tripwire", tag_fill=WARN))
-    parts.append(card(430, 318, 470, 150, title="Also in this cascade", lines=(
-        "confidence and abstention on every decision",
-        "taxonomy version returned by classify",
-        "tenant cache isolation",
-        "MiniLM embedder is opt-in (--extra embed)",
-        "Phase B 30-grade IntentOS planner: not started",
-    )))
+    parts.append(
+        card(
+            430,
+            78,
+            470,
+            220,
+            title="Frozen eval (2026-08-24)",
+            lines=(
+                "accuracy 0.9082",
+                "macro-F1 0.9269",
+                "high-conf precision 0.964 at threshold 0.9 (n=28, coverage ~0.29)",
+                "unknown-intent recall 0.857",
+                "hard-negative accuracy 0.50  /  target ≥ 0.58",
+                "hard-negative gate not yet cleared",
+                "dataset n=98 · artifact datasets/eval/intentos/final-2026.08.24.json",
+            ),
+            stroke=BAD,
+            tag="tripwire",
+            tag_fill=WARN,
+        )
+    )
+    parts.append(
+        card(
+            430,
+            318,
+            470,
+            150,
+            title="Also in this cascade",
+            lines=(
+                "confidence and abstention on every decision",
+                "taxonomy version returned by classify",
+                "tenant cache isolation",
+                "MiniLM embedder is opt-in (--extra embed)",
+                "Phase B 30-grade IntentOS planner: not started",
+            ),
+        )
+    )
     write(
         "intentos-cascade.svg",
         940,
@@ -254,8 +287,12 @@ def routing() -> None:
 
 def usage() -> None:
     body = f"""
-  <text x="32" y="36" fill="{TEXT}" font-family="{FONT}" font-size="18" font-weight="600">Usage metering</text>
-  <text x="32" y="56" fill="{WARN}" font-family="{FONT}" font-size="12">Durable usage accounting — not billing-grade exactly-once accounting. Crash windows are classified, not hidden.</text>
+  <text x="32" y="36" fill="{TEXT}" font-family="{
+        FONT
+    }" font-size="18" font-weight="600">Usage metering</text>
+  <text x="32" y="56" fill="{WARN}" font-family="{
+        FONT
+    }" font-size="12">Durable usage accounting — not billing-grade exactly-once accounting. Crash windows are classified, not hidden.</text>
   {card(40, 80, 180, 60, title="Provider invocation")}
   {arrow(220, 110, 268, 110)}
   {card(270, 80, 180, 60, title="UsageEvent")}
@@ -265,12 +302,38 @@ def usage() -> None:
   {card(770, 80, 180, 60, title="Redis counters", lines=("best-effort INCR"))}
   {arrow(610, 140, 610, 176)}
   {card(430, 178, 360, 64, title="Command Center / Economics", lines=("registry prices × tokens"))}
-  {card(40, 178, 360, 200, title="What is counted", lines=("HTTP request", "each provider invocation", "fallback attempts", "prompt + completion tokens", "token provenance", "estimated vs measured cost"))}
-  {card(40, 396, 910, 84, title="Crash window (not exactly-once)", lines=(
-      "Provider returns then process dies before INSERT → invocation lost.",
-      "INSERT succeeds then client retries → a new invocation_id; a second real provider call is counted.",
-      "INSERT succeeds and Redis INCR fails → ledger is ahead; reconcile repairs Redis from Postgres, never the reverse.",
-  ), stroke=WARN)}
+  {
+        card(
+            40,
+            178,
+            360,
+            200,
+            title="What is counted",
+            lines=(
+                "HTTP request",
+                "each provider invocation",
+                "fallback attempts",
+                "prompt + completion tokens",
+                "token provenance",
+                "estimated vs measured cost",
+            ),
+        )
+    }
+  {
+        card(
+            40,
+            396,
+            910,
+            84,
+            title="Crash window (not exactly-once)",
+            lines=(
+                "Provider returns then process dies before INSERT → invocation lost.",
+                "INSERT succeeds then client retries → a new invocation_id; a second real provider call is counted.",
+                "INSERT succeeds and Redis INCR fails → ledger is ahead; reconcile repairs Redis from Postgres, never the reverse.",
+            ),
+            stroke=WARN,
+        )
+    }
 """
     write(
         "usage-metering.svg",
