@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="440" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+  <title id="title">Evaluation loop</title>
+  <desc id="desc">Change, dataset, eval, regression and quality gates, then shadow or canary and promote. IntentOS, routing, guardrails, and generation coverage differ.</desc>
+  <rect width="960" height="440" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Eval-first loop</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Evals are first-class. They do not mean every AI behaviour is solved. Agent and safety suites are not built.</text>
+  <rect x="32" y="86" width="120" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="44" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Change</text>
+  <line x1="152" y1="115" x2="188" y2="115" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="190" y="86" width="120" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="202" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Dataset</text>
+  <line x1="310" y1="115" x2="346" y2="115" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="348" y="86" width="120" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="360" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Eval</text>
+  <line x1="468" y1="115" x2="504" y2="115" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="506" y="86" width="150" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="518" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Regression gate</text>
+  <line x1="656" y1="115" x2="692" y2="115" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="694" y="86" width="160" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="706" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Absolute quality</text>
+  <line x1="400" y1="144" x2="400" y2="180" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="250" y="182" width="140" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="262" y="204" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Shadow / canary</text>
+  <line x1="390" y1="211" x2="430" y2="211" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="432" y="182" width="140" height="58" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="444" y="204" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Promote</text>
+  <rect x="32" y="270" width="220" height="140" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="44" y="292" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">IntentOS</text>
+  <text x="44" y="310" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">frozen 98-case tripwire</text>
+  <text x="44" y="325" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">HN gate not cleared</text>
+  <text x="44" y="340" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">serving-path routing OFF</text>
+  <rect x="268" y="270" width="220" height="140" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="280" y="292" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Routing</text>
+  <text x="280" y="310" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">planner-match labels</text>
+  <text x="280" y="325" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">not routing-quality eval</text>
+  <rect x="504" y="270" width="220" height="140" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="516" y="292" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Guardrails</text>
+  <text x="516" y="310" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">deterministic engines</text>
+  <text x="516" y="325" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">no dedicated safety suite</text>
+  <rect x="740" y="270" width="200" height="140" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="752" y="292" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Generation</text>
+  <text x="752" y="310" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">named suite ci exists</text>
+  <text x="752" y="325" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">DeepEval optional adapter</text>
+
+</svg>

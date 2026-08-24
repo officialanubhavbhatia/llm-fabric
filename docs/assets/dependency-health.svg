@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="490" viewBox="0 0 960 490" role="img" aria-labelledby="title desc">
+  <title id="title">Dependency-aware recovery</title>
+  <desc id="desc">When PostgreSQL or Redis is unhealthy, liveness stays 200, readiness is 503, and new inference is refused until dependencies recover.</desc>
+  <rect width="960" height="490" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Dependency-aware recovery</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Postgres and Redis are serving dependencies. This is admission control, not fully autonomous self-healing.</text>
+  <rect x="40" y="86" width="260" height="70" rx="8" fill="#1a222c" stroke="#7fd99a"/>
+  <text x="52" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Postgres / Redis healthy</text>
+  <text x="52" y="126" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">serving admitted</text>
+  <line x1="300" y1="121" x2="348" y2="121" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="350" y="86" width="200" height="70" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="362" y="108" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Serving</text>
+  <text x="362" y="126" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">chat completions</text>
+  <line x1="200" y1="156" x2="200" y2="198" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="40" y="200" width="260" height="70" rx="8" fill="#1a222c" stroke="#e06c75"/>
+  <text x="52" y="222" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Dependency fails</text>
+  <text x="52" y="240" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">DependencyMonitor</text>
+  <line x1="300" y1="235" x2="348" y2="235" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="350" y="186" width="280" height="100" rx="8" fill="#1a222c" stroke="#e06c75"/>
+  <text x="362" y="208" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">UNHEALTHY</text>
+  <text x="362" y="226" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">/healthz = 200  (liveness)</text>
+  <text x="362" y="241" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">/readyz = 503  (readiness)</text>
+  <text x="362" y="256" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">new inference = 503</text>
+  <line x1="200" y1="270" x2="200" y2="318" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="40" y="320" width="260" height="70" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="342" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Dependency restored</text>
+  <line x1="300" y1="355" x2="348" y2="355" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="350" y="306" width="200" height="52" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="362" y="328" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">RECOVERING</text>
+  <line x1="450" y1="358" x2="450" y2="390" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="350" y="392" width="280" height="70" rx="8" fill="#1a222c" stroke="#7fd99a"/>
+  <text x="362" y="414" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">HEALTHY</text>
+  <text x="362" y="432" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">serving resumes</text>
+  <rect x="660" y="186" width="280" height="276" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="672" y="208" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Not claimed</text>
+  <text x="672" y="226" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">unattended autoscaling</text>
+  <text x="672" y="241" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">multi-region failover</text>
+  <text x="672" y="256" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">cancelling in-flight provider calls</text>
+  <text x="672" y="271" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">CLI heal mutating a live process</text>
+
+</svg>

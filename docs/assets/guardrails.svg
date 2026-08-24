@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="330" viewBox="0 0 1040 330" role="img" aria-labelledby="title desc">
+  <title id="title">Five-stage guardrails</title>
+  <desc id="desc">INPUT and OUTPUT are wired on chat completions. RETRIEVAL, CONTEXT, and EXECUTION exist as pluggable stages without RAG or tool execution on the serving path.</desc>
+  <rect width="1040" height="330" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">Guardrails</text>
+  <text x="32" y="56" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Five-stage model. Only INPUT and OUTPUT run on the chat serving path today. Other stages are pluggable types without RAG or tools to bind to.</text>
+  <rect x="40" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#7fd99a"/>
+  <text x="52" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">INPUT</text>
+  <text x="52" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">size limits</text>
+  <text x="52" y="145" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">secret/PII-shaped redact</text>
+  <text x="52" y="160" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">injection markers</text>
+  <rect x="114" y="98" width="74" height="16" rx="8" fill="none" stroke="#7fd99a"/><text x="151" y="110" text-anchor="middle" fill="#7fd99a" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">wired</text>
+  <line x1="200" y1="130" x2="236" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="238" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="250" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">RETRIEVAL</text>
+  <text x="250" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">no RAG path</text>
+  <rect x="312" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="349" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">pluggable</text>
+  <line x1="398" y1="130" x2="434" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="436" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="448" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">CONTEXT</text>
+  <text x="448" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">compiler not on path</text>
+  <rect x="510" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="547" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">pluggable</text>
+  <line x1="596" y1="130" x2="632" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="634" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#2a3542" stroke-dasharray="5 4"/>
+  <text x="646" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">EXECUTION</text>
+  <text x="646" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">no tool runtime</text>
+  <rect x="708" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="745" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">pluggable</text>
+  <line x1="794" y1="130" x2="830" y2="130" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="832" y="90" width="160" height="80" rx="8" fill="#1a222c" stroke="#7fd99a"/>
+  <text x="844" y="112" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">OUTPUT</text>
+  <text x="844" y="130" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">deterministic engines</text>
+  <text x="844" y="145" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">on chat completions</text>
+  <rect x="906" y="98" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="943" y="110" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">wired</text>
+  <rect x="40" y="210" width="952" height="90" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="52" y="232" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Baseline engines</text>
+  <text x="52" y="250" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Deterministic allow / block / redact / transform / escalate. Model-backed classifiers are adapters and are not on the request path unless configured.</text>
+  <text x="52" y="265" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">This is not a claim of solved prompt-injection defence for every flow.</text>
+
+</svg>

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="650" viewBox="0 0 940 650" role="img" aria-labelledby="title desc">
+  <title id="title">IntentOS classification cascade</title>
+  <desc id="desc">L0 exact cache through L3 embedding are the default classify path; L4 is optional; L5 is off by default; hard-negative gate is not cleared.</desc>
+  <rect width="940" height="650" fill="#0f1419"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6ea8fe"/>
+    </marker>
+  </defs>
+  <text x="32" y="36" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600">IntentOS cascade</text>
+  <text x="32" y="56" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12">Classify API exists. Serving-path IntentOS routing is OFF. Frozen eval n=98 is a regression tripwire, not production quality.</text>
+  <rect x="40" y="78" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="52" y="100" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Request</text>
+  <text x="52" y="118" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">POST /v1/intents/classify</text>
+  <line x1="220" y1="136" x2="220" y2="148" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="40" y="148" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="52" y="170" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L0 Exact cache</text>
+  <text x="52" y="188" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">enabled on classify API</text>
+  <rect x="314" y="156" width="74" height="16" rx="8" fill="none" stroke="#6ea8fe"/><text x="351" y="168" text-anchor="middle" fill="#6ea8fe" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">default</text>
+  <line x1="220" y1="206" x2="220" y2="218" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="218" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="218" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="52" y="240" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L1 Semantic cache</text>
+  <text x="52" y="258" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">tenant-isolated cache</text>
+  <rect x="314" y="226" width="74" height="16" rx="8" fill="none" stroke="#6ea8fe"/><text x="351" y="238" text-anchor="middle" fill="#6ea8fe" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">default</text>
+  <line x1="220" y1="276" x2="220" y2="288" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="288" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="288" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="52" y="310" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L2 Rules</text>
+  <text x="52" y="328" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">deterministic rules</text>
+  <rect x="314" y="296" width="74" height="16" rx="8" fill="none" stroke="#6ea8fe"/><text x="351" y="308" text-anchor="middle" fill="#6ea8fe" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">default</text>
+  <line x1="220" y1="346" x2="220" y2="358" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="358" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="358" width="360" height="58" rx="8" fill="#1a222c" stroke="#6ea8fe"/>
+  <text x="52" y="380" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L3 Embedding</text>
+  <text x="52" y="398" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">default: HashingEmbedder</text>
+  <rect x="314" y="366" width="74" height="16" rx="8" fill="none" stroke="#6ea8fe"/><text x="351" y="378" text-anchor="middle" fill="#6ea8fe" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">default</text>
+  <line x1="220" y1="416" x2="220" y2="428" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="428" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="428" width="360" height="58" rx="8" fill="#1a222c" stroke="#e6b84d" stroke-dasharray="5 4"/>
+  <text x="52" y="450" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L4 Structured classifier</text>
+  <text x="52" y="468" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">local rerank / model</text>
+  <rect x="314" y="436" width="74" height="16" rx="8" fill="none" stroke="#e6b84d"/><text x="351" y="448" text-anchor="middle" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">optional</text>
+  <line x1="220" y1="486" x2="220" y2="498" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="498" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="498" width="360" height="58" rx="8" fill="#1a222c" stroke="#8b9aab" stroke-dasharray="5 4"/>
+  <text x="52" y="520" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">L5 Escalation</text>
+  <text x="52" y="538" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">not attached by default</text>
+  <rect x="314" y="506" width="74" height="16" rx="8" fill="none" stroke="#8b9aab"/><text x="351" y="518" text-anchor="middle" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">off</text>
+  <line x1="220" y1="556" x2="220" y2="568" stroke="#6ea8fe" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="236" y="568" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10">miss</text>
+  <rect x="40" y="568" width="360" height="58" rx="8" fill="#1a222c" stroke="#e6b84d"/>
+  <text x="52" y="590" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">ABSTAIN</text>
+  <text x="52" y="608" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">unknown / low confidence</text>
+  <rect x="314" y="576" width="74" height="16" rx="8" fill="none" stroke="#e6b84d"/><text x="351" y="588" text-anchor="middle" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">built</text>
+  <rect x="430" y="78" width="470" height="220" rx="8" fill="#1a222c" stroke="#e06c75"/>
+  <text x="442" y="100" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Frozen eval (2026-08-24)</text>
+  <text x="442" y="118" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">accuracy 0.9082</text>
+  <text x="442" y="133" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">macro-F1 0.9269</text>
+  <text x="442" y="148" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">high-conf precision 0.964 at threshold 0.9 (n=28, coverage ~0.29)</text>
+  <text x="442" y="163" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">unknown-intent recall 0.857</text>
+  <text x="442" y="178" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">hard-negative accuracy 0.50  /  target ≥ 0.58</text>
+  <text x="442" y="193" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">hard-negative gate not yet cleared</text>
+  <text x="442" y="208" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">dataset n=98 · artifact datasets/eval/intentos/final-2026.08.24.json</text>
+  <rect x="814" y="86" width="74" height="16" rx="8" fill="none" stroke="#e6b84d"/><text x="851" y="98" text-anchor="middle" fill="#e6b84d" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="9">tripwire</text>
+  <rect x="430" y="318" width="470" height="150" rx="8" fill="#1a222c" stroke="#2a3542"/>
+  <text x="442" y="340" fill="#e8eef4" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600">Also in this cascade</text>
+  <text x="442" y="358" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">confidence and abstention on every decision</text>
+  <text x="442" y="373" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">taxonomy version returned by classify</text>
+  <text x="442" y="388" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">tenant cache isolation</text>
+  <text x="442" y="403" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">MiniLM embedder is opt-in (--extra embed)</text>
+  <text x="442" y="418" fill="#8b9aab" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11">Phase B 30-grade IntentOS planner: not started</text>
+</svg>
