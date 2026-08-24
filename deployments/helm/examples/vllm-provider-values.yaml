@@ -1,0 +1,32 @@
+# Fabric only: vLLM runs as a separate GPU workload/service.
+providers:
+  baseUrls:
+    vllm-general: http://vllm-general.inference.svc.cluster.local:8000/v1
+    vllm-coding: http://vllm-coding.inference.svc.cluster.local:8000/v1
+    vllm-reasoning: http://vllm-reasoning.inference.svc.cluster.local:8000/v1
+
+fabricConfig:
+  models: |
+    models:
+      - id: vllm-general
+        provider: vllm-general
+        provider_model: REPLACE_WITH_PINNED_MODEL_ID
+        revision: REPLACE_WITH_PINNED_REVISION
+        digest: REPLACE_WITH_MODEL_DIGEST
+        grade: Grade10
+        context_window: 32768
+        capabilities: [chat, streaming]
+        placement:
+          locality: private
+        enabled: true
+        lifecycle: registered
+    aliases:
+      - id: auto
+        policy: declared
+        candidates: [vllm-general]
+
+# Approval is deliberately absent. A reachable Kubernetes Service does not
+# promote a deployment; mount evidence through promotionEvidence after probe,
+# evaluation, and shadow review.
+promotionEvidence:
+  existingConfigMap: ""

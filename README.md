@@ -64,7 +64,7 @@ IntentOS is **one component**, not the product.
 | Evaluation platform | Built (`llm-fabric-eval`). Agent/safety suites are not. |
 | Self-healing CLI | Built (`llm-fabric-heal`). Does not mutate a live process from the CLI. |
 | Python SDK (`myvista`) / TypeScript SDK | Built. Chat, responses, classify, route preview, eval, traces. Embeddings and agents raise `UnsupportedError`. |
-| Docker / Compose / Helm | Built. HPA off by default. |
+| Docker / Compose / Helm / kind | Built. One OCI image, one chart. HPA off by default. AKS/EKS/GKE examples are Helm-rendered, not live-tested. |
 | Agent orchestration | **Not built** |
 | Tool execution / MCP / A2A | **Not built** |
 | `/v1/embeddings`, RAG, vector DB, knowledge graph | **Not built** |
@@ -80,30 +80,31 @@ IntentOS is **one component**, not the product.
 4. [Architecture](#architecture)
 5. [Request lifecycle](#request-lifecycle)
 6. [Quick Start](#quick-start)
-7. [Local development](#local-development)
-8. [Local vs production](#local-vs-production)
-9. [Using LLM Fabric](#using-llm-fabric)
-10. [Providers and models](#providers-and-models)
-11. [Model and provider routing](#model-and-provider-routing)
-12. [IntentOS](#intentos)
-13. [Caching](#caching)
-14. [Security](#security)
-15. [Configuration](#configuration)
-16. [Observability](#observability)
-17. [Production deployment](#production-deployment)
-18. [Scaling and reliability](#scaling-and-reliability)
-19. [Performance](#performance)
-20. [Evaluation](#evaluation)
-21. [Operations runbook](#operations-runbook)
-22. [Rollback](#rollback)
-23. [Troubleshooting](#troubleshooting)
-24. [Repository structure](#repository-structure)
-25. [Development guide](#development-guide)
-26. [Adding a provider](#adding-a-provider)
-27. [Contributing](#contributing)
-28. [Production checklist](#production-checklist)
-29. [FAQ](#faq)
-30. [Deeper documentation](#deeper-documentation)
+7. [Run anywhere](#run-anywhere)
+8. [Local development](#local-development)
+9. [Local vs production](#local-vs-production)
+10. [Using LLM Fabric](#using-llm-fabric)
+11. [Providers and models](#providers-and-models)
+12. [Model and provider routing](#model-and-provider-routing)
+13. [IntentOS](#intentos)
+14. [Caching](#caching)
+15. [Security](#security)
+16. [Configuration](#configuration)
+17. [Observability](#observability)
+18. [Production deployment](#production-deployment)
+19. [Scaling and reliability](#scaling-and-reliability)
+20. [Performance](#performance)
+21. [Evaluation](#evaluation)
+22. [Operations runbook](#operations-runbook)
+23. [Rollback](#rollback)
+24. [Troubleshooting](#troubleshooting)
+25. [Repository structure](#repository-structure)
+26. [Development guide](#development-guide)
+27. [Adding a provider](#adding-a-provider)
+28. [Contributing](#contributing)
+29. [Production checklist](#production-checklist)
+30. [FAQ](#faq)
+31. [Deeper documentation](#deeper-documentation)
 
 ---
 
@@ -357,6 +358,74 @@ Stop: `Ctrl-C` in the `make dev` terminal.
 
 IntentOS is not required for this path.
 
+### Docker (same OCI image, mock)
+
+Requires Docker. No API keys. Config is mounted from `config/`, not baked into
+the image.
+
+```bash
+git clone https://github.com/officialanubhavbhatia/llm-fabric.git
+cd llm-fabric
+make docker-up
+make docker-test
+```
+
+Gateway: `http://127.0.0.1:47317`. Stop with `make docker-down`.
+
+### Docker with Ollama (separate container)
+
+```bash
+make docker-ollama
+make ollama-pull MODEL=llama3.2
+```
+
+Ollama is a separate image and volume. Pulling a tag is an operator step; stack
+health is not a model-quality result.
+
+### Local Kubernetes (kind, same image and chart)
+
+Requires Docker, kind, kubectl, and Helm.
+
+```bash
+make k8s-local-up
+make k8s-local-test
+make k8s-local-down
+```
+
+Default kind values use two mock replicas and NodePort `47317`. Optional
+Ollama sidecar: `make k8s-local-ollama-up` then `make k8s-ollama-pull`.
+
+---
+
+## Run anywhere
+
+One source tree, one Fabric OCI image, one Helm chart. Cloud identity, ingress,
+and registries are values — not Python branches.
+
+| Environment | Fabric image | Inference |
+| --- | --- | --- |
+| Local process | same code | mock / Ollama |
+| Docker | same OCI image | mock / Ollama |
+| Local Kubernetes (kind) | same OCI image | mock / Ollama |
+| Azure AKS | same OCI image | vLLM / remote |
+| AWS EKS | same OCI image | vLLM / remote |
+| Google GKE | same OCI image | vLLM / remote |
+| Other Kubernetes | same OCI image | compatible provider |
+
+| Environment | Manifest / Helm validated | Live tested |
+| --- | --- | --- |
+| Docker | yes | yes (local mock; Ollama stack-up) |
+| kind | yes | yes (`make k8s-local-test`, 2026-08-24) |
+| AKS | yes | **no** |
+| EKS | yes | **no** |
+| GKE | yes | **no** |
+
+Helm-rendered AKS/EKS/GKE files are **deployment-compatible**, not live
+validated. Matrix and statelessness notes:
+[`docs/deployment/README.md`](docs/deployment/README.md).
+
+---
+
 ### Local inference with Ollama
 
 Preferred local runtime when you want a real model. Mock remains the zero-dependency path above.
@@ -408,29 +477,23 @@ LLM_FABRIC_ENVIRONMENT=development llm-fabric route explain \
 
 IntentOS is not required for this path either. Serving-path classification stays **OFF**.
 
-### Docker Compose (production-like local stack)
+### Docker Compose profiles
 
-**Recommended when you need Postgres + Redis + auth**, not for the first
-hello-world. Compose is a production-*like* test stack, not the internal-VPC
-tier.
+Compose services are profile-gated. A bare `docker compose up` starts nothing
+useful.
 
-```bash
-docker compose -f deployments/docker/docker-compose.yml up --build
-```
+| Profile | Workloads |
+| --- | --- |
+| `mock` | Fabric only (`make docker-up`) |
+| `local` | Fabric + Ollama (`make docker-ollama`) |
+| `tools` | One-shot `ollama pull` (`make ollama-pull`) |
+| `platform` | Postgres, Redis, migrate Job |
+| `observability` | OTEL collector, Prometheus, Grafana |
 
-Gateway: `http://127.0.0.1:47317` with `LLM_FABRIC_AUTH_MODE=api_key` and
-`LLM_FABRIC_API_KEYS=production-test-key-16`.
+Platform and observability are optional. They are not the internal-VPC
+production tier. Do not put API keys in the Compose file; pass them through a
+local env file or `docker compose` `--env-file` that is not committed.
 
-```bash
-curl -s http://127.0.0.1:47317/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer production-test-key-16' \
-  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
-```
-
-Optional Ollama sidecar: `--profile inference` (image `ollama/ollama:0.3.14`)
-on the production-like stack, or `--profile local` for a development gateway
-that uses `config/models.local.yaml` and `LLM_FABRIC_OLLAMA_BASE_URL=http://ollama:11434/v1`.
 See [Providers](docs/PROVIDERS.md).
 
 ### Native production-shaped process (no reload)
@@ -484,8 +547,8 @@ make dev                          # mock only — zero-dependency smoke path
 make dev-ollama                   # local real models via Ollama (config/models.local.yaml)
 # or
 make serve                        # production-shaped uvicorn
-# or Compose (Postgres, Redis, migrate Job, gateway):
-docker compose -f deployments/docker/docker-compose.yml up --build
+# or Compose mock gateway:
+make docker-up
 ```
 
 `make dev` stays the recommended first command. Mock is the deterministic
@@ -1217,10 +1280,15 @@ Canonical verdict: [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md)
 (audit 2026-08-24). **GO** for internal single-VPC Kubernetes. **NO-GO** for
 public SaaS, billing-grade metering, multi-region failover, unattended HPA.
 
+The portable distribution is one OCI image and one Helm chart. Cloud files under
+[`deployments/helm/examples`](deployments/helm/examples) are **deployment-compatible**.
+They are not live AKS/EKS/GKE tests. Operator commands:
+[`docs/deployment/runbook.md`](docs/deployment/runbook.md).
+
 ```mermaid
 flowchart TB
     LB[Internal load balancer / TLS edge]
-    subgraph Fabric["LLM Fabric replicas (Helm replicaCount 2, HPA off)"]
+    subgraph Fabric["LLM Fabric replicas (one image, Helm chart)"]
       API1[Gateway]
       API2[Gateway]
     end
@@ -1254,57 +1322,72 @@ following is the usual shape, not a pinned CLI contract:
 vllm serve <huggingface-or-local-model> --host 0.0.0.0 --port 8000
 ```
 
-Then:
+Then set `providers.baseUrls` in Helm (or `LLM_FABRIC_PROVIDER_BASE_URLS`) to
+that Service. Registry rows stay `lifecycle: registered` until promotion
+evidence exists. A Ready vLLM Service does not approve a model.
 
-```bash
-export LLM_FABRIC_VLLM_BASE_URL=http://127.0.0.1:8000/v1
-# Enable a `provider: vllm` row in the registry (see config/models.yaml examples).
-```
-
-Multiple pools use distinct provider names (`vllm-coding`, `vllm-reasoning`) and
-`LLM_FABRIC_PROVIDER_BASE_URLS`. See
-[`examples/config/vllm-pools.yaml`](examples/config/vllm-pools.yaml) and
-[`examples/helm/vllm-pools-values.yaml`](examples/helm/vllm-pools-values.yaml).
-Kubernetes layout stays: load balancer → Fabric replicas → vLLM GPU pools
-([`docs/TOPOLOGY.md`](docs/TOPOLOGY.md)). Helm chart:
-`deployments/helm/llm-fabric`. HPA stays off until you measure it.
+Multiple pools use distinct provider names (`vllm-coding`, `vllm-reasoning`).
+See [`deployments/helm/examples/vllm-provider-values.yaml`](deployments/helm/examples/vllm-provider-values.yaml)
+and [`deployments/kubernetes/vllm-reference.yaml`](deployments/kubernetes/vllm-reference.yaml).
+Topology: [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md). HPA stays off until you measure it.
 
 ### Docker image
 
 ```bash
-docker build -f deployments/docker/Dockerfile -t llm-fabric:0.1.0 .
+docker build \
+  --build-arg VERSION=0.1.0 \
+  --build-arg REVISION=$(git rev-parse HEAD) \
+  -f deployments/docker/Dockerfile \
+  -t llm-fabric:0.1.0 .
 ```
 
-- User `10001`, `EXPOSE 47317`, `CMD python -m llm_fabric`
-- Healthcheck hits `/healthz`
-- `STOPSIGNAL SIGTERM`; graceful shutdown default 25s
+- Multi-stage, `uv sync --frozen --no-dev`, user `10001:10001`
+- `EXPOSE 47317`, `CMD ["python", "-m", "llm_fabric"]`, `STOPSIGNAL SIGTERM`
+- Config mounted at runtime; no weights, vLLM, Ollama, or secrets in the image
+- Release workflow publishes `linux/amd64,linux/arm64` to GHCR on `v*` tags
 
-### Docker Compose
-
-[`deployments/docker/docker-compose.yml`](deployments/docker/docker-compose.yml):
-Postgres (roles from `postgres-init/`), Redis, OTEL collector, Prometheus,
-Grafana, migrate Job, gateway. **Not** the production tier.
+Set `LLM_FABRIC_HOST=0.0.0.0` in containers (process default is localhost).
 
 ### Kubernetes / Helm
 
-Chart: [`deployments/helm/llm-fabric/`](deployments/helm/llm-fabric/).
+Chart: [`deployments/helm/llm-fabric/`](deployments/helm/llm-fabric/) (version
+0.2.0). Same chart on kind, AKS, EKS, GKE, or any conformant cluster.
+
+```bash
+helm upgrade --install llm-fabric \
+    deployments/helm/llm-fabric \
+    --namespace llm-fabric \
+    --create-namespace \
+    -f values.yaml
+```
+
+Pin `image.digest`. Put Postgres, Redis, OIDC, and provider keys in
+`secretName`. Set `replicaCount`, resources, and ingress in values. OTLP
+endpoint may live in the ConfigMap; OTLP headers belong in the Secret.
 
 | Item | Chart default |
 | --- | --- |
-| `replicaCount` | 2 |
+| `replicaCount` | 1 (local kind example uses 2) |
 | Service | ClusterIP `47317` |
 | Probes | `/healthz` live/startup, `/readyz` ready |
 | Resources | 250m/512Mi request, 2 CPU / 2Gi limit |
 | HPA | `autoscaling.enabled: false` |
-| PDB | `minAvailable: 1` |
-| `terminationGracePeriodSeconds` | 30 |
-| Migrations | pre-install/pre-upgrade Job |
+| PDB | off (`podDisruptionBudget.enabled: false`) |
+| `terminationGracePeriodSeconds` | 30 (app drain 25s) |
+| Migrations | off until `secretName` is set |
+| IntentOS serving path | `LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED=false` |
 
-Secret must contain `LLM_FABRIC_MIGRATION_DATABASE_URL` (DDL owner) and
-`LLM_FABRIC_DATABASE_URL` (DML `fabric_app`). Workers never migrate.
+When migrations are enabled, the Secret must contain
+`LLM_FABRIC_MIGRATION_DATABASE_URL` (DDL owner) and `LLM_FABRIC_DATABASE_URL`
+(DML `fabric_app`). Workers never migrate.
 
-There is no cloud-provider module in this repository. Use the Helm chart on
-your cluster.
+Cloud examples (Helm-rendered, **not** live-tested):
+
+- [Azure AKS](docs/deployment/aks.md)
+- [AWS EKS](docs/deployment/eks.md)
+- [Google GKE](docs/deployment/gke.md)
+
+There is no cloud-provider module in this repository.
 
 ### TLS, secrets, scaling
 
@@ -1405,6 +1488,10 @@ paths.
 | Task | Command / note |
 | --- | --- |
 | Start locally | `make dev` or `make serve` |
+| Docker mock | `make docker-up` · `make docker-test` · `make docker-down` |
+| Docker + Ollama | `make docker-ollama` · `make ollama-pull` |
+| kind | `make k8s-local-up` · `make k8s-local-test` · `make k8s-local-down` |
+| Helm production | [`docs/deployment/runbook.md`](docs/deployment/runbook.md) |
 | Stop locally | `Ctrl-C` |
 | Production process | `python -m llm_fabric` (image `CMD`) |
 | Health | `GET /healthz` live · `GET /readyz` ready · `make doctor` |
@@ -1427,9 +1514,12 @@ paths.
 
 ## Rollback
 
-**Fabric release.** Helm rollback / previous image tag. Workers are stateless
-aside from Redis/Postgres. In-flight SSE should drain within
-`terminationGracePeriodSeconds`.
+**Fabric release.** `helm history` / `helm rollback`, or re-pin `image.digest`.
+Do not retag an immutable digest. Workers are stateless aside from
+Redis/Postgres. In-flight SSE should drain within
+`terminationGracePeriodSeconds`. If the release applied a forward-only
+migration, restore the database first
+([`docs/BACKUP_RECOVERY.md`](docs/BACKUP_RECOVERY.md)).
 
 **Provider / routing config.** Revert `config/models.yaml` (or ConfigMap).
 Pins and allow-lists live there.
@@ -1481,9 +1571,12 @@ inside a process; that is not a substitute for shipping a previous image.
 ├── config/models.yaml        Model registry and aliases
 ├── datasets/eval/            Eval suites, IntentOS frozen artifacts
 ├── datasets/intent/          Taxonomy, bootstrap, val, adversarial
-├── deployments/docker/       Dockerfile, Compose, OTEL, Prometheus, Postgres init
+├── deployments/docker/       Dockerfile, Compose profiles, OTEL, Prometheus, Postgres init
 ├── deployments/helm/llm-fabric/
+├── deployments/helm/examples/  local, Ollama, AKS, EKS, GKE, vLLM URLs
+├── deployments/kind/         kind cluster + smoke scripts
 ├── docs/                     Contract, IntentOS, metering, ADRs, configuration
+├── docs/deployment/          Runbook and cloud values notes
 ├── examples/python/          Copy-paste clients
 ├── examples/typescript/
 ├── sdk/typescript/           myvista TS client
@@ -1666,7 +1759,10 @@ Yes, at the **internal single-VPC** tier described in
 | [`docs/ROUTING.md`](docs/ROUTING.md) | L0–L30, planner, fallback |
 | [`docs/ROUTING-QUALITY.md`](docs/ROUTING-QUALITY.md) | Overrouting / underrouting |
 | [`docs/COST-MODEL.md`](docs/COST-MODEL.md) | Known-zero vs unknown prices |
-| [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) | Fabric + external vLLM pools |
+| [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) | Fabric + Ollama / external vLLM pools |
+| [`docs/deployment/README.md`](docs/deployment/README.md) | Portability matrix and statelessness |
+| [`docs/deployment/runbook.md`](docs/deployment/runbook.md) | Deploy, upgrade, rollback, scale |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | CORE / DEV / EVAL / experimental / engines |
 | [`docs/adr/0004-service-tiers.md`](docs/adr/0004-service-tiers.md) | L30 → Grade29 |
 | [`docs/USAGE_METERING.md`](docs/USAGE_METERING.md) | Usage ledger |
 | [`docs/AUTH_REVOCATION.md`](docs/AUTH_REVOCATION.md) | Token revocation |

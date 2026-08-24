@@ -1,9 +1,14 @@
-# Production-like stack for integration tests. Not a production deployment.
-# Inference endpoint is mock by default; enable the `inference` profile for Ollama.
+# Local release bundle. Each process remains an independently managed workload.
+# Profiles:
+#   mock            Fabric with deterministic in-process inference
+#   local           Fabric plus Ollama (weights persist outside the Fabric image)
+#   observability   OTLP collector, Prometheus, and Grafana
+#   platform        PostgreSQL and Redis for production-state integration tests
 
 services:
   postgres:
     image: postgres:16.4
+    profiles: ["platform"]
     environment:
       POSTGRES_USER: fabric
       POSTGRES_PASSWORD: fabric
@@ -20,6 +25,7 @@ services:
 
   redis:
     image: redis:7.4
+    profiles: ["platform"]
     ports:
       - "6379:6379"
     healthcheck:
@@ -30,6 +36,7 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.109.0
+    profiles: ["observability"]
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otel-collector.yaml:ro
@@ -38,6 +45,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.54.1
+    profiles: ["observability"]
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
@@ -45,6 +53,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.0
+    profiles: ["observability"]
     ports:
       - "3000:3000"
     environment:
@@ -53,29 +62,96 @@ services:
 
   ollama:
     image: ollama/ollama:0.3.14
-    profiles: ["inference", "local"]
+    profiles: ["local"]
     ports:
       - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  gateway-local:
-    profiles: ["local"]
+  ollama-pull:
+    image: ollama/ollama:0.3.14
+    profiles: ["tools"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull"]
+    volumes:
+      - ollama-models:/root/.ollama
+
+  gateway-mock:
+    profiles: ["mock"]
+    image: ${LLM_FABRIC_IMAGE:-llm-fabric:dev}
     build:
       context: ../..
       dockerfile: deployments/docker/Dockerfile
-    depends_on:
-      ollama:
-        condition: service_started
+      args:
+        VERSION: ${LLM_FABRIC_VERSION:-0.1.0}
+        REVISION: ${LLM_FABRIC_REVISION:-dev}
     environment:
       LLM_FABRIC_ENVIRONMENT: development
       LLM_FABRIC_HOST: 0.0.0.0
       LLM_FABRIC_PORT: 47317
       LLM_FABRIC_ALLOW_ANONYMOUS: "true"
-      LLM_FABRIC_REGISTRY_PATH: config/models.local.yaml
-      LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+      LLM_FABRIC_REGISTRY_PATH: /app/config/models.yaml
+      LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
+      LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
+      LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
+    volumes:
+      - ../../config:/app/config:ro
     ports:
       - "47317:47317"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  gateway-ollama:
+    profiles: ["local"]
+    image: ${LLM_FABRIC_IMAGE:-llm-fabric:dev}
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+      args:
+        VERSION: ${LLM_FABRIC_VERSION:-0.1.0}
+        REVISION: ${LLM_FABRIC_REVISION:-dev}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      LLM_FABRIC_ENVIRONMENT: development
+      LLM_FABRIC_HOST: 0.0.0.0
+      LLM_FABRIC_PORT: 47317
+      LLM_FABRIC_ALLOW_ANONYMOUS: "true"
+      LLM_FABRIC_REGISTRY_PATH: /app/config/models.local.yaml
+      LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
+      LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
+      LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
+      LLM_FABRIC_OLLAMA_BASE_URL: http://ollama:11434/v1
+    volumes:
+      - ../../config:/app/config:ro
+    ports:
+      - "47317:47317"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   migrate:
+    profiles: ["platform"]
+    image: ${LLM_FABRIC_IMAGE:-llm-fabric:dev}
     build:
       context: ../..
       dockerfile: deployments/docker/Dockerfile
@@ -88,26 +164,5 @@ services:
     environment:
       LLM_FABRIC_MIGRATION_DATABASE_URL: postgresql://fabric:fabric@postgres:5432/fabric
 
-  gateway:
-    build:
-      context: ../..
-      dockerfile: deployments/docker/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      LLM_FABRIC_ENVIRONMENT: production
-      LLM_FABRIC_HOST: 0.0.0.0
-      LLM_FABRIC_PORT: 47317
-      LLM_FABRIC_ALLOW_ANONYMOUS: "false"
-      LLM_FABRIC_AUTH_MODE: api_key
-      LLM_FABRIC_API_KEYS: production-test-key-16
-      LLM_FABRIC_DATABASE_URL: postgresql://fabric_app:fabric@postgres:5432/fabric
-      LLM_FABRIC_REDIS_URL: redis://redis:6379/0
-      LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
-    ports:
-      - "47317:47317"
+volumes:
+  ollama-models:

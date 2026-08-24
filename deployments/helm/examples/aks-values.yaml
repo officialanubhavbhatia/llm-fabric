@@ -1,0 +1,46 @@
+# Manifest-validated example only; not live-tested on AKS.
+replicaCount: 3
+
+image:
+  repository: myregistry.azurecr.io/llm-fabric
+  tag: "0c42672"
+  digest: "" # Set the published sha256 digest for production.
+  pullPolicy: IfNotPresent
+
+config:
+  environment: production
+  allowAnonymous: "false"
+  authMode: oidc
+
+secretName: llm-fabric
+migrations:
+  enabled: true
+
+serviceAccount:
+  create: true
+  annotations:
+    azure.workload.identity/client-id: REPLACE_WITH_CLIENT_ID
+
+podLabels:
+  azure.workload.identity/use: "true"
+
+providers:
+  baseUrls:
+    vllm-general: http://vllm-general.inference.svc.cluster.local:8000/v1
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: llm-fabric
+
+ingress:
+  enabled: false
+  className: azure-application-gateway
+  annotations: {}

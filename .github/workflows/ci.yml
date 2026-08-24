@@ -244,7 +244,88 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build gateway image
-        run: docker build -f deployments/docker/Dockerfile -t llm-fabric:ci .
+        run: >
+          docker build
+          --build-arg VERSION=ci
+          --build-arg REVISION=${{ github.sha }}
+          -f deployments/docker/Dockerfile
+          -t llm-fabric:ci .
+      - name: Verify non-root read-only runtime and packaged Command Center
+        run: |
+          docker run --detach --rm --name llm-fabric-ci \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --publish 47317:47317 \
+            --volume "$PWD/config:/app/config:ro" \
+            --env LLM_FABRIC_ENVIRONMENT=development \
+            --env LLM_FABRIC_HOST=0.0.0.0 \
+            --env LLM_FABRIC_ALLOW_ANONYMOUS=true \
+            --env LLM_FABRIC_REGISTRY_PATH=/app/config/models.yaml \
+            --env LLM_FABRIC_ROUTING_CONFIG_PATH=/app/config/routing.yaml \
+            --env LLM_FABRIC_PROMOTION_CONFIG_PATH=/app/config/promotion.yaml \
+            llm-fabric:ci
+          trap 'docker stop --time 30 llm-fabric-ci || true' EXIT
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:47317/healthz && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:47317/readyz
+          curl --fail --silent http://127.0.0.1:47317/command-center >/dev/null
+          curl --fail --silent -H 'content-type: application/json' \
+            -d '{"model":"auto","messages":[{"role":"user","content":"image smoke"}]}' \
+            http://127.0.0.1:47317/v1/chat/completions >/dev/null
+          test "$(docker image inspect llm-fabric:ci --format '{{.Config.User}}')" = "10001:10001"
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: llm-fabric:ci
+          format: spdx-json
+          output-file: llm-fabric.spdx.json
+      # Monitor-only until a reviewed vulnerability baseline defines blocking
+      # exceptions. Findings remain visible without moving a gate post-hoc.
+      - name: Scan image vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: llm-fabric:ci
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+      - name: Record image digest
+        run: docker image inspect llm-fabric:ci --format 'digest={{.Id}}'
+
+  helm:
+    name: Helm portability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.3
+      - name: Lint and render default/local/cloud examples
+        run: make helm-check
+
+  kind:
+    name: kind image and chart smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.3
+      - uses: helm/kind-action@v1.10.0
+        with:
+          install_only: true
+          version: v0.23.0
+      - name: Build, load, and install the same image
+        run: make k8s-local-up
+      - name: Health, mock chat, headers, and rolling restart
+        run: make k8s-local-test
+      - name: Delete kind cluster
+        if: always()
+        run: make k8s-local-down
 
   # Regression gate for the evaluation platform. The committed baseline is a
   # measured run of datasets/eval/ci-suite.yaml. A material drop on a critical

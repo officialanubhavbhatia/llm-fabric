@@ -3,12 +3,19 @@ kind: Service
 metadata:
   name: {{ include "llm-fabric.fullname" . }}
   labels:
-    app.kubernetes.io/name: llm-fabric
+    {{- include "llm-fabric.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   selector:
-    app.kubernetes.io/name: llm-fabric
+    {{- include "llm-fabric.selectorLabels" . | nindent 4 }}
   ports:
     - name: http
       port: {{ .Values.service.port }}
       targetPort: http
+      {{- if .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}

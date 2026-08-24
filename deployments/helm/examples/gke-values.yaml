@@ -1,0 +1,43 @@
+# Manifest-validated example only; not live-tested on GKE.
+replicaCount: 3
+
+image:
+  repository: us-central1-docker.pkg.dev/my-project/llm-fabric/llm-fabric
+  tag: "0c42672"
+  digest: "" # Set the published sha256 digest for production.
+  pullPolicy: IfNotPresent
+
+config:
+  environment: production
+  allowAnonymous: "false"
+  authMode: oidc
+
+secretName: llm-fabric
+migrations:
+  enabled: true
+
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: llm-fabric@my-project.iam.gserviceaccount.com
+
+providers:
+  baseUrls:
+    vllm-general: http://vllm-general.inference.svc.cluster.local:8000/v1
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: llm-fabric
+
+ingress:
+  enabled: false
+  className: gce
+  annotations: {}

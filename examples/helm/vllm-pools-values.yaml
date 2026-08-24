@@ -6,16 +6,18 @@
 #
 #   helm upgrade --install llm-fabric deployments/helm/llm-fabric \
 #     -f examples/helm/vllm-pools-values.yaml \
-#     --set image.tag=<digest>
+#     --set image.digest=sha256:<digest>
 #
 # Put API keys and OIDC secrets in the Secret named by secretName, never here.
 # Provider URLs below are cluster-local examples, not measured endpoints.
+# A reachable vLLM Service does not approve a model.
 
 replicaCount: 2
 
 image:
   repository: llm-fabric
   tag: "0.1.0"
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
@@ -33,16 +35,10 @@ resources:
 probes:
   readiness:
     path: /readyz
-    initialDelaySeconds: 5
-    periodSeconds: 10
   liveness:
     path: /healthz
-    initialDelaySeconds: 10
-    periodSeconds: 20
   startup:
     path: /healthz
-    failureThreshold: 30
-    periodSeconds: 5
 
 config:
   environment: production
@@ -52,33 +48,16 @@ config:
   authMode: oidc
 
 secretName: llm-fabric
+migrations:
+  enabled: true
 
-env:
-  - name: LLM_FABRIC_ENVIRONMENT
-    value: production
-  - name: LLM_FABRIC_HOST
-    value: "0.0.0.0"
-  - name: LLM_FABRIC_PORT
-    value: "47317"
-  - name: LLM_FABRIC_ALLOW_ANONYMOUS
-    value: "false"
-  - name: LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED
-    value: "false"
-  - name: LLM_FABRIC_ROUTING_QUALITY_SHADOW
-    value: "false"
-  # Promotion policy/state files are versioned with the release image. Roll a
-  # reviewed artifact update; do not mutate lifecycle through public traffic.
-  - name: LLM_FABRIC_PROMOTION_CONFIG_PATH
-    value: "config/promotion.yaml"
-  - name: LLM_FABRIC_PROMOTION_STATE_PATH
-    value: "datasets/eval/models/promotion-state.json"
-  - name: LLM_FABRIC_VLLM_BASE_URL
-    value: "http://vllm-general:8000/v1"
-  - name: LLM_FABRIC_PROVIDER_BASE_URLS
-    value: '{"vllm-general":"http://vllm-general:8000/v1","vllm-coding":"http://vllm-coding:8000/v1","vllm-reasoning":"http://vllm-reasoning:8000/v1","vllm-long-context":"http://vllm-long-context:8000/v1"}'
+providers:
+  baseUrls:
+    vllm-general: http://vllm-general:8000/v1
+    vllm-coding: http://vllm-coding:8000/v1
+    vllm-reasoning: http://vllm-reasoning:8000/v1
+    vllm-long-context: http://vllm-long-context:8000/v1
 
 observability:
   otlp:
     endpoint: "http://otel-collector:4318/v1/traces"
-  collector:
-    enabled: false

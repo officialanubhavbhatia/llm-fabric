@@ -2,7 +2,8 @@
 .PHONY: help install dev dev-ollama serve doctor migrate test test-isolation lint format typecheck check clean \
 	dashboard benchmark bench-intent bench-intent-cache bench-load bench-load-target bench-load-all \
 	profile-request eval-gate eval-run heal-analyze bench-stages model-probe eval-models eval-routing \
-	test-vllm-live
+	test-vllm-live docker-build docker-up docker-test docker-down docker-ollama ollama-pull \
+	k8s-local-up k8s-local-test k8s-local-down k8s-local-ollama-up k8s-ollama-pull helm-check
 
 PYTHON_VERSION := 3.12
 UV := uv
@@ -26,6 +27,63 @@ dev-ollama: install ## Run the gateway against local Ollama
 
 dashboard: ## Print the local Command Center URL (gateway must already be running)
 	@echo "Command Center: http://127.0.0.1:47317/command-center"
+
+docker-build: ## Build the immutable local Fabric OCI image
+	docker build \
+		--build-arg VERSION=dev \
+		--build-arg REVISION=$$(git rev-parse HEAD) \
+		-f deployments/docker/Dockerfile \
+		-t llm-fabric:dev .
+
+docker-up: ## Start the containerized mock-only Fabric
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile mock up --build --detach --wait
+	@echo "Fabric: http://127.0.0.1:47317"
+
+docker-test: ## Smoke-test container health, Command Center, and mock chat
+	curl --fail --silent http://127.0.0.1:47317/healthz >/dev/null
+	curl --fail --silent http://127.0.0.1:47317/command-center >/dev/null
+	curl --fail --silent -H 'content-type: application/json' \
+		-d '{"model":"auto","messages":[{"role":"user","content":"docker smoke"}]}' \
+		http://127.0.0.1:47317/v1/chat/completions >/dev/null
+
+docker-ollama: ## Start Fabric and Ollama as separate containers
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile local up --build --detach --wait
+	@echo "Pull a model with: make ollama-pull MODEL=llama3.2"
+
+ollama-pull: ## Deliberately pull an Ollama model into its persistent volume
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile local up --detach ollama
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile local --profile tools run --rm ollama-pull $(or $(MODEL),llama3.2)
+
+docker-down: ## Stop all local Compose profiles and retain model volumes
+	docker compose -f deployments/docker/docker-compose.yml \
+		--profile mock --profile local --profile observability --profile platform down
+
+helm-check: ## Lint and render every portable Helm values example
+	helm lint deployments/helm/llm-fabric
+	@for values in deployments/helm/examples/*.yaml; do \
+		echo "rendering $$values"; \
+		helm template llm-fabric deployments/helm/llm-fabric -f "$$values" >/dev/null; \
+	done
+
+k8s-local-up: ## Build, load, and deploy Fabric to local kind
+	deployments/kind/up.sh
+
+k8s-local-test: ## Smoke-test and rolling-restart the kind deployment
+	deployments/kind/smoke.sh
+
+k8s-local-down: ## Delete the local kind cluster
+	deployments/kind/down.sh
+
+k8s-local-ollama-up: ## Deploy Fabric plus separate Ollama workload to kind
+	LLM_FABRIC_HELM_VALUES=deployments/helm/examples/local-ollama-values.yaml \
+		deployments/kind/up.sh
+
+k8s-ollama-pull: ## Pull a model in the optional kind Ollama workload
+	MODEL=$(or $(MODEL),llama3.2) deployments/kind/ollama-pull.sh
 
 benchmark: bench-stages ## Alias for isolated in-process stage benches
 

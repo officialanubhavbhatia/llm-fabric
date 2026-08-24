@@ -1,0 +1,54 @@
+# Reference integration only. Replace image, model, and revision after validating
+# the selected vLLM release's CLI. This workload is not part of the Fabric chart.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-general
+  namespace: inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-general
+  template:
+    metadata:
+      labels:
+        app: vllm-general
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:REPLACE_WITH_TESTED_VERSION
+          args:
+            - --model
+            - REPLACE_WITH_PINNED_MODEL_OR_LOCAL_PATH
+            - --revision
+            - REPLACE_WITH_PINNED_REVISION
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-general
+  namespace: inference
+spec:
+  selector:
+    app: vllm-general
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

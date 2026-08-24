@@ -1,0 +1,10 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: llm-fabric
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30017
+        hostPort: 47317
+        listenAddress: "127.0.0.1"
+        protocol: TCP

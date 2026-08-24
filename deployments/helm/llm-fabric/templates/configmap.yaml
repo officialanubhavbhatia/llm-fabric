@@ -3,13 +3,39 @@ kind: ConfigMap
 metadata:
   name: {{ include "llm-fabric.fullname" . }}
   labels:
-    app.kubernetes.io/name: llm-fabric
+    {{- include "llm-fabric.labels" . | nindent 4 }}
 data:
   LLM_FABRIC_ENVIRONMENT: {{ .Values.config.environment | quote }}
   LLM_FABRIC_HOST: {{ .Values.config.host | quote }}
   LLM_FABRIC_PORT: {{ .Values.config.port | quote }}
   LLM_FABRIC_ALLOW_ANONYMOUS: {{ .Values.config.allowAnonymous | quote }}
   LLM_FABRIC_AUTH_MODE: {{ .Values.config.authMode | quote }}
+  LLM_FABRIC_INTENT_CLASSIFICATION_ENABLED: "false"
+  LLM_FABRIC_REGISTRY_PATH: /app/config/models.yaml
+  LLM_FABRIC_ROUTING_CONFIG_PATH: /app/config/routing.yaml
+  LLM_FABRIC_PROMOTION_CONFIG_PATH: /app/config/promotion.yaml
+  {{- if .Values.promotionEvidence.existingConfigMap }}
+  LLM_FABRIC_PROMOTION_STATE_PATH: {{ printf "/app/datasets/eval/models/%s" .Values.promotionEvidence.stateKey | quote }}
+  {{- else }}
+  LLM_FABRIC_PROMOTION_STATE_PATH: /tmp/promotion-state.json
+  {{- end }}
+  {{- if .Values.providers.baseUrls }}
+  LLM_FABRIC_PROVIDER_BASE_URLS: {{ toJson .Values.providers.baseUrls | quote }}
+  {{- end }}
   {{- if .Values.observability.otlp.endpoint }}
   LLM_FABRIC_OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otlp.endpoint | quote }}
   {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "llm-fabric.fullname" . }}-files
+  labels:
+    {{- include "llm-fabric.labels" . | nindent 4 }}
+data:
+  models.yaml: |
+    {{- .Values.fabricConfig.models | nindent 4 }}
+  routing.yaml: |
+    {{- .Values.fabricConfig.routing | nindent 4 }}
+  promotion.yaml: |
+    {{- .Values.fabricConfig.promotion | nindent 4 }}

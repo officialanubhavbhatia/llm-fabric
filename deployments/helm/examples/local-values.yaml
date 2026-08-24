@@ -1,0 +1,31 @@
+replicaCount: 2
+
+image:
+  repository: llm-fabric
+  tag: dev
+  digest: ""
+  pullPolicy: IfNotPresent
+
+config:
+  environment: development
+  allowAnonymous: "true"
+  authMode: disabled
+
+secretName: ""
+migrations:
+  enabled: false
+
+service:
+  type: NodePort
+  nodePort: 30017
+
+podDisruptionBudget:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi

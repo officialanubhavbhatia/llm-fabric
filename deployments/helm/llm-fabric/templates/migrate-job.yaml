@@ -1,37 +1,47 @@
 {{- if .Values.migrations.enabled }}
+{{- if not .Values.secretName }}{{ fail "migrations.enabled requires secretName" }}{{ end }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "llm-fabric.fullname" . }}-migrate
   labels:
-    app.kubernetes.io/name: llm-fabric
+    {{- include "llm-fabric.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
-  backoffLimit: 6
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
   ttlSecondsAfterFinished: 600
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: llm-fabric
+        {{- include "llm-fabric.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
       restartPolicy: OnFailure
+      serviceAccountName: {{ include "llm-fabric.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        fsGroup: 10001
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: migrate
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "llm-fabric.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           workingDir: /app
           command: ["python", "-m", "alembic", "upgrade", "head"]
           envFrom:
             - secretRef:
                 name: {{ .Values.secretName }}
                 optional: false
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
 {{- end }}

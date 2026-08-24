@@ -1,0 +1,71 @@
+{
+  "artifact": "datasets/eval/deployment/k8s-0.2.0.json",
+  "chart_version": "0.2.0",
+  "app_version": "0.1.0",
+  "fabric_commit": "0c426729fe25b9e0d624908bc24dda302440cc98",
+  "working_tree": "uncommitted portable distribution (image, chart, kind, docs)",
+  "measured_at": "2026-08-24T20:15:00Z",
+  "host": {
+    "os": "darwin 25.6.0",
+    "arch": "arm64",
+    "docker": "29.5.3",
+    "kind": "v0.23.0",
+    "helm": "v3.15.3",
+    "kubectl": "v1.30.3"
+  },
+  "image": {
+    "repository": "llm-fabric",
+    "tag": "dev",
+    "id": "sha256:09881cd64c9e77a687182e250914b6257bf9f1248af84f12ab00461a0c3319e6",
+    "user": "10001:10001",
+    "os": "linux",
+    "architecture": "arm64",
+    "size_bytes": 280741736,
+    "platforms_built_here": ["linux/arm64"],
+    "linux_amd64_built_here": false
+  },
+  "results": {
+    "docker_build": "PASS",
+    "docker_non_root_readonly_smoke": "PASS",
+    "docker_healthz": "PASS",
+    "docker_readyz": "PASS",
+    "docker_command_center": "PASS",
+    "docker_mock_chat": "PASS",
+    "docker_routing_headers": "PASS",
+    "docker_sigterm_idle_stop_seconds": 0.517,
+    "docker_ollama_stack": "PASS_EARLIER_THIS_PHASE",
+    "docker_ollama_model_pull": "NOT_RUN",
+    "helm_lint": "PASS",
+    "helm_template_examples": "PASS",
+    "kind_create_or_recreate": "PASS",
+    "kind_helm_install": "PASS",
+    "kind_replicas_ready": "2/2",
+    "kind_healthz": "PASS",
+    "kind_readyz": "PASS",
+    "kind_command_center": "PASS",
+    "kind_mock_chat": "PASS",
+    "kind_routing_headers": "PASS",
+    "kind_rolling_restart": "PASS",
+    "aks_live": "NOT_TESTED",
+    "eks_live": "NOT_TESTED",
+    "gke_live": "NOT_TESTED",
+    "vllm_live": "NOT_TESTED",
+    "sbom": "NOT_RUN_LOCALLY",
+    "trivy": "NOT_RUN_LOCALLY"
+  },
+  "pytest": {
+    "command": "LLM_FABRIC_ENVIRONMENT=test LLM_FABRIC_TEST_DATABASE_URL=postgresql://fabric:fabric@127.0.0.1:5432/fabric LLM_FABRIC_TEST_REDIS_URL=redis://127.0.0.1:6379/0 uv run pytest --strict-markers",
+    "note": "This host also had LLM_FABRIC_KIND_TEST=1, which ran kind system tests against the mock-only chart (no llm-fabric Secret). Those two tests failed. CI does not set LLM_FABRIC_KIND_TEST. With that flag unset the same run is 1228 passed, 12 skipped.",
+    "this_host_with_kind_flag": {
+      "passed": 1228,
+      "failed": 2,
+      "skipped": 10,
+      "failed_names": [
+        "tests/system/test_kind_readiness.py::test_kind_pod_transitions_notready_on_postgres_outage_and_recovers",
+        "tests/system/test_kind_rolling_stream.py::test_kind_rolling_restart_drains_in_cluster_stream"
+      ]
+    },
+    "lint": "PASS",
+    "typecheck": "PASS"
+  }
+}
