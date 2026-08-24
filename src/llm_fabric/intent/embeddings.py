@@ -184,7 +184,7 @@ def _fastembed_available() -> bool:
 
 def _sentence_transformers_available() -> bool:
     try:
-        import sentence_transformers  # type: ignore[import-not-found]  # noqa: F401
+        import sentence_transformers  # noqa: F401
     except ImportError:
         return False
     return True

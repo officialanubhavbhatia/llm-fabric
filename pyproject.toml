@@ -102,6 +102,15 @@ show_error_codes = true
 module = ["deepeval.*", "lm_eval"]
 ignore_missing_imports = true
 
+# Optional local-embedding backends are intentionally absent from the base
+# development and production environments.
+[[tool.mypy.overrides]]
+module = [
+    "fastembed",
+    "sentence_transformers",
+]
+ignore_missing_imports = true
+
 # Core modules carry the security invariants, so they are checked strictly.
 [[tool.mypy.overrides]]
 module = [
